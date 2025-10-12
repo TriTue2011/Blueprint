@@ -8,3 +8,4 @@ cloudflareaccess.com
 cfipaddress.com
 update.argotunnel.com
 update.cloudflareclient.com
+vlxx.bz
