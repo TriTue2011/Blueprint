@@ -1,0 +1,10 @@
+cfargotunnel.com
+cloudflare.com
+cloudflared.com
+workers.dev
+trycloudflare.com
+argotunnel.com
+cloudflareaccess.com
+cfipaddress.com
+update.argotunnel.com
+update.cloudflareclient.com
