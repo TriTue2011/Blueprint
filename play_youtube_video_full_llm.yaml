@@ -1,0 +1,93 @@
+blueprint:
+  name: Voice - Play YouTube Video
+  author: luuquangvu
+  description: >-
+    # Tool plays YouTube videos on a smart TV used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * A smart TV integrated into Home Assistant.
+
+    * Support only Android TV, Samsung TV, Apple TV.
+
+    ### Optional
+
+    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    * Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for playing YouTube videos on a smart TV.
+
+    * Make sure to expose the script to Assist after the script has been saved.
+
+    * Do not alter the default script name.
+  domain: script
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    media_player_settings:
+      name: Settings for Media Player
+      icon: mdi:television
+      description: You can use these settings to configure a smart TV.
+      input:
+        media_player:
+          name: Smart TV
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+                  device_class: tv
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        media_id_prompt:
+          name: Media ID Prompt
+          description: The prompt which will be used for the LLM can provide the Media ID for the query.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Specify the Media ID of the video you want to play.
+mode: parallel
+max_exceeded: silent
+variables:
+  version: 20250923
+fields:
+  media_id:
+    name: Media ID
+    description: !input media_id_prompt
+    selector:
+        text:
+    required: true
+sequence:
+  - variables:
+      media_id: "{{ media_id | default('') | trim }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ not media_id }}"
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to play the video because the media id is empty.
+      - alias: Stop the script
+        stop: Unable to play the video because the media id is empty.
+        response_variable: response
+  - action: media_player.turn_on
+    target:
+      entity_id: !input media_player
+  - action: media_player.play_media
+    data:
+      media_content_type: url
+      media_content_id: "{{ 'https://www.youtube.com/watch?v=' ~ media_id }}"
+      enqueue: play
+    target:
+      entity_id: !input media_player

@@ -1,0 +1,164 @@
+blueprint:
+  name: Create Lunar Events
+  author: luuquangvu
+  description: >-
+    # Tool help to create Lunar calendar events
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * The Pyscript integration needs to be installed through HACS and properly configured.
+
+    * The `scripts/date_conversion_tool.py` script needs to be copied into the `config/pyscript` folder.
+
+    * The mentioned file(s) is/are included in the repository.
+
+    * Enable two Pyscript configuration options in `config/configuration.yaml` to permit the import of any Python package and to expose hass as a variable.
+
+    ```
+
+    #File configuration.yaml
+
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+
+    ```
+
+    * A calendar entity with write permissions to save events.
+
+    ### Note
+
+    * Google Calendar requires Read/Write access.
+  domain: script
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    calendar_settings:
+      name: Settings for Calendar
+      icon: mdi:calendar
+      description: You can use these settings to configure a Calendar.
+      input:
+        calendar:
+          name: Calendar
+          selector:
+            entity:
+              filter:
+                - domain: calendar
+mode: single
+max_exceeded: silent
+variables:
+  version: 20250923
+fields:
+  lunar_date:
+    selector:
+      date:
+    required: true
+    name: Lunar Date
+    description: Choose the start Lunar date of the event.
+  days:
+    selector:
+      number:
+        min: 1
+        max: 30
+        step: 1
+    name: Days
+    default: 1
+    description: Choose the duration of the event.
+  event_summary:
+    selector:
+      text:
+    name: Event Summary
+    required: true
+    description: The summary of the event.
+  event_description:
+    selector:
+      text:
+        multiline: true
+    name: Event Description
+    description: More details about the event.
+  repeat:
+    selector:
+      number:
+        min: 1
+        max: 30
+        step: 1
+    name: Repeat
+    default: 1
+    description: Select the number of years the event will repeat.
+  leap_month:
+    name: Leap Month
+    description: When the event is in the leap month. The script will force Repeat to 1 which means no repeat.
+    selector:
+      boolean:
+sequence:
+  - variables:
+      lunar_date: "{{ lunar_date | as_datetime(default='') }}"
+      start_date: "{{ as_datetime(lunar_date).date() if lunar_date else 'n/a' }}"
+      days: "{{ days | default(1) | abs }}"
+      event_summary: "{{ event_summary | default('') | trim }}"
+      event_description: "{{ event_description | default('') | trim }}"
+      repeat: "{{ repeat | default(1) | abs }}"
+      leap_month: "{{ leap_month | default(false) }}"
+      calendar: !input calendar
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: >-
+          {{ start_date == 'n/a' or not event_summary }}
+    then:
+      - alias: Stop the script
+        stop: Unable to add the event because either the Lunar date or event summary is empty or the calendar entity is invalid.
+        error: true
+  - alias: Verify whether the calendar entity has write permissions.
+    if:
+      - condition: template
+        value_template: >-
+          {% set feats = (state_attr(calendar, 'supported_features') | int(0)) -%}
+          {{ (feats % 2) != 1 }}
+    then:
+      - alias: Stop the script
+        stop: The event could not be added because the calendar entity lacks write permissions.
+        error: true
+  - alias: Verify the leap month
+    if:
+      - condition: template
+        value_template: "{{ leap_month }}"
+    then:
+      - variables:
+          repeat: 1
+  - repeat:
+      sequence:
+        - action: pyscript.date_conversion_tool
+          data:
+            conversion_type: l2s
+            date: "{{ start_date }}"
+            leap_month: "{{ leap_month }}"
+          response_variable: response
+        - variables:
+            solar_date: >-
+              {{ response.date if (response is defined and response.get('date')) }}
+        - action: calendar.create_event
+          data:
+            summary: "{{ event_summary }}"
+            description: "{{ event_description }}"
+            start_date: "{{ solar_date }}"
+            end_date: >-
+              {{ (as_datetime(solar_date) + timedelta(days=days)).date() }}
+          target:
+            entity_id: !input calendar
+        - variables:
+            start_date: >-
+              {{ as_datetime(start_date).replace(year=as_datetime(start_date).year + 1).date() }}
+        - alias: Add a small delay when creating Google Calendar events.
+          if:
+            - condition: template
+              value_template: "{{ calendar in integration_entities('google') }}"
+          then:
+            - delay:
+                hours: 0
+                minutes: 0
+                seconds: 0
+                milliseconds: 200
+      count: "{{ repeat }}"

@@ -1,0 +1,157 @@
+blueprint:
+  name: Voice - Set Fan Oscillation
+  author: luuquangvu
+  description: >-
+    # Tool for Controlling Fan Oscillation used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * A smart fan integrated into Home Assistant.
+
+    * A template sensor stores all information about entity aliases needs to be configured in `config/configuration.yaml`; The sensor is required for friendly-name lookup.
+
+    ```
+
+    #File configuration.yaml
+
+    shell_command:
+      get_entity_alias: jq '[.data.entities[] | select(.options.conversation.should_expose == true and (.aliases | length > 0)) | {entity_id, aliases}]' ./.storage/core.entity_registry
+    template:
+      - triggers:
+          - trigger: homeassistant
+            event: start
+          - trigger: event
+            event_type: event_template_reloaded
+        actions:
+          - action: shell_command.get_entity_alias
+            response_variable: response
+        sensor:
+          - name: "Assist: Entity IDs and Aliases"
+            unique_id: entity_ids_and_aliases
+            icon: mdi:format-list-bulleted
+            device_class: timestamp
+            state: "{{ now().isoformat() }}"
+            attributes:
+              entities: "{{ response.stdout }}"
+
+    ```
+
+    ### Optional
+
+    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    * Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for controlling oscillation of a smart fan.
+
+    * Make sure to expose the fan entities you want to control to Assist.
+
+    * Make sure to expose the script to Assist after the script has been saved.
+
+    * Do not alter the default script name.
+  domain: script
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    entity_aliases_settings:
+      name: Settings for Entity Aliases
+      icon: mdi:format-list-bulleted
+      description: You can use these settings to configure a template sensor that stores all information about entity aliases.
+      input:
+        entity_aliases:
+          name: Entity Aliases
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  integration: template
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        fan_entities_prompt:
+          name: Fan Entities Prompt
+          description: The prompt which will be used for the LLM can provide the name of fans for controlling.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Specify at least one fan's name to control.
+
+            To control multiple fans, separate each fan name with a semicolon.
+        oscillating_prompt:
+          name: Oscillating Prompt
+          description: The prompt which will be used for the LLM can provide the oscillation state.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Define the oscillation state for the fan you want to set.
+
+            It must be one of the following two values: 'true' turns oscillation on, or 'false' turns oscillation off.
+mode: parallel
+max_exceeded: silent
+variables:
+  version: 20250923
+fields:
+  fan_entities:
+    name: Fan Entities
+    description: !input fan_entities_prompt
+    selector:
+        text:
+    required: true
+  oscillating:
+    name: Oscillating
+    description: !input oscillating_prompt
+    selector:
+      boolean:
+    required: true
+sequence:
+  - variables:
+      entity_aliases: !input entity_aliases
+      fan_entities: "{{ fan_entities | default('') | trim }}"
+      oscillating: "{{ oscillating | default(false) }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: >-
+          {% set validation = namespace(not_exist=false) -%}
+          {% for entity in fan_entities.split(';') -%}
+          {% if not ((states.fan | selectattr('attributes.friendly_name', '==', entity.strip()) | list) or
+          (state_attr(entity_aliases, 'entities') | default([]) | selectattr('entity_id', 'match', 'fan\.') | selectattr('aliases', 'contains', entity.strip()) | list)) -%}
+          {% set validation.not_exist = true -%}
+          {% endif -%}
+          {% endfor -%}
+          {{ validation.not_exist }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to control the fan because the fan name is invalid.
+      - alias: Stop the script
+        stop: Unable to control the fan because the fan name is invalid.
+        response_variable: response
+  - variables:
+      devices: >-
+        {% set device = namespace(entities=[]) -%}
+        {% for entity in fan_entities.split(';') -%}
+        {% if (states.fan | selectattr('attributes.friendly_name', '==', entity.strip()) | list) -%}
+        {% set device.entities = device.entities + (states.fan | selectattr('attributes.friendly_name', '==', entity.strip()) | map(attribute='entity_id') | list) -%}
+        {% else -%}
+        {% set device.entities = device.entities + (state_attr(entity_aliases, 'entities') | default([]) | selectattr('entity_id', 'match', 'fan\.') | selectattr('aliases', 'contains', entity.strip()) | map(attribute='entity_id') | list) -%}
+        {% endif -%}
+        {% endfor -%}
+        {{ device.entities }}
+  - action: fan.oscillate
+    target:
+      entity_id: "{{ devices | join(', ') }}"
+    data:
+      oscillating: "{{ (oscillating | string) | lower }}"

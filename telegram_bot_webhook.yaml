@@ -1,0 +1,466 @@
+blueprint:
+  name: Telegram Bot Webhook
+  author: luuquangvu
+  description: >-
+    # A Telegram bot enabling seamless two-way communication with Home Assistant.
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * Create a Telegram bot if it does not already exist using Telegram BotFather.
+
+    * The bot needs to disable Privacy mode before being added to a group chat or set as a group chat admin to access messages.
+
+    * If the bot is also added to Telegram bot integration, it must be set up in broadcast mode to prevent any conflicts.
+
+    * The Pyscript integration needs to be installed through HACS and properly configured.
+
+    * The `scripts/telegram_bot_handle_tool.py` and `scripts/common_utilities.py` scripts need to be copied into the `config/pyscript` folder.
+
+    * The `scripts/requirements.txt` file needs to be copied into the `config/pyscript` folder.
+
+    * The mentioned file(s) is/are included in the repository.
+
+    * Enable two Pyscript configuration options in `config/configuration.yaml` to permit the import of any Python package and to expose hass as a variable.
+
+    * A Telegram bot token needs to be configured in `config/configuration.yaml` and `config/secrets.yaml`.
+
+    ```
+
+    #File configuration.yaml
+
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+      telegram_bot_token: !secret telegram_bot_token
+
+    ```
+
+    ```
+
+    #File secrets.yaml
+
+    telegram_bot_token: XXXXXX      # Retrieve the token from the Telegram BotFather.
+
+    ```
+
+    ### Note
+
+    * The `file_content_analyzer_full_llm.yaml` blueprint must be installed to analyze and extract various types of information from media and document files.
+
+    ### Optional
+
+    * Use the `pyscript.get_telegram_bot_info` action to retrieve Telegram bot basic information.
+
+    * Use the `pyscript.get_telegram_updates` action to retrieve chat IDs and user IDs.
+
+    * Use the `pyscript.set_telegram_webhook` action to easily configure a Telegram Webhook ID automatically.
+
+    * Use the `pyscript.get_telegram_webhook` action to check the current Telegram Webhook ID.
+
+    * Use the `pyscript.delete_telegram_webhook` action to delete the Telegram Webhook ID when you are no longer using it.
+
+    * Use the `pyscript.send_telegram_message` action to easily send a message directly to Telegram in your automation without any dependencies.
+
+    * Use the `pyscript.send_telegram_photo` action to easily send a photo directly to Telegram in your automation without any dependencies.
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.0
+  input:
+    webhook_settings:
+      name: Settings for Webhook
+      icon: mdi:webhook
+      description: These settings allow you to set up the Webhook ID for receiving Telegram messages.
+      input:
+        webhook_id:
+          name: Webhook ID
+          description: Enter the preferred Webhook ID. Use the `pyscript.set_telegram_webhook` action to generate one automatically.
+          selector:
+            text:
+    telegram_settings:
+      name: Settings for Telegram
+      icon: mdi:send-circle
+      description: These settings allow you to set up the Telegram Chat IDs and optionally restrict specific user IDs within group chat IDs.
+      input:
+        chat_ids:
+          name: Chat IDs
+          description: Specified chat IDs enable communication with the Telegram bot.
+          selector:
+            text:
+              multiple: true
+        user_ids:
+          name: User IDs
+          description: You can optionally restrict specific user IDs within group chat IDs to enable communication with the Telegram bot. If left empty, by default, all users in the selected group chat IDs are allowed.
+          selector:
+            text:
+              multiple: true
+          default:
+    agent_settings:
+      name: Settings for Conversation Agent
+      icon: mdi:robot-outline
+      description: These settings allow you to set up the conversation agent responsible for managing messages.
+      input:
+        agent_id:
+          name: Conversation Agent
+          description: It should be the same conversational agent found under the Voice Assistants - Assist settings.
+          selector:
+            entity:
+              filter:
+                domain: conversation
+        language:
+          name: Language
+          description: The language code used to communicate with a conversation agent follows the IETF language tag standard, such as en-US.
+          selector:
+            text:
+          default: vi-VN
+mode: queued
+max: 30
+max_exceeded: silent
+variables:
+  version: 20251020
+  chat_ids: !input chat_ids
+  user_ids: !input user_ids
+  language: !input language
+alias: Telegram bot webhook
+description: ""
+triggers:
+  - trigger: webhook
+    allowed_methods:
+      - POST
+    local_only: false
+    webhook_id: !input webhook_id
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.json is defined and trigger.json.message is defined }}
+  - condition: template
+    value_template: >-
+      {{ (trigger.json.message.chat.id | string) in chat_ids }}
+  - condition: template
+    value_template: >-
+      {% if user_ids is list -%}
+        {% if (trigger.json.message.from.id | string) in user_ids -%}
+        {{ true }}
+        {% else -%}
+        {{ false }}
+        {% endif -%}
+      {% else -%}
+      {{ true }}
+      {% endif -%}
+actions:
+  - variables:
+      chat_id: >-
+        {{ ('id_' ~ trigger.json.message.chat.id ~ '_' ~ trigger.json.message.from.id) | slugify }}
+  - action: pyscript.memory_cache_get
+    data:
+      key: "{{ chat_id }}"
+    response_variable: get_chat
+  - variables:
+      conversation_id: >-
+        {{ get_chat.value if (get_chat.status == 'ok' and get_chat.value | default('', true) | length > 0) }}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.text is defined }}"
+        sequence:
+          - variables:
+              input:
+                system: >-
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {{ trigger.json.message.text }}
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+        alias: Process text
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.photo is defined }}"
+        sequence:
+          - action: pyscript.get_telegram_file
+            data:
+              file_id: "{{ trigger.json.message.photo[-1].file_id }}"
+            response_variable: file
+          - variables:
+              input:
+                system: >-
+                  Always use the *File Content Analyzer* to analyze file content and identify the user's request.
+
+                  If the prompt is empty, always treat any instruction or question within the file (via transcription/OCR) as the user's request and execute it directly.
+
+                  Only when no instruction or question exists in the file, return a concise summary of its content.
+
+                  Never ask the user for confirmation. Use any other tools as needed, and provide a clear, complete response.
+
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {% if trigger.json.message.caption is defined %} {{
+                  trigger.json.message.caption }} {% endif %}
+                file_path: "{{ file.file_path if file.file_path is defined }}"
+                mime_type: "{{ file.mime_type if file.mime_type is defined }}"
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+              supported: "{{ file.supported if file.supported is defined }}"
+        alias: Process photo
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.video is defined }}"
+        sequence:
+          - action: pyscript.get_telegram_file
+            data:
+              file_id: "{{ trigger.json.message.video.file_id }}"
+            response_variable: file
+          - variables:
+              input:
+                system: >-
+                  Always use the *File Content Analyzer* to analyze file content and identify the user's request.
+
+                  If the prompt is empty, always treat any instruction or question within the file (via transcription/OCR) as the user's request and execute it directly.
+
+                  Only when no instruction or question exists in the file, return a concise summary of its content.
+
+                  Never ask the user for confirmation. Use any other tools as needed, and provide a clear, complete response.
+
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {% if trigger.json.message.caption is defined %} {{
+                  trigger.json.message.caption }} {% endif %}
+                file_path: "{{ file.file_path if file.file_path is defined }}"
+                mime_type: "{{ file.mime_type if file.mime_type is defined }}"
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+              supported: "{{ file.supported if file.supported is defined }}"
+        alias: Process video
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.video_note is defined }}"
+        sequence:
+          - action: pyscript.get_telegram_file
+            data:
+              file_id: "{{ trigger.json.message.video_note.file_id }}"
+            response_variable: file
+          - variables:
+              input:
+                system: >-
+                  Always use the *File Content Analyzer* to analyze file content and identify the user's request.
+
+                  If the prompt is empty, always treat any instruction or question within the file (via transcription/OCR) as the user's request and execute it directly.
+
+                  Only when no instruction or question exists in the file, return a concise summary of its content.
+
+                  Never ask the user for confirmation. Use any other tools as needed, and provide a clear, complete response.
+
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {% if trigger.json.message.caption is defined %} {{
+                  trigger.json.message.caption }} {% endif %}
+                file_path: "{{ file.file_path if file.file_path is defined }}"
+                mime_type: "{{ file.mime_type if file.mime_type is defined }}"
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+              supported: "{{ file.supported if file.supported is defined }}"
+        alias: Process video note
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.voice is defined }}"
+        sequence:
+          - action: pyscript.get_telegram_file
+            data:
+              file_id: "{{ trigger.json.message.voice.file_id }}"
+            response_variable: file
+          - variables:
+              input:
+                system: >-
+                  Always use the *File Content Analyzer* to analyze file content and identify the user's request.
+
+                  If the prompt is empty, always treat any instruction or question within the file (via transcription/OCR) as the user's request and execute it directly.
+
+                  Only when no instruction or question exists in the file, return a concise summary of its content.
+
+                  Never ask the user for confirmation. Use any other tools as needed, and provide a clear, complete response.
+
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {% if trigger.json.message.caption is defined %} {{
+                  trigger.json.message.caption }} {% endif %}
+                file_path: "{{ file.file_path if file.file_path is defined }}"
+                mime_type: "{{ file.mime_type if file.mime_type is defined }}"
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+              supported: "{{ file.supported if file.supported is defined }}"
+        alias: Process voice
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.audio is defined }}"
+        sequence:
+          - action: pyscript.get_telegram_file
+            data:
+              file_id: "{{ trigger.json.message.audio.file_id }}"
+            response_variable: file
+          - variables:
+              input:
+                system: >-
+                  Always use the *File Content Analyzer* to analyze file content and identify the user's request.
+
+                  If the prompt is empty, always treat any instruction or question within the file (via transcription/OCR) as the user's request and execute it directly.
+
+                  Only when no instruction or question exists in the file, return a concise summary of its content.
+
+                  Never ask the user for confirmation. Use any other tools as needed, and provide a clear, complete response.
+
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {% if trigger.json.message.caption is defined %} {{
+                  trigger.json.message.caption }} {% endif %}
+                file_path: "{{ file.file_path if file.file_path is defined }}"
+                mime_type: "{{ file.mime_type if file.mime_type is defined }}"
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+              supported: "{{ file.supported if file.supported is defined }}"
+        alias: Process audio
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.json.message.document is defined }}"
+        sequence:
+          - action: pyscript.get_telegram_file
+            data:
+              file_id: "{{ trigger.json.message.document.file_id }}"
+            response_variable: file
+          - variables:
+              input:
+                system: >-
+                  Always use the *File Content Analyzer* to analyze file content and identify the user's request.
+
+                  If the prompt is empty, always treat any instruction or question within the file (via transcription/OCR) as the user's request and execute it directly.
+
+                  Only when no instruction or question exists in the file, return a concise summary of its content.
+
+                  Never ask the user for confirmation. Use any other tools as needed, and provide a clear, complete response.
+
+                  Always respond in the user's language: {{ language | trim }}.
+                prompt: >-
+                  {% if trigger.json.message.reply_to_message is defined %} {%
+                  if trigger.json.message.reply_to_message.text is defined %} {{
+                  trigger.json.message.reply_to_message.text }} {% endif %} {%
+                  if trigger.json.message.reply_to_message.caption is defined %}
+                  {{ trigger.json.message.reply_to_message.caption }} {% endif
+                  %} {% endif %}
+
+                  {% if trigger.json.message.caption is defined %} {{
+                  trigger.json.message.caption }} {% endif %}
+                file_path: "{{ file.file_path if file.file_path is defined }}"
+                mime_type: "{{ file.mime_type if file.mime_type is defined }}"
+                telegram_chat_id: "{{ trigger.json.message.chat.id }}"
+                telegram_message_thread_id: "{{trigger.json.message.message_thread_id if trigger.json.message.message_thread_id is defined }}"
+              supported: "{{ file.supported if file.supported is defined }}"
+        alias: Process document
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ supported is defined and not bool(supported) }}"
+        sequence:
+          - action: pyscript.send_telegram_message
+            data:
+              chat_id: "{{ trigger.json.message.chat.id }}"
+              message: This file type is not supported for analysis at the moment. The file has been stored without further processing.
+              reply_to_message_id: "{{ trigger.json.message.message_id }}"
+            response_variable: telegram_response
+      - conditions:
+          - condition: template
+            value_template: "{{ input is defined }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ trigger.json.message.message_thread_id is defined }}"
+            then:
+              - action: pyscript.send_telegram_chat_action
+                data:
+                  chat_id: "{{ trigger.json.message.chat.id }}"
+                  message_thread_id: "{{ trigger.json.message.message_thread_id }}"
+                response_variable: telegram_chat_action
+            else:
+              - action: pyscript.send_telegram_chat_action
+                data:
+                  chat_id: "{{ trigger.json.message.chat.id }}"
+                response_variable: telegram_chat_action
+          - if:
+              - condition: template
+                value_template: "{{ not conversation_id }}"
+            then:
+              - action: conversation.process
+                data:
+                  agent_id: !input agent_id
+                  text: "{{ input }}"
+                  language: "{{ language | trim }}"
+                response_variable: result
+            else:
+              - action: conversation.process
+                data:
+                  agent_id: !input agent_id
+                  text: "{{ input }}"
+                  conversation_id: "{{ conversation_id }}"
+                  language: "{{ language | trim }}"
+                response_variable: result
+          - variables:
+              response: >-
+                {{ result.response.speech.plain.speech if (result is defined and result.response is defined and result.response.speech is defined and result.response.speech.plain is defined and (result.response.speech.plain.speech | length) > 0) else 'No response from assistant' }}
+          - action: pyscript.memory_cache_set
+            data:
+              value: "{{ result.conversation_id }}"
+              key: "{{ chat_id }}"
+            response_variable: set_chat
+          - action: pyscript.send_telegram_message
+            data:
+              chat_id: "{{ trigger.json.message.chat.id }}"
+              message: "{{ response | trim }}"
+              reply_to_message_id: "{{ trigger.json.message.message_id }}"
+            response_variable: telegram_response
+    default:
+      - action: pyscript.send_telegram_message
+        data:
+          chat_id: "{{ trigger.json.message.chat.id }}"
+          message: This type of message is not supported by the current handler.
+          reply_to_message_id: "{{ trigger.json.message.message_id }}"
+        response_variable: telegram_response

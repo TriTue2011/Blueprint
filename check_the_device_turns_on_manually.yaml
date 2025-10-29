@@ -1,0 +1,55 @@
+blueprint:
+  name: Check The Device Turns On Manually
+  author: luuquangvu
+  description: >-
+    # Verify whether the device activated manually or via automation/application
+  domain: automation
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    linked_entity:
+      name: Entity
+      description: Entity to link
+      selector:
+        entity:
+          filter:
+            - domain:
+              - switch
+              - light
+    linked_boolean:
+      name: Input Boolean
+      description: Input Boolean Helper to link
+      selector:
+        entity:
+          filter:
+            - domain: input_boolean
+mode: queued
+max_exceeded: silent
+variables:
+  version: 20250923
+triggers:
+  - trigger: state
+    entity_id: !input linked_entity
+    from:
+      - 'on'
+      - 'off'
+    to:
+      - 'off'
+      - 'on'
+conditions: []
+actions:
+  - if:
+      - condition: template
+        value_template: "{{ trigger.to_state.state == 'on' }}"
+      - condition: template
+        value_template: "{{ trigger.to_state.context.parent_id is none }}"
+      - condition: template
+        value_template: "{{ trigger.to_state.context.user_id is none }}"
+    then:
+      - action: homeassistant.turn_on
+        target:
+          entity_id: !input linked_boolean
+    else:
+      - action: homeassistant.turn_off
+        target:
+          entity_id: !input linked_boolean

@@ -1,0 +1,1326 @@
+blueprint:
+  name: Devices Schedules
+  author: luuquangvu
+  description: >-
+    # Voice assistant friendly multi-device timer controller
+
+    * Manages per-entity timers with caching and deduplication.
+
+    * Supports start / cancel / cancel_all / extend / pause / resume / list modes.
+
+    * Each timer is stored under its own key: voice_timer:<id> (TTL = remaining + buffer).
+
+    * Maintains a global index: voice_timer_index (auto-compacted on start/list).
+
+    * De-duplication: cancel_existing | reuse_existing | error | none; match by: entity | actions | both
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * The Pyscript integration needs to be installed through HACS and properly configured.
+
+    * The `scripts/common_utilities.py` script need to be copied into the `config/pyscript` folder.
+
+    * This blueprint is a dependency for the `devices_schedules_full_llm.yaml` and the `devices_schedules_restart_handler.yaml` blueprints.
+
+    * The mentioned file(s) is/are included in the repository.
+
+    * Enable two Pyscript configuration options in `config/configuration.yaml` to permit the import of any Python package and to expose hass as a variable.
+
+    ```
+
+    #File configuration.yaml
+
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+
+    ```
+
+    ### Note
+
+    * Do not alter the default script name.
+  domain: script
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    advanced_settings:
+      name: Advanced settings
+      icon: mdi:tools
+      description: Configure optional global parameters (timer limits, dedupe behavior, cache keys, TTL buffer).
+      collapsed: true
+      input:
+        simultaneous:
+          name: Maximum simultaneous timers
+          description: Highest number of timers allowed to run in parallel.
+          selector:
+            number:
+              min: 20
+              max: 200
+          default: 100
+        dedupe_mode:
+          name: Duplicate handling mode
+          description: Controls behavior when a matching timer already exists (cancel_existing | reuse_existing | error | none)
+          default: cancel_existing
+          selector:
+            select:
+              options: [cancel_existing, reuse_existing, error, none]
+        dedupe_match:
+          name: Duplicate match criteria
+          description: Attributes used to determine duplicates (entity | actions | both)
+          default: both
+          selector:
+            select:
+              options: [entity, actions, both]
+        registry_index_key:
+          name: Cache index key
+          description: Cache key that stores the full list of timer IDs
+          default: voice_timer_index
+          selector:
+            text:
+        registry_timer_prefix:
+          name: Per-timer cache key prefix
+          description: Prefix prepended to each individual timer key in cache
+          default: "voice_timer:"
+          selector:
+            text:
+        ttl_buffer_seconds:
+          name: TTL buffer (seconds)
+          description: Seconds added to each timer's remaining duration when writing to cache
+          default: 120
+          selector:
+            number:
+              min: 60
+              max: 3600
+              unit_of_measurement: s
+              mode: box
+
+mode: parallel
+max: !input simultaneous
+max_exceeded: silent
+
+variables:
+  version: 20251014
+
+fields:
+  mode:
+    name: Operation mode
+    required: true
+    selector:
+      select:
+        options: [start, cancel, cancel_all, extend, pause, resume, list]
+    description: Required. Choose which action this script call should perform
+  timer_id:
+    name: Timer ID
+    description: Optional. Supply when acting on an existing timer (auto-generated during start if omitted)
+    selector:
+      text:
+  target_entity:
+    name: Target entity_id
+    description: Optional. Used by start/extend/pause/resume/cancel/cancel_all to identify and deduplicate timers
+    selector:
+      text:
+  duration_seconds:
+    name: Timer duration (START)
+    description: Required when mode = start; ignored for other modes
+    selector:
+      number:
+        min: 1
+        max: 604800
+        unit_of_measurement: s
+        mode: box
+  expire_actions:
+    name: Expire actions (START)
+    description: Optional. Only used when mode = start; executed on completion and reused by resume
+    selector:
+      action: {}
+  extend_seconds:
+    name: Additional seconds (EXTEND)
+    description: Required when mode = extend; number of seconds to add to the timer
+    selector:
+      number:
+        min: 1
+        max: 604800
+        unit_of_measurement: s
+        mode: box
+  list_entity_filter:
+    name: Entity filter (LIST)
+    description: Optional. Only used when mode = list; limits results to a specific entity_id
+    selector:
+      text:
+
+sequence:
+  - variables:
+      _mode: "{{ mode }}"
+      _tid_in: "{{ timer_id | default('', true) }}"
+      _entity_norm: "{{ target_entity | default('', true) | string | trim | lower }}"
+      _dur: "{{ duration_seconds | default(0, true) }}"
+      _expire_actions_in: "{{ expire_actions | default([], true) }}"
+      _ext: "{{ extend_seconds | default(0, true) }}"
+      _filter: "{{ list_entity_filter | default('', true) }}"
+      _dedupe_mode: !input dedupe_mode
+      _dedupe_match: !input dedupe_match
+      _index_key: !input registry_index_key
+      _prefix: !input registry_timer_prefix
+      _buf: !input ttl_buffer_seconds
+
+  # Read & compact index -> _IDX_ALIVE
+  - action: pyscript.memory_cache_get
+    data: { key: "{{ _index_key }}" }
+    response_variable: _idx_res
+  - variables:
+      _IDX_LIST: >
+        {% set idx_raw = _idx_res.value if _idx_res.status == 'ok' else [] %}
+        {% if idx_raw is sequence %}
+          {{ idx_raw }}
+        {% else %}
+          {{ [] }}
+        {% endif %}
+      _IDX_ALIVE: []
+  - repeat:
+      for_each: "{{ _IDX_LIST if _IDX_LIST is sequence else [] }}"
+      sequence:
+        - action: pyscript.memory_cache_get
+          data: { key: "{{ _prefix }}{{ repeat.item }}" }
+          response_variable: _tr
+        - choose:
+            - conditions: "{{ _tr.status == 'ok' }}"
+              sequence:
+                - variables:
+                    _IDX_ALIVE: >
+                      {% set current = (_IDX_ALIVE | list) if _IDX_ALIVE is sequence else [] %}
+                      {% set ns = namespace(out=[]) %}
+                      {% for existing in current %}
+                        {% if existing not in ns.out %}
+                          {% set ns.out = ns.out + [existing] %}
+                        {% endif %}
+                      {% endfor %}
+                      {% if repeat.item not in ns.out %}
+                        {% set ns.out = ns.out + [repeat.item] %}
+                      {% endif %}
+                      {{ ns.out }}
+  - variables:
+      _IDX_STALE: >
+        {% set stale = [] %}
+        {% set alive = _IDX_ALIVE if _IDX_ALIVE is sequence else [] %}
+        {% set idx_list = _IDX_LIST if _IDX_LIST is sequence else [] %}
+        {% for existing in idx_list %}
+          {% if existing not in alive %}
+            {% set stale = stale + [existing] %}
+          {% endif %}
+        {% endfor %}
+        {{ stale }}
+  - action: pyscript.memory_cache_index_update
+    data:
+      index_key: "{{ _index_key }}"
+      add: "{{ _IDX_ALIVE }}"
+      remove: "{{ _IDX_STALE }}"
+      ttl_seconds: 2592000  # 30 days
+    response_variable: cache_set_index
+  - variables:
+      _IDX_ALIVE: >
+        {% if cache_set_index.status == 'ok' %}
+          {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+          {{ ids }}
+        {% else %}
+          {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+        {% endif %}
+
+  # Gather active timers for dedupe checks
+  - variables:
+      _ACTIVE: []
+  - repeat:
+      for_each: "{{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}"
+      sequence:
+        - action: pyscript.memory_cache_get
+          data: { key: "{{ _prefix }}{{ repeat.item }}" }
+          response_variable: _ar
+        - variables:
+            _ar_data: "{{ _ar.value | default({}) if _ar.status == 'ok' else {} }}"
+        - choose:
+            - conditions: "{{ _ar.status == 'ok' and (_ar_data.status|string|lower) in ['running','paused'] }}"
+              sequence:
+                - variables:
+                    _ACTIVE_ITEM: >
+                      {% set raw_entity = _ar_data.entity_id | default('') %}
+                      {% set entity = raw_entity|string|trim|lower %}
+                      {% set raw_actions = _ar_data.actions if _ar_data.actions is defined else [] %}
+                      {% if raw_actions is mapping %}
+                        {% set raw_actions = [raw_actions] %}
+                      {% elif raw_actions is none %}
+                        {% set raw_actions = [] %}
+                      {% endif %}
+                      {% set ns_actions = namespace(out=[]) %}
+                      {% for step in raw_actions %}
+                        {% set svc = step.action | default('') %}
+                        {% if svc is string and svc|length > 0 %}
+                          {% set normalized = {
+                            'action': svc,
+                            'target': {'entity_id': entity},
+                            'data': step.data | default({})
+                          } %}
+                          {% set ns_actions.out = ns_actions.out + [normalized] %}
+                        {% endif %}
+                      {% endfor %}
+                      {% set actions = ns_actions.out %}
+                      {{ dict(_ar_data, **{
+                        'entity_id': entity,
+                        'actions': actions
+                      }) }}
+                    _ACTIVE: >
+                      {% set current = (_ACTIVE | list) if _ACTIVE is sequence else [] %}
+                      {{ current + [_ACTIVE_ITEM] }}
+
+  - choose:
+
+      #######################################################################
+      # START
+      #######################################################################
+      - conditions: "{{ _mode == 'start' }}"
+        sequence:
+          - variables:
+              _IDX_DEDUPE_REMOVALS: []
+          # Dedupe checks
+          - variables:
+              _same_entity: >-
+                {% if _entity_norm|length == 0 %}
+                  false
+                {% else %}
+                  {% set ns = namespace(match=false) %}
+                  {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                  {% for item in active %}
+                    {% set eid = item.entity_id | default('') | string | trim | lower %}
+                    {% if eid == _entity_norm %}
+                      {% set ns.match = true %}
+                    {% endif %}
+                  {% endfor %}
+                  {{ ns.match }}
+                {% endif %}
+              _new_actions: >
+                {% set raw = _expire_actions_in | default([]) %}
+                {% if raw is mapping %}
+                  {% set raw = [raw] %}
+                {% elif raw is none %}
+                  {% set raw = [] %}
+                {% endif %}
+                {% set ns = namespace(out=[]) %}
+                {% for step in raw %}
+                  {% set svc = step.action | default('') %}
+                  {% if svc is string and svc|length > 0 %}
+                    {% set normalized = {
+                      'action': svc,
+                      'target': {'entity_id': _entity_norm},
+                      'data': step.data | default({})
+                    } %}
+                    {% set ns.out = ns.out + [normalized] %}
+                  {% endif %}
+                {% endfor %}
+                {{ ns.out }}
+              _same_actions: >-
+                {% if _new_actions | count == 0 %}
+                  false
+                {% else %}
+                  {% set ns = namespace(match=false) %}
+                  {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                  {% for item in active %}
+                    {% if (item.actions | default([])) == _new_actions %}
+                      {% set ns.match = true %}
+                    {% endif %}
+                  {% endfor %}
+                  {{ ns.match }}
+                {% endif %}
+              _is_dup: >-
+                {% if _dedupe_match == 'entity' %}
+                  {{ _same_entity }}
+                {% elif _dedupe_match == 'actions' %}
+                  {{ _same_actions }}
+                {% else %}
+                  {{ _same_entity and _same_actions }}
+                {% endif %}
+
+          - choose:
+              # A) cancel_existing - cancel matching older timers
+              - conditions: "{{ _dedupe_mode == 'cancel_existing' and _is_dup }}"
+                sequence:
+                  - repeat:
+                      for_each: "{{ _ACTIVE if _ACTIVE is sequence else [] }}"
+                      sequence:
+                        - variables:
+                            _match_entity: "{{ (repeat.item.entity_id | default('') | string | trim | lower) == _entity_norm }}"
+                            _match_actions: "{{ (repeat.item.actions | default([])) == _new_actions }}"
+                        - choose:
+                            - conditions: >-
+                                {% if _dedupe_match == 'entity' %}
+                                  {{ _match_entity }}
+                                {% elif _dedupe_match == 'actions' %}
+                                  {{ _match_actions }}
+                                {% else %}
+                                  {{ _match_entity and _match_actions }}
+                                {% endif %}
+                              sequence:
+                                - event: device_timer_signal
+                                  event_data: { timer_id: "{{ repeat.item.id }}", reason: "cancel" }
+                                - action: pyscript.memory_cache_set
+                                  data:
+                                    key: "{{ _prefix }}{{ repeat.item.id }}"
+                                    value: >
+                                      {{ dict(repeat.item, **{'status':'canceled','canceled_at': now().isoformat()}) }}
+                                    ttl_seconds: "{{ _buf|int }}"
+                                  response_variable: cache_set_timer_id
+                                - variables:
+                                    _IDX_ALIVE: >
+                                      {% set alive = _IDX_ALIVE if _IDX_ALIVE is sequence else [] %}
+                                      {% set ns = namespace(out=[]) %}
+                                      {% for existing in alive %}
+                                        {% if existing != repeat.item.id and existing not in ns.out %}
+                                          {% set ns.out = ns.out + [existing] %}
+                                        {% endif %}
+                                      {% endfor %}
+                                      {{ ns.out }}
+                                    _ACTIVE: >
+                                      {% set items = _ACTIVE if _ACTIVE is sequence else [] %}
+                                      {% set ns_items = namespace(out=[]) %}
+                                      {% for t in items %}
+                                        {% if t.id != repeat.item.id %}
+                                          {% set ns_items.out = ns_items.out + [t] %}
+                                        {% endif %}
+                                      {% endfor %}
+                                      {{ ns_items.out }}
+                                    _IDX_DEDUPE_REMOVALS: >
+                                      {% set removed = (_IDX_DEDUPE_REMOVALS | list) if _IDX_DEDUPE_REMOVALS is sequence else [] %}
+                                      {% if repeat.item.id not in removed %}
+                                        {% set removed = removed + [repeat.item.id] %}
+                                      {% endif %}
+                                      {{ removed }}
+
+              # B) reuse_existing - do not create a new one
+              - conditions: "{{ _dedupe_mode == 'reuse_existing' and _is_dup }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='start',
+                            status='reuse_existing',
+                            entity=_entity_norm,
+                            reason='existing_timer_active',
+                            requested_timer=_tid_in,
+                            message="reuse_existing: timer already active for " ~ (_entity_norm | default('unknown entity', true))
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+
+              # C) error - abort the new timer
+              - conditions: "{{ _dedupe_mode == 'error' and _is_dup }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='start',
+                            status='error',
+                            entity=_entity_norm,
+                            reason='duplicate_timer',
+                            match_policy=_dedupe_match,
+                            message="duplicate timer (" ~ (_dedupe_match | default('unknown', true)) ~ ") - aborting"
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+
+          - variables:
+              _IDX_ALIVE: >
+                {% set removed = _IDX_DEDUPE_REMOVALS if _IDX_DEDUPE_REMOVALS is sequence else [] %}
+                {% set current = _IDX_ALIVE if _IDX_ALIVE is sequence else [] %}
+                {% set ns = namespace(out=[]) %}
+                {% for existing in current %}
+                  {% if existing not in removed and existing not in ns.out %}
+                    {% set ns.out = ns.out + [existing] %}
+                  {% endif %}
+                {% endfor %}
+                {{ ns.out }}
+              _IDX_DEDUPE_REMOVALS: "[]"
+          - action: pyscript.memory_cache_index_update
+            data:
+              index_key: "{{ _index_key }}"
+              add: "{{ _IDX_ALIVE }}"
+              remove: "{{ _IDX_DEDUPE_REMOVALS }}"
+              ttl_seconds: 2592000
+            response_variable: cache_set_index
+          - variables:
+              _IDX_ALIVE: >
+                {% if cache_set_index.status == 'ok' %}
+                  {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                  {{ ids }}
+                {% else %}
+                  {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                {% endif %}
+
+          # Create id + persist per-timer
+          - choose:
+              - conditions: "{{ _dur|int <= 0 }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='start',
+                            status='invalid_duration',
+                            requested_duration=_dur
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - variables:
+              _id: >-
+                {% if _tid_in|length > 0 %}
+                  {{ _tid_in }}
+                {% else %}
+                  {% set slug = (_entity_norm|default('timer')|lower|regex_replace('[^a-z0-9]+','_')) %}
+                  {% set slug = slug if slug|length > 0 else 'timer' %}
+                  {% set ts = now().strftime('%Y%m%d%H%M%S%f') %}
+                  {% set entropy = '%05x' % (range(100000) | random) %}
+                  {{ slug ~ '__' ~ ts ~ '_' ~ entropy }}
+                {% endif %}
+              _end_dt: "{{ now() + timedelta(seconds=_dur|int) }}"
+              _end_iso: "{{ as_datetime(_end_dt).isoformat() }}"
+              _item: >
+                {{ dict(
+                  id=_id,
+                  entity_id=_entity_norm,
+                  status='running',
+                  created_at=now().isoformat(),
+                  end=_end_iso,
+                  remaining=_dur|int,
+                  actions=_new_actions
+
+                ) }}
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id }}"
+              value: "{{ _item }}"
+              ttl_seconds: "{{ (_dur|int) + (_buf|int) }}"
+            response_variable: cache_set_timer_id
+
+          # Update index (append id if missing)
+          - action: pyscript.memory_cache_index_update
+            data:
+              index_key: "{{ _index_key }}"
+              add: "{{ _id }}"
+              ttl_seconds: 2592000
+            response_variable: cache_set_index
+          - variables:
+              _IDX_ALIVE: >
+                {% if cache_set_index.status == 'ok' %}
+                  {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                  {{ ids }}
+                {% else %}
+                  {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                {% endif %}
+
+          # Wait for expire, extend, cancel, or pause signals
+          - variables:
+              _wait_loop_active: true
+          - repeat:
+              while: "{{ _wait_loop_active }}"
+              sequence:
+                - wait_for_trigger:
+                    - trigger: template
+                      value_template: "{{ now() >= as_datetime(_end_iso) }}"
+                    - trigger: event
+                      event_type: device_timer_signal
+                      event_data: { timer_id: "{{ _id }}" }
+                  timeout: "{{ (as_datetime(_end_iso) - now()).total_seconds()|int + 5 }}"
+                  continue_on_timeout: true
+                - variables:
+                    _wait_is_event: "{{ wait.trigger is not none and wait.trigger.platform == 'event' }}"
+                    _wait_reason: "{{ wait.trigger.event.data.reason | default('cancel') if _wait_is_event else '' }}"
+                - choose:
+                    - conditions: "{{ _wait_is_event and (_wait_reason | lower) == 'extend' }}"
+                      sequence:
+                        - variables:
+                            _wait_new_end: "{{ wait.trigger.event.data.new_end | default(_item.end, true) }}"
+                            _wait_new_remaining: "{{ (wait.trigger.event.data.new_remaining | default(_item.remaining, true)) | int }}"
+                            _item: >
+                              {{ dict(_item, **{'end': _wait_new_end, 'remaining': _wait_new_remaining}) }}
+                            _end_iso: "{{ _wait_new_end }}"
+                    - conditions: "{{ _wait_is_event and (_wait_reason | lower) == 'pause' }}"
+                      sequence:
+                        - variables:
+                            _wait_loop_active: false
+                            _stop_result: >
+                              {{
+                                dict(
+                                  mode=_mode,
+                                  status='paused_by_signal',
+                                  timer_id=_id,
+                                  entity=_entity_norm,
+                                  signal_reason='pause',
+                                  message="timer " ~ (_id | default('unknown', true)) ~ " paused via signal"
+                                )
+                              }}
+                        - stop: ""
+                          response_variable: _stop_result
+                    - conditions: "{{ _wait_is_event }}"
+                      sequence:
+                        - variables:
+                            _wait_loop_active: false
+                        # Remove from index
+                        - action: pyscript.memory_cache_index_update
+                          data:
+                            index_key: "{{ _index_key }}"
+                            remove: "{{ _id }}"
+                            ttl_seconds: 2592000
+                          response_variable: cache_set_index
+                        - variables:
+                            _IDX_ALIVE: >
+                              {% if cache_set_index.status == 'ok' %}
+                                {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                                {{ ids }}
+                              {% else %}
+                                {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                              {% endif %}
+                        # Mark canceled + short TTL
+                        - action: pyscript.memory_cache_set
+                          data:
+                            key: "{{ _prefix }}{{ _id }}"
+                            value: >
+                              {{ dict(_item, **{'status':'canceled','canceled_at': now().isoformat()}) }}
+                            ttl_seconds: "{{ _buf|int }}"
+                          response_variable: cache_set_timer_id
+                        - variables:
+                            _stop_result: >
+                              {{
+                                dict(
+                                  mode=_mode,
+                                  status='stopped_by_signal',
+                                  timer_id=_id,
+                                  entity=_entity_norm,
+                                  signal_reason=_wait_reason | default('cancel', true),
+                                  message="timer " ~ (_id | default('unknown', true)) ~ " stopped via signal (reason: " ~ (_wait_reason | default('cancel', true)) ~ ")"
+                                )
+                              }}
+                        - stop: ""
+                          response_variable: _stop_result
+                  default:
+                    - variables:
+                        _wait_loop_active: false
+
+          # Expired: run action (if any) + mark expired + remove from index
+          - variables:
+              _run_actions: "{{ (_item.actions | default([])) | selectattr('action','defined') | list }}"
+          - choose:
+              - conditions: "{{ _run_actions | count > 0 }}"
+                sequence:
+                  - repeat:
+                      for_each: "{{ _run_actions }}"
+                      sequence:
+                        - action: "{{ repeat.item.action }}"
+                          target: "{{ repeat.item.target | default({}) }}"
+                          data: "{{ repeat.item.data | default({}) }}"
+          - action: pyscript.memory_cache_index_update
+            data:
+              index_key: "{{ _index_key }}"
+              remove: "{{ _id }}"
+              ttl_seconds: 2592000
+            response_variable: cache_set_index
+          - variables:
+              _IDX_ALIVE: >
+                {% if cache_set_index.status == 'ok' %}
+                  {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                  {{ ids }}
+                {% else %}
+                  {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                {% endif %}
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id }}"
+              value: >
+                {{ dict(_item, **{'status':'expired','expired_at': now().isoformat(),'remaining':0}) }}
+              ttl_seconds: "{{ _buf|int }}"
+            response_variable: cache_set_timer_id
+          - variables:
+              _stop_result: >
+                {{
+                  dict(
+                    mode='start',
+                    status='completed',
+                    timer_id=_id,
+                    entity=_entity_norm,
+                    created_at=_item.created_at | default('', true),
+                    end=_item.end | default('', true),
+                    actions=_item.actions | default([])
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result
+
+      #######################################################################
+      # CANCEL (by id or latest by entity)
+      #######################################################################
+      - conditions: "{{ _mode == 'cancel' }}"
+        sequence:
+          - variables:
+              _cancel_candidates: >
+                {% if _entity_norm|length > 0 %}
+                  {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                  {{ active | selectattr('entity_id', 'equalto', _entity_norm) | list }}
+                {% else %}
+                  {{ [] }}
+                {% endif %}
+              _cancel_latest: "{{ (_cancel_candidates | sort(attribute='created_at'))[-1] if _cancel_candidates|count>0 else none }}"
+              _id_resolved: >
+                {{ _tid_in if _tid_in|length > 0 else (_cancel_latest.id if _cancel_latest is mapping else '') }}
+          - choose:
+              - conditions: "{{ _id_resolved|length == 0 }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='cancel',
+                            status='not_found',
+                            requested_timer=_tid_in,
+                            entity=_entity_norm
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - action: pyscript.memory_cache_get
+            data: { key: "{{ _prefix }}{{ _id_resolved }}" }
+            response_variable: _cancel_timer
+          - variables:
+              _cancel_timer_data: "{{ _cancel_timer.value | default({}) if _cancel_timer.status == 'ok' else {} }}"
+              _T: "{{ _cancel_timer_data if _cancel_timer.status == 'ok' else {'id': _id_resolved} }}"
+              _cancel_remaining: >-
+                {% if _cancel_timer.status == 'ok' %}
+                  {% if (_T.status|string|lower) == 'running' and (_T.end is defined) %}
+                    {{ (as_timestamp(as_datetime(_T.end)) - as_timestamp(now())) | int(0) }}
+                  {% else %}
+                    {{ _T.remaining|default(0)|int(0) }}
+                  {% endif %}
+                {% else %}
+                  0
+                {% endif %}
+              _T2: >
+                {{ dict(_T, **{'remaining': (_cancel_remaining if _cancel_remaining > 0 else 0)}) }}
+          # Remove from index
+          - action: pyscript.memory_cache_index_update
+            data:
+              index_key: "{{ _index_key }}"
+              remove: "{{ _id_resolved }}"
+              ttl_seconds: 2592000
+            response_variable: cache_set_index
+          - variables:
+              _IDX_ALIVE: >
+                {% if cache_set_index.status == 'ok' %}
+                  {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                  {{ ids }}
+                {% else %}
+                  {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                {% endif %}
+          - variables:
+              _IDX_ALIVE: >
+                {% if cache_set_index.status == 'ok' %}
+                  {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                  {{ ids }}
+                {% else %}
+                  {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                {% endif %}
+          # Mark canceled + short TTL
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id_resolved }}"
+              value: >
+                {{ dict(_T2, **{'status':'canceled','canceled_at':now().isoformat()}) }}
+              ttl_seconds: "{{ _buf|int }}"
+            response_variable: cache_set_timer_id
+          # Notify running instance to stop
+          - event: device_timer_signal
+            event_data: { timer_id: "{{ _id_resolved }}", reason: "cancel" }
+          - variables:
+              _stop_result: >
+                {{
+                  dict(
+                    mode='cancel',
+                    status='success',
+                    timer_id=_id_resolved,
+                    entity=_entity_norm,
+                    seconds_remaining=_cancel_remaining
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result
+
+      #######################################################################
+      # CANCEL ALL (optionally filtered by entity)
+      #######################################################################
+      - conditions: "{{ _mode == 'cancel_all' }}"
+        sequence:
+          - variables:
+              _cancel_all_candidates: >
+                {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                {% if _entity_norm|length > 0 %}
+                  {% set filtered = [] %}
+                  {% for item in active %}
+                    {% set entity = item.entity_id | default('') | string | trim | lower %}
+                    {% if entity == _entity_norm %}
+                      {% set filtered = filtered + [item] %}
+                    {% endif %}
+                  {% endfor %}
+                  {{ filtered }}
+                {% else %}
+                  {{ active }}
+                {% endif %}
+              _cancel_all_count: "{{ _cancel_all_candidates | length if _cancel_all_candidates is sequence else 0 }}"
+          - choose:
+              - conditions: "{{ _cancel_all_count == 0 }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='cancel_all',
+                            status='nothing_to_cancel',
+                            entity=_entity_norm,
+                            count=0
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - variables:
+              _cancel_all_ids: >
+                {% set candidates = _cancel_all_candidates if _cancel_all_candidates is sequence else [] %}
+                {% set ns = namespace(ids=[]) %}
+                {% for item in candidates %}
+                  {% set tid = item.id | default('') %}
+                  {% if tid|length > 0 and tid not in ns.ids %}
+                    {% set ns.ids = ns.ids + [tid] %}
+                  {% endif %}
+                {% endfor %}
+                {{ ns.ids }}
+          - action: pyscript.memory_cache_index_update
+            data:
+              index_key: "{{ _index_key }}"
+              remove: "{{ _cancel_all_ids }}"
+              ttl_seconds: 2592000
+            response_variable: cache_set_index
+          - variables:
+              _IDX_ALIVE: >
+                {% if cache_set_index.status == 'ok' %}
+                  {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                  {{ ids }}
+                {% else %}
+                  {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                {% endif %}
+              _CANCELLED: []
+          - repeat:
+              for_each: "{{ _cancel_all_candidates if _cancel_all_candidates is sequence else [] }}"
+              sequence:
+                - variables:
+                    _cancel_all_id: "{{ repeat.item.id | default('') }}"
+                - choose:
+                    - conditions: "{{ _cancel_all_id|length > 0 }}"
+                      sequence:
+                        - action: pyscript.memory_cache_get
+                          data: { key: "{{ _prefix }}{{ _cancel_all_id }}" }
+                          response_variable: _cancel_all_item
+                        - variables:
+                            _cancel_all_raw: "{{ _cancel_all_item.value | default({}) if _cancel_all_item.status == 'ok' else repeat.item }}"
+                            _cancel_all_entity: "{{ (_cancel_all_raw.entity_id | default(repeat.item.entity_id | default(''))) | string | trim | lower }}"
+                            _cancel_all_remaining: >-
+                              {% if _cancel_all_item.status == 'ok' %}
+                                {% if (_cancel_all_raw.status|string|lower) == 'running' and (_cancel_all_raw.end is defined) %}
+                                  {{ (as_timestamp(as_datetime(_cancel_all_raw.end)) - as_timestamp(now())) | int(0) }}
+                                {% else %}
+                                  {{ _cancel_all_raw.remaining | default(0) | int(0) }}
+                                {% endif %}
+                              {% else %}
+                                {{ repeat.item.remaining | default(0) | int(0) }}
+                              {% endif %}
+                            _cancel_all_remaining_safe: "{{ _cancel_all_remaining if _cancel_all_remaining > 0 else 0 }}"
+                            _cancel_all_updated: >
+                              {{ dict(_cancel_all_raw, **{
+                                'entity_id': _cancel_all_entity,
+                                'status': 'canceled',
+                                'canceled_at': now().isoformat(),
+                                'remaining': _cancel_all_remaining_safe
+                              }) }}
+                        - action: pyscript.memory_cache_set
+                          data:
+                            key: "{{ _prefix }}{{ _cancel_all_id }}"
+                            value: "{{ _cancel_all_updated }}"
+                            ttl_seconds: "{{ _buf|int }}"
+                          response_variable: cache_set_timer_id
+                        - event: device_timer_signal
+                          event_data: { timer_id: "{{ _cancel_all_id }}", reason: "cancel" }
+                        - variables:
+                            _CANCELLED: >
+                              {% set current = (_CANCELLED | list) if _CANCELLED is sequence else [] %}
+                              {{ current + [dict(
+                                id=_cancel_all_id,
+                                entity_id=_cancel_all_entity,
+                                seconds_remaining=_cancel_all_remaining_safe
+                              )] }}
+          - variables:
+              _stop_result: >
+                {{
+                  dict(
+                    mode='cancel_all',
+                    status='success',
+                    entity=_entity_norm,
+                    count=_cancel_all_count | int,
+                    canceled=_CANCELLED if _CANCELLED is sequence else []
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result
+
+      #######################################################################
+      # EXTEND (+N seconds)
+      #######################################################################
+      - conditions: "{{ _mode == 'extend' }}"
+        sequence:
+          - variables:
+              _extend_candidates: >
+                {% if _entity_norm|length > 0 %}
+                  {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                  {{ active | selectattr('entity_id', 'equalto', _entity_norm) | list }}
+                {% else %}
+                  {{ [] }}
+                {% endif %}
+              _extend_latest: "{{ (_extend_candidates | sort(attribute='created_at'))[-1] if _extend_candidates|count>0 else none }}"
+              _id_resolved: >
+                {{ _tid_in if _tid_in|length > 0 else (_extend_latest.id if _extend_latest is mapping else '') }}
+          - choose:
+              - conditions: "{{ _id_resolved|length == 0 }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='extend',
+                            status='not_found',
+                            requested_timer=_tid_in,
+                            entity=_entity_norm
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - action: pyscript.memory_cache_get
+            data: { key: "{{ _prefix }}{{ _id_resolved }}" }
+            response_variable: _tres
+          - variables:
+              _tres_data: "{{ _tres.value | default({}) if _tres.status == 'ok' else {} }}"
+          - choose:
+              - conditions: "{{ not (_tres.status == 'ok' and (_tres_data.status|string|lower) in ['running','paused']) }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='extend',
+                            status='invalid_state',
+                            timer_id=_id_resolved,
+                            entity=_entity_norm,
+                            timer_status=_tres_data.status | default('unknown')
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - variables:
+              _T: "{{ _tres_data }}"
+              _new_end: >-
+                {% if (_T.status|string|lower) == 'running' %}
+                  {{ (as_datetime(_T.end | default(now())) + timedelta(seconds=_ext|int)).isoformat() }}
+                {% elif (_T.status|string|lower) == 'paused' %}
+                  {{ (now() + timedelta(seconds=(_T.remaining|int + _ext|int))).isoformat() }}
+                {% else %}
+                  {{ _T.end }}
+                {% endif %}
+              _new_remaining: >-
+                {% if (_T.status|string|lower) == 'running' %}
+                  {% set delta = (as_timestamp(as_datetime(_new_end)) - as_timestamp(now())) | int %}
+                {% elif (_T.status|string|lower) == 'paused' %}
+                  {% set delta = (_T.remaining|int(0) + _ext|int(0)) %}
+                {% else %}
+                  {% set delta = _T.remaining|int(0) %}
+                {% endif %}
+                {{ delta if delta > 0 else 0 }}
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id_resolved }}"
+              value: >
+                {{ dict(_T, **{'end': _new_end, 'remaining': _new_remaining}) }}
+              ttl_seconds: "{{ (_new_remaining|int) + (_buf|int) }}"
+            response_variable: cache_set_timer_id
+          - event: device_timer_signal
+            event_data:
+              timer_id: "{{ _id_resolved }}"
+              reason: "extend"
+              new_end: "{{ _new_end }}"
+              new_remaining: "{{ _new_remaining }}"
+          - variables:
+              _stop_result: >
+                {{
+                  dict(
+                    mode='extend',
+                    status='success',
+                    timer_id=_id_resolved,
+                    entity=_entity_norm,
+                    extended_seconds=_ext | int,
+                    new_end=_new_end,
+                    new_remaining_seconds=_new_remaining
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result
+
+      #######################################################################
+      # PAUSE
+      #######################################################################
+      - conditions: "{{ _mode == 'pause' }}"
+        sequence:
+          - variables:
+              _pause_candidates: >
+                {% if _entity_norm|length > 0 %}
+                  {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                  {{ active | selectattr('entity_id', 'equalto', _entity_norm) | list }}
+                {% else %}
+                  {{ [] }}
+                {% endif %}
+              _pause_latest: "{{ (_pause_candidates | sort(attribute='created_at'))[-1] if _pause_candidates|count>0 else none }}"
+              _id_resolved: >
+                {{ _tid_in if _tid_in|length > 0 else (_pause_latest.id if _pause_latest is mapping else '') }}
+          - choose:
+              - conditions: "{{ _id_resolved|length == 0 }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='pause',
+                            status='not_found',
+                            requested_timer=_tid_in,
+                            entity=_entity_norm
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - action: pyscript.memory_cache_get
+            data: { key: "{{ _prefix }}{{ _id_resolved }}" }
+            response_variable: _tres
+          - variables:
+              _tres_data: "{{ _tres.value | default({}) if _tres.status == 'ok' else {} }}"
+          - choose:
+              - conditions: "{{ not (_tres.status == 'ok' and (_tres_data.status|string|lower) == 'running') }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='pause',
+                            status='invalid_state',
+                            timer_id=_id_resolved,
+                            entity=_entity_norm,
+                            timer_status=_tres_data.status | default('unknown')
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - variables:
+              _T: "{{ _tres_data }}"
+              _remain: "{{ (as_timestamp(as_datetime(_T.end | default(now()))) - as_timestamp(now())) | int }}"
+              _remain2: "{{ iif(_remain>0, _remain, 0) }}"
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id_resolved }}"
+              value: >
+                {{ dict(_T, **{'status':'paused','paused_at':now().isoformat(),'remaining': _remain2}) }}
+              ttl_seconds: "{{ (_remain2|int) + (_buf|int) }}"
+            response_variable: cache_set_timer_id
+          - event: device_timer_signal
+            event_data: { timer_id: "{{ _id_resolved }}", reason: "pause" }
+          - variables:
+              _stop_result: >
+                {{
+                  dict(
+                    mode='pause',
+                    status='success',
+                    timer_id=_id_resolved,
+                    entity=_entity_norm,
+                    remaining_seconds=_remain2
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result
+
+      #######################################################################
+      # RESUME
+      #######################################################################
+      - conditions: "{{ _mode == 'resume' }}"
+        sequence:
+          - variables:
+              _resume_candidates: >
+                {% if _entity_norm|length > 0 %}
+                  {% set active = _ACTIVE if _ACTIVE is sequence else [] %}
+                  {{ active | selectattr('entity_id', 'equalto', _entity_norm) | list }}
+                {% else %}
+                  {{ [] }}
+                {% endif %}
+              _resume_latest: "{{ (_resume_candidates | sort(attribute='created_at'))[-1] if _resume_candidates|count>0 else none }}"
+              _id_resolved: >
+                {{ _tid_in if _tid_in|length > 0 else (_resume_latest.id if _resume_latest is mapping else '') }}
+          - choose:
+              - conditions: "{{ _id_resolved|length == 0 }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='resume',
+                            status='not_found',
+                            requested_timer=_tid_in,
+                            entity=_entity_norm
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - action: pyscript.memory_cache_get
+            data: { key: "{{ _prefix }}{{ _id_resolved }}" }
+            response_variable: _tres
+          - variables:
+              _tres_data: "{{ _tres.value | default({}) if _tres.status == 'ok' else {} }}"
+          - choose:
+              - conditions: "{{ not (_tres.status == 'ok' and (_tres_data.status|string|lower) == 'paused' and (_tres_data.remaining|int) > 0) }}"
+                sequence:
+                  - variables:
+                      _stop_result: >
+                        {{
+                          dict(
+                            mode='resume',
+                            status='invalid_state',
+                            timer_id=_id_resolved,
+                            entity=_entity_norm,
+                            timer_status=_tres_data.status | default('unknown'),
+                            remaining=_tres_data.remaining | default(0)
+                          )
+                        }}
+                  - stop: ""
+                    response_variable: _stop_result
+          - variables:
+              _T: "{{ _tres_data }}"
+              _remaining: "{{ _T.remaining|int(0) }}"
+              _remaining_safe: "{{ _remaining if _remaining > 0 else 0 }}"
+              _new_end_iso: "{{ (now() + timedelta(seconds=_remaining_safe)).isoformat() }}"
+              _resumed_at: "{{ now().isoformat() }}"
+              _T_running: "{{ dict(_T, **{'status':'running','resumed_at': _resumed_at,'end':_new_end_iso,'remaining': _remaining_safe}) }}"
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id_resolved }}"
+              value: >
+                {{ _T_running }}
+              ttl_seconds: "{{ (_remaining_safe + (_buf|int)) }}"
+            response_variable: cache_set_timer_id
+          - variables:
+              _T: "{{ _T_running }}"
+              _current_end_iso: "{{ _new_end_iso }}"
+              _wait_loop_active: true
+          - repeat:
+              while: "{{ _wait_loop_active }}"
+              sequence:
+                - wait_for_trigger:
+                    - trigger: template
+                      value_template: "{{ now() >= as_datetime(_current_end_iso) }}"
+                    - trigger: event
+                      event_type: device_timer_signal
+                      event_data: { timer_id: "{{ _id_resolved }}" }
+                  timeout: "{{ (as_datetime(_current_end_iso) - now()).total_seconds()|int + 5 }}"
+                  continue_on_timeout: true
+                - variables:
+                    _wait_is_event: "{{ wait.trigger is not none and wait.trigger.platform == 'event' }}"
+                    _wait_reason: "{{ wait.trigger.event.data.reason | default('cancel') if _wait_is_event else '' }}"
+                - choose:
+                    - conditions: "{{ _wait_is_event and (_wait_reason | lower) == 'extend' }}"
+                      sequence:
+                        - variables:
+                            _wait_new_end: "{{ wait.trigger.event.data.new_end | default(_T.end, true) }}"
+                            _wait_new_remaining: "{{ (wait.trigger.event.data.new_remaining | default(_T.remaining, true)) | int }}"
+                            _T: >
+                              {{ dict(_T, **{'end': _wait_new_end, 'remaining': _wait_new_remaining}) }}
+                            _current_end_iso: "{{ _wait_new_end }}"
+                    - conditions: "{{ _wait_is_event and (_wait_reason | lower) == 'pause' }}"
+                      sequence:
+                        - variables:
+                            _wait_loop_active: false
+                            _stop_result: >
+                              {{
+                                dict(
+                                  mode='resume',
+                                  status='paused_by_signal',
+                                  timer_id=_id_resolved,
+                                  entity=_entity_norm,
+                                  signal_reason='pause',
+                                  message="resume paused by signal for timer " ~ (_id_resolved | default('unknown', true))
+                                )
+                              }}
+                        - stop: ""
+                          response_variable: _stop_result
+                    - conditions: "{{ _wait_is_event }}"
+                      sequence:
+                        - variables:
+                            _wait_loop_active: false
+                        - action: pyscript.memory_cache_index_update
+                          data:
+                            index_key: "{{ _index_key }}"
+                            remove: "{{ _id_resolved }}"
+                            ttl_seconds: 2592000
+                          response_variable: cache_set_index
+                        - variables:
+                            _IDX_ALIVE: >
+                              {% if cache_set_index.status == 'ok' %}
+                                {% set ids = cache_set_index.ids if cache_set_index.ids is sequence else [] %}
+                                {{ ids }}
+                              {% else %}
+                                {{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}
+                              {% endif %}
+                        - action: pyscript.memory_cache_set
+                          data:
+                            key: "{{ _prefix }}{{ _id_resolved }}"
+                            value: >
+                              {{ dict(_T, **{'status':'canceled','canceled_at': now().isoformat(),'remaining':0}) }}
+                            ttl_seconds: "{{ _buf|int }}"
+                          response_variable: cache_set_timer_id
+                        - variables:
+                            _stop_result: >
+                              {{
+                                dict(
+                                  mode='resume',
+                                  status='canceled_by_signal',
+                                  timer_id=_id_resolved,
+                                  entity=_entity_norm,
+                                  signal_reason=wait.trigger.event.data.reason | default('cancel', true),
+                                  message="resume canceled for timer " ~ (_id_resolved | default('unknown', true)) ~ " (reason: " ~ (wait.trigger.event.data.reason | default('cancel', true)) ~ ")"
+                                )
+                              }}
+                        - stop: ""
+                          response_variable: _stop_result
+                  default:
+                    - variables:
+                        _wait_loop_active: false
+          # Expired on resume - run stored action
+          - variables:
+              _resume_actions: "{{ (_T.actions | default([])) | selectattr('action','defined') | list }}"
+          - choose:
+              - conditions: "{{ _resume_actions | count > 0 }}"
+                sequence:
+                  - repeat:
+                      for_each: "{{ _resume_actions }}"
+                      sequence:
+                        - action: "{{ repeat.item.action }}"
+                          target: "{{ repeat.item.target | default({}) }}"
+                          data: "{{ repeat.item.data | default({}) }}"
+          - action: pyscript.memory_cache_set
+            data:
+              key: "{{ _prefix }}{{ _id_resolved }}"
+              value: >
+                {{ dict(_T, **{'status':'expired','expired_at': now().isoformat(),'end': _current_end_iso,'remaining':0}) }}
+              ttl_seconds: "{{ _buf|int }}"
+            response_variable: cache_set_timer_id
+          # Remove from index
+          - action: pyscript.memory_cache_index_update
+            data:
+              index_key: "{{ _index_key }}"
+              remove: "{{ _id_resolved }}"
+              ttl_seconds: 2592000
+            response_variable: cache_set_index
+          - variables:
+              _stop_result: >
+                {{
+                  dict(
+                    mode='resume',
+                    status='completed',
+                    timer_id=_id_resolved,
+                    entity=_entity_norm,
+                    created_at=_T.created_at | default('', true),
+                    end=_T.end | default('', true),
+                    actions=_resume_actions | default([])
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result
+
+      #######################################################################
+      # LIST
+      #######################################################################
+      - conditions: "{{ _mode == 'list' }}"
+        sequence:
+          - variables:
+              _ALIVE: []
+          - repeat:
+              for_each: "{{ _IDX_ALIVE if _IDX_ALIVE is sequence else [] }}"
+              sequence:
+                - action: pyscript.memory_cache_get
+                  data: { key: "{{ _prefix }}{{ repeat.item }}" }
+                  response_variable: _lr
+                - variables:
+                    _lr_data: "{{ _lr.value | default({}) if _lr.status == 'ok' else {} }}"
+                - choose:
+                    - conditions: "{{ _lr.status == 'ok' }}"
+                      sequence:
+                        - variables:
+                            _ALIVE: >
+                              {% set current = (_ALIVE | list) if _ALIVE is sequence else [] %}
+                              {{ current + [_lr_data] }}
+          - variables:
+              _filter_norm: "{{ (_filter|string)|lower }}"
+              _ACTIVE_LIST: >
+                {% set alive = _ALIVE if _ALIVE is sequence else [] %}
+                {% set ns = namespace(items=[]) %}
+                {% for t in alive %}
+                  {% set st = (t['status'] | default('') | string | lower) %}
+                  {% set entity_raw = t['entity_id'] | default('') %}
+                  {% set entity_id = entity_raw|string %}
+                  {% set entity_norm = entity_id|lower %}
+                  {% if st in ['running','paused'] and (_filter_norm|length==0 or entity_norm==_filter_norm) %}
+                    {% if st == 'running' %}
+                      {% set remain_calc = (as_timestamp(as_datetime(t['end'] | default(now()))) - as_timestamp(now())) | int(0) %}
+                    {% else %}
+                      {% set remain_calc = t['remaining'] | default(0) | int %}
+                    {% endif %}
+                    {% if remain_calc < 0 %}
+                      {% set remain_calc = 0 %}
+                    {% endif %}
+                    {% set ns.items = ns.items + [dict(
+                      id=t['id'],
+                      entity_id=entity_id,
+                      status=st,
+                      created_at=t['created_at'] | default(''),
+                      end=t['end'],
+                      remaining=remain_calc,
+                      actions=t['actions'] | default([])
+                    )] %}
+                  {% endif %}
+                {% endfor %}
+                {{ ns.items | sort(attribute='created_at') | reverse | list }}
+              _count: "{{ _ACTIVE_LIST | length if _ACTIVE_LIST is sequence else 0 }}"
+          - variables:
+              _summary: >
+                {% if _count == 0 %}
+                  No active timers {{ "matching entity " ~ _filter if _filter_norm|length>0 else "right now" }}.
+                {% else %}
+                  {{ "There " ~ ("is" if _count==1 else "are") ~ " " ~ _count ~ " active timer" ~ ("" if _count==1 else "s") ~ "." }}
+                {% endif %}
+              _stop_result: >
+                {{
+                  dict(
+                    count=_count | int,
+                    summary=_summary,
+                    entity_filter=_filter,
+                    timers=(_ACTIVE_LIST if _ACTIVE_LIST is sequence else [])
+                  )
+                }}
+          - stop: ""
+            response_variable: _stop_result

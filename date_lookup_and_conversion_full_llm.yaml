@@ -1,0 +1,144 @@
+blueprint:
+  name: Voice - Convert Calendar Dates
+  author: luuquangvu
+  description: >-
+    # Tool converts Solar date to Lunar date and vice versa used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * The Pyscript integration needs to be installed through HACS and properly configured.
+
+    * The `scripts/date_conversion_tool.py` script needs to be copied into the `config/pyscript` folder.
+
+    * The mentioned file(s) is/are included in the repository.
+
+    * Enable two Pyscript configuration options in `config/configuration.yaml` to permit the import of any Python package and to expose hass as a variable.
+
+    ```
+
+    #File configuration.yaml
+
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+
+    ```
+
+    ### Optional
+
+    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    * Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for date conversion from Solar date to Lunar date and vice versa.
+
+    * Make sure to expose the script to Assist after the script has been saved.
+
+    * Do not alter the default script name.
+
+    * Add additional aliases: `Get Auspicious Information` and `Get Day of Week` for this script.
+  domain: script
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        conversion_type_prompt:
+          name: Conversion Type Prompt
+          description: The prompt which will be used for the LLM can provide the type for the conversion.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            It must be one of the following two values: 's2l' to convert a Solar date to a Lunar date, or 'l2s' to convert a Lunar date to a Solar date.
+
+            After obtaining the result, ensure the response clearly specifies the day of the week, the Solar date, the Lunar date, and the number of days remaining or days elapsed.
+        date_prompt:
+          name: Date Prompt
+          description: The prompt which will be used for the LLM can provide the input date for the conversion.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Provide the date for the requested conversion using the format YYYY-MM-DD.
+
+            Always include the relevant date: today's date for today's request, tomorrow's date for tomorrow's request.
+
+            If the request does not specify a year, assume the current year.
+
+            Some specific Lunar calendar terms in Vietnamese:
+            'Ngày Rằm' refers to the 15th day of the requested month in the Lunar calendar.
+            'Tết Nguyên Đán' refers to the 1st day of the 1st month in the Lunar calendar (Lunar New Year).
+            'Tết Trung Thu' refers to the 15th day of the 8th month in the Lunar calendar (Mid-Autumn Festival).
+        leap_month_prompt:
+          name: Leap Month Prompt
+          description: The prompt which will be used for the LLM can provide the leap month for the conversion.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is optional.
+
+            Use this argument only when converting Lunar dates to Solar dates.
+
+            It must be one of the following two values: 'true' for a leap month, or 'false' for a regular month.
+mode: parallel
+max_exceeded: silent
+variables:
+  version: 20250923
+fields:
+  conversion_type:
+    name: Conversion Type
+    description: !input conversion_type_prompt
+    selector:
+      select:
+        options:
+          - s2l
+          - l2s
+    required: true
+  date:
+    name: Date
+    description: !input date_prompt
+    selector:
+      date:
+    required: true
+  leap_month:
+    name: Leap Month
+    description: !input leap_month_prompt
+    selector:
+      boolean:
+sequence:
+  - variables:
+      conversion_type: "{{ conversion_type | default('') | trim }}"
+      date: "{{ (date | as_datetime(default=now())).date() }}"
+      leap_month: "{{ leap_month | default(false) }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ not (conversion_type in ['s2l', 'l2s']) }}"
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to perform the date conversion because the conversion type is invalid.
+      - alias: Stop the script
+        stop: Unable to perform the date conversion because the conversion type is invalid.
+        response_variable: response
+  - action: pyscript.date_conversion_tool
+    response_variable: response
+    data:
+      conversion_type: "{{ conversion_type }}"
+      date: "{{ date }}"
+      leap_month: "{{ leap_month }}"
+  - stop: ""
+    response_variable: response

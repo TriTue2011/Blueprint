@@ -1,0 +1,76 @@
+blueprint:
+  name: Link On/Off State of Multiple Devices
+  author: luuquangvu
+  description: >-
+    # Link On/Off State of Multiple Devices
+
+    * Select multiple entities to link their on/off state. If any selected entity is turned on or off, the other selected entities will be sent a matching on or off command.
+
+    * You can select any entity, but only entities supported by the `homeassistant.turn_on` or `homeassistant.turn_off` action calls will work.
+
+    ## Requirements
+
+    * All selected entities must support `homeassistant.turn_on` and `homeassistant.turn_off`; otherwise, errors will be logged, and the blueprint will not work.
+
+    * Requires Home Assistant 2024.10.0 or newer.
+
+    ## Credits
+
+    * [@adchevrier](https://community.home-assistant.io/u/adchevrier) for the [initial blueprint](https://community.home-assistant.io/t/synchronize-the-on-off-state-of-2-entities/259010)
+
+    * [@hebus](https://community.home-assistant.io/u/hebus) for [this fantastic template](https://community.home-assistant.io/t/synchronize-the-on-off-state-of-2-entities/259010/38)
+  domain: automation
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    linked_entities:
+      name: Entities
+      description: Entities to link together
+      selector:
+        entity:
+          multiple: true
+mode: restart
+max_exceeded: silent
+variables:
+  version: 20250923
+  linked_entities: !input linked_entities
+triggers:
+  - trigger: state
+    entity_id: !input linked_entities
+    from:
+      - 'on'
+      - 'off'
+    to:
+      - 'off'
+      - 'on'
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.state != trigger.from_state.state }}"
+  - condition: template
+    value_template: "{{ (trigger.to_state.state == 'on') or (trigger.to_state.state == 'off') }}"
+  - condition: template
+    value_template: >-
+      {{
+        trigger.to_state.context.parent_id is none or
+        (
+          trigger.to_state.context.id != this.context.id and
+          trigger.to_state.context.id != this.context.parent_id and
+          trigger.to_state.context.parent_id != this.context.parent_id
+        ) or
+        (
+          trigger.to_state.context.id == this.context.id and
+          trigger.to_state.context.id == trigger.from_state.context.id and
+          trigger.to_state.context.parent_id == this.context.parent_id and
+          trigger.to_state.context.parent_id == trigger.from_state.context.parent_id
+        ) or
+        (
+          trigger.to_state.context.id == this.context.parent_id and
+          trigger.to_state.context.id == trigger.from_state.context.id and
+          trigger.to_state.context.parent_id == trigger.from_state.context.parent_id
+        )
+      }}
+actions:
+- action: homeassistant.turn_{{ trigger.to_state.state }}
+  target:
+    entity_id: >-
+      {{ expand(linked_entities) | selectattr('entity_id', '!=', trigger.entity_id) | map(attribute='entity_id') | list }}

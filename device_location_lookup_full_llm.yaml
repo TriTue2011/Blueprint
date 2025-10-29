@@ -1,0 +1,185 @@
+blueprint:
+  name: Voice - Find Device
+  author: luuquangvu
+  description: >-
+    # Find My Device Tool used for Voice Assistant
+
+    ## Features
+
+    * The Voice Assist will tell you if the device is at home or not, and the specific room where the device is located if possible.
+
+    * It can determine any BLE Device added by Bermuda BLE Trilateration integration: Android, iOS, some smartwatches, beacon tiles, ...
+
+    * It can determine any Mobile Device with the Home Assistant Companion App installed.
+
+    * If the device has the Home Assistant Companion App installed, it can also ring to locate more easily, even in Do Not Disturb mode.
+
+    * LLM has extremely limited knowledge about your device's location. It cannot know your device's actual GPS location but may have general information such as whether you are at home or in specific areas like the living room or kitchen. And it only accesses this information when you request it to locate your device.
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * Check out the guide `home_assistant_device_location_lookup_guide_en.md` for further details.
+
+    * An online LLM like Gemini or OpenAI.
+
+    * Expose Bermuda Device Tracker or Mobile Device Tracker entities to Assist.
+
+    * Only add one device tracker per physical device.
+
+    * If you expose your phone or tablet to Voice Assist using Bermuda Device Tracker, make sure to rename Bermuda Device the same as Mobile Device or Mobile Device name must be part of Bermuda Device name. Because this script identifies the relationship between them to find the notification action. This allows you to locate your phone in a specific room and make it ring.
+
+    * The `device_ringing_full_llm.yaml` blueprint needs to be installed.
+
+    * The mentioned file(s) is/are included in the repository.
+
+    * Consider adding entity aliases to make them easier to remember if needed.
+
+    * A template sensor stores all information about entity aliases needs to be configured in `config/configuration.yaml`; The sensor is required for friendly-name lookup.
+
+    ```
+
+    #File configuration.yaml
+
+    shell_command:
+      get_entity_alias: jq '[.data.entities[] | select(.options.conversation.should_expose == true and (.aliases | length > 0)) | {entity_id, aliases}]' ./.storage/core.entity_registry
+    template:
+      - triggers:
+          - trigger: homeassistant
+            event: start
+          - trigger: event
+            event_type: event_template_reloaded
+        actions:
+          - action: shell_command.get_entity_alias
+            response_variable: response
+        sensor:
+          - name: "Assist: Entity IDs and Aliases"
+            unique_id: entity_ids_and_aliases
+            icon: mdi:format-list-bulleted
+            device_class: timestamp
+            state: "{{ now().isoformat() }}"
+            attributes:
+              entities: "{{ response.stdout }}"
+
+    ```
+
+    ### Optional
+
+    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    * Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to determine if the device is at home or not, and the specific room where the device is located.
+
+    * Make sure to expose the script to Assist after the script has been saved.
+
+    * Do not alter the default script name.
+  domain: script
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    entity_aliases_settings:
+      name: Settings for Entity Aliases
+      icon: mdi:format-list-bulleted
+      description: You can use these settings to configure a template sensor that stores all information about entity aliases.
+      input:
+        entity_aliases:
+          name: Entity Aliases
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  integration: template
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        entities_prompt:
+          name: Entities Prompt
+          description: The prompt which will be used for the LLM can provide the device's name for the query.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Specify at least one device name to find it.
+
+            If requesting multiple devices, separate each device name with a semicolon.
+
+            If the query does not specify a device, provide all relevant devices based on the context.
+
+            After obtaining the result, if the device supports ringing, prompt the user to activate its ringing function.
+mode: parallel
+max_exceeded: silent
+variables:
+  version: 20250923
+fields:
+  entities:
+    name: Entities
+    description: !input entities_prompt
+    selector:
+        text:
+    required: true
+sequence:
+  - variables:
+      entity_aliases: !input entity_aliases
+      entities: "{{ entities | default('') | trim }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: >-
+          {% set validation = namespace(not_exist=false) -%}
+          {% for entity in entities.split(';') -%}
+          {% if not ((integration_entities('bermuda') | select('match','device_tracker\.') | select('is_state_attr', 'friendly_name', entity.strip()) | list) or
+          (integration_entities('mobile_app') | select('match','device_tracker\.') | select('is_state_attr', 'friendly_name', entity.strip()) | list) or
+          (state_attr(entity_aliases, 'entities') | default([]) | selectattr('entity_id', 'match', 'device_tracker\.') | selectattr('aliases', 'contains', entity.strip()) | list)) -%}
+          {% set validation.not_exist = true -%}
+          {% endif -%}
+          {% endfor -%}
+          {{ validation.not_exist }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to find the device because the device name is invalid.
+      - alias: Stop the script
+        stop: Unable to find the device because the device name is invalid.
+        response_variable: response
+  - variables:
+      response:
+        devices: >-
+          {% set mobile_devices = integration_entities('mobile_app') | select('match','device_tracker\.') | map('regex_replace', 'device_tracker\.','') | list -%}
+          {% for entity in entities.split(';') -%}
+          {% set device = namespace(friendly_name=none, entity_id=none, notify_id=none, is_mobile=false, at_home=false) -%}
+          {% set device.friendly_name = entity.strip() -%}
+          {% if (integration_entities('bermuda') | select('match','device_tracker\.') | select('is_state_attr', 'friendly_name', device.friendly_name) | list) -%}
+          {% set device.entity_id = integration_entities('bermuda') | select('match','device_tracker\.') | select('is_state_attr', 'friendly_name', device.friendly_name) | first -%}
+          {% elif (integration_entities('mobile_app') | select('match','device_tracker\.') | select('is_state_attr', 'friendly_name', device.friendly_name) | list) -%}
+          {% set device.entity_id = integration_entities('mobile_app') | select('match','device_tracker\.') | select('is_state_attr', 'friendly_name', device.friendly_name) | first -%}
+          {% set device.is_mobile = true -%}
+          {% set device.notify_id = device.entity_id.split('device_tracker.')[1] -%}
+          {% else -%}
+          {% set device.entity_id = state_attr(entity_aliases, 'entities') | default([]) | selectattr('entity_id', 'match', 'device_tracker\.') | selectattr('aliases', 'contains', device.friendly_name) | map(attribute='entity_id') | first -%}
+          {% endif -%}
+          {% if not device.is_mobile -%}
+          {% set parts = device.entity_id.split('device_tracker.')[1].split('_') -%}
+          {% for i in range(1, (parts | length) + 1) -%}
+          {% if (parts[:i] | join('_')) in mobile_devices -%}
+          {% set device.is_mobile = true -%}
+          {% set device.notify_id = parts[:i] | join('_') -%}
+          {% endif -%}
+          {% endfor -%}
+          {% endif -%}
+          {% set device.at_home = is_state(device.entity_id, 'home') -%}
+          - friendly_name: {{ device.friendly_name }}
+            at_home: {{ device.at_home }}
+            area: {{ state_attr(device.entity_id, 'area') }}
+            can_ring: {{ device.is_mobile and device.at_home }}
+            ring_id: {{ ('notify.mobile_app_' ~ device.notify_id) if (device.is_mobile and device.at_home) else none }}
+          {% endfor -%}
+  - stop: ""
+    response_variable: response

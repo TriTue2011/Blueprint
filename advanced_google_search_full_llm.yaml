@@ -1,0 +1,133 @@
+blueprint:
+  name: Voice - Perform Google Search
+  author: luuquangvu
+  description: >-
+    # Tool for searching Google information used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    * This blueprint is exclusively designed for Google Generative AI only.
+
+    * A Conversation Agent with Google Search tool enabled, create it if it doesn't already exist.
+
+    * Increase the agent's maximum token limit to enable it to gather comprehensive information, with a minimum requirement of 16384 tokens.
+
+    * Agent Instructions:
+
+    ```
+
+    You are a voice assistant. Always respond in the same language as the user's message. If in Vietnamese, reply in Vietnamese; if in English, reply in English. Current date and time: {{ now().isoformat(timespec='seconds') }}.
+
+    ```
+
+    ### Optional
+
+    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    * Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to search for information from Google.
+
+    * Make sure to expose the script to Assist after the script has been saved.
+
+    * Do not alter the default script name.
+  domain: script
+  homeassistant:
+    min_version: 2025.4.0
+  input:
+    agent_settings:
+      name: Settings for Conversation Agent
+      icon: mdi:robot-outline
+      description: These settings enable you to configure the conversation agent used for searching Google information.
+      input:
+        agent_id:
+          name: Conversation Agent
+          selector:
+            entity:
+              filter:
+                domain: conversation
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        query_string_prompt:
+          name: Query String Prompt
+          description: The prompt which will be used for the LLM can provide the search string for the query.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Provide the search string to obtain information from Google.
+
+            If the query seems misspelled or misheard, silently correct it to the most likely intended search string and proceed. Do not ask clarifying questions; instead, briefly note the correction in the response.
+        language_prompt:
+          name: Language Prompt
+          description: The prompt which will be used for the LLM can provide the language for the query.
+          selector:
+            text:
+              multiline: true
+          default: >-
+            This argument is mandatory and must always be provided.
+
+            Specify the output language of the response using an IETF BCP 47 language tag (e.g., vi-VN, en-US). The value must match the user's language.
+mode: parallel
+max_exceeded: silent
+variables:
+  version: 20250923
+fields:
+  query_string:
+    name: Query String
+    description: !input query_string_prompt
+    selector:
+        text:
+    required: true
+  language:
+    name: Language
+    description: !input language_prompt
+    selector:
+      text:
+    required: true
+sequence:
+  - variables:
+      query_string: "{{ query_string | default('') | trim }}"
+      language: "{{ language | default('') | trim }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ not query_string or not language }}"
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to search for information because the query string or language is empty.
+      - alias: Stop the script
+        stop: Unable to search for information because the query string or language is empty.
+        response_variable: response
+  - action: conversation.process
+    response_variable: response
+    data:
+      agent_id: !input agent_id
+      text: >-
+        Use Google Search to gather accurate, comprehensive information about:
+
+        {{ query_string }}
+
+
+        Instructions:
+
+        - Perform up to three iterative refinements. Avoid duplicate sources; prioritize recent, authoritative content.
+
+        - Provide both a concise overview and expanded details to minimize the need for follow-up searches.
+
+        - Optionally include source names (publisher/site, date).
+
+        - Always use the Google Search tool for factual lookups. If no results are found, state this clearly and suggest refined queries. Never fabricate sources.
+      language: "{{ language }}"
+  - stop: ""
+    response_variable: response
