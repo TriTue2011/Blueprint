@@ -1,0 +1,199 @@
+blueprint:
+  name: Voice - AI Image Generator
+  author: luuquangvu
+  description: |
+    # Tool for generating images using AI based on text descriptions
+    ## Blueprint Setup
+    ### Required
+    * An AI Task entity with image generation capability must be created and configured in the System - General settings.
+    ### Optional
+    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+    * Configure a custom AI Task entity if you want to use a specific model.
+    ### Note
+    * Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to generate images from text prompts.
+    * Make sure to expose the script to Assist after the script has been saved.
+    * Do not alter the default script name.
+  domain: script
+  homeassistant:
+    min_version: 2025.8.0
+  input:
+    ai_task_settings:
+      name: Settings for AI Task
+      icon: mdi:robot-outline
+      description: These settings allow you to set up the AI Task responsible for handling the image generation task.
+      collapsed: true
+      input:
+        ai_task_entity:
+          name: AI Task Entity
+          description: If left empty, the system will use the default settings under System - General. Make sure to select an AI Task that supports image generation.
+          selector:
+            entity:
+              filter:
+              - domain:
+                - ai_task
+              multiple: false
+          default:
+    output_settings:
+      name: Settings for Image Output
+      icon: mdi:folder-image
+      description: Configure where generated images should be stored and how filenames are generated.
+      collapsed: true
+      input:
+        output_directory:
+          name: Output Directory
+          description: Absolute path where the generated image will be stored (default is `/media`).
+          selector:
+            text:
+              multiple: false
+              multiline: false
+          default: /media
+        filename_prefix:
+          name: Filename Prefix
+          description: Prefix used when generating the image filename.
+          selector:
+            text:
+              multiple: false
+              multiline: false
+          default: ai_generated_
+        file_extension:
+          name: File Extension
+          description: File extension to use for the generated image (for example jpg or png).
+          selector:
+            text:
+              multiple: false
+              multiline: false
+          default: png
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        instructions_prompt:
+          name: Instructions Prompt
+          description: The prompt which will be used for the LLM can provide the image generation request.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: |
+            This argument is mandatory and must always be provided.
+            Describe in detail what image you want to generate. Include information about subjects, style, colors, composition, lighting, and any other relevant details.
+            The more detailed the description, the better the result will be.
+            Examples: "A cute cat sleeping on a couch", "Modern minimalist living room with natural light", "Abstract geometric pattern in blue and gold".
+        task_name_prompt:
+          name: Task Name Prompt
+          description: The prompt for the LLM to provide a task name (optional, will auto-generate if not provided).
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: |
+            This argument is optional.
+            Provide a short descriptive name for this image generation task (for example "Cat Portrait" or "Sunset Landscape"). 
+            If not provided, a name will be auto-generated from the instructions.
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/ai_image_generator_full_llm.yaml
+
+mode: parallel
+max: 10
+max_exceeded: silent
+
+variables:
+  version: 20251029
+
+fields:
+  instructions:
+    name: Instructions
+    description: !input instructions_prompt
+    selector:
+      text:
+        multiline: true
+    required: true
+  task_name:
+    name: Task Name
+    description: !input task_name_prompt
+    selector:
+      text:
+    required: false
+
+sequence:
+  - variables:
+      ai_task_entity: !input ai_task_entity
+      instructions: '{{ instructions | default("") | trim }}'
+      task_name_input: '{{ task_name | default("") | trim }}'
+
+  - alias: Validate instructions
+    if:
+      - condition: template
+        value_template: '{{ not instructions }}'
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to generate image because instructions are missing or empty.
+      - alias: Stop the script
+        stop: Unable to generate image because instructions are missing or empty.
+        response_variable: response
+
+
+
+  - variables:
+      auto_task_name: |
+        {% if task_name_input %}
+          {{ task_name_input }}
+        {% else %}
+          {% set words = instructions.split()[:5] %}
+          {{ words | join(' ') | truncate(50, True, '') }}
+        {% endif %}
+
+  - alias: Generate image using AI Task
+    if:
+      - condition: template
+        value_template: '{{ not ai_task_entity }}'
+    then:
+      - action: ai_task.generate_image
+        data:
+          task_name: '{{ auto_task_name }}'
+          instructions: '{{ instructions }}'
+        response_variable: ai_result
+    else:
+      - action: ai_task.generate_image
+        data:
+          task_name: '{{ auto_task_name }}'
+          instructions: '{{ instructions }}'
+          entity_id: '{{ ai_task_entity }}'
+        response_variable: ai_result
+
+  - alias: Check if image generation was successful
+    if:
+      - condition: template
+        value_template: '{{ ai_result is defined and ai_result.media_source_id is defined }}'
+    then:
+      - variables:
+          image_path_from_media_source: |
+            {% set source_id = ai_result.media_source_id %}
+            {% if source_id.startswith('media-source://ai_task/image/') %}
+              {{ '/media/ai_task/image/' ~ source_id.split('/')[-1] }}
+            {% else %}
+              {{ source_id }}
+            {% endif %}
+          response:
+            image_path: '{{ image_path_from_media_source }}'
+            task_name: '{{ auto_task_name }}'
+            instructions: '{{ instructions }}'
+            status: Image generated successfully
+            media_source_id: '{{ ai_result.media_source_id }}'
+            url: '{{ ai_result.url | default("") }}'
+            model: '{{ ai_result.model | default("") }}'
+            revised_prompt: '{{ ai_result.revised_prompt | default("") }}'
+    else:
+      - alias: Set error response
+        variables:
+          response:
+            error: Image generation failed. The AI Task did not return a valid image URL.
+      - alias: Stop script with error
+        stop: Image generation failed. The AI Task did not return a valid image URL.
+        response_variable: response
+
+  - stop: ''
+    response_variable: response
