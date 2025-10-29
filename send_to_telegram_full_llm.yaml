@@ -48,6 +48,12 @@ blueprint:
               step: 1.0
               mode: box
           default:
+        delete_after_send:
+          name: Delete Image After Sending
+          description: Automatically delete the image file after it has been sent to Telegram.
+          selector:
+            boolean:
+          default: true
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
@@ -233,14 +239,12 @@ sequence:
 - variables:
     default_chat_id: !input chat_id
     default_thread_id: !input thread_id
+    delete_after_send: !input delete_after_send
     summary: '{{ summary | default('''') | trim }}'
     detail: '{{ detail | default('''') | trim }}'
     content_type: '{{ content_type | default('''') | trim }}'
     location: '{{ location | default('''') | trim }}'
     image_path: '{{ image_path | default('''') | trim }}'
-    image_path_resolved: "{% set path = image_path %} {% set prefix = 'local/' %}
-      {% if path and path.startswith(prefix) %}\n  {{ '/media/' ~ path[prefix | length:]
-      }}\n{% else %}\n  {{ path }}\n{% endif %}"      
     override_chat_id: '{{ target_chat_id | default('''') | trim }}'
     override_message_thread_id: '{{ target_message_thread_id | default('''') | trim
       }}'
@@ -320,8 +324,12 @@ sequence:
 
           {{ detail | e }}{% endif %}'
       response_variable: telegram_response
-    - action: delete.file  
-      data:
-        file: '{{ image_path_resolved }}'      
+    - if:
+      - condition: template
+        value_template: '{{ delete_after_send }}'
+      then:
+      - action: delete.file
+        data:
+          file: '{{ image_path }}'
 - stop: ''
   response_variable: telegram_response
