@@ -391,6 +391,13 @@ Tự động thêm các sự kiện tính theo lịch Âm (giỗ, kỷ niệm, c
 
 ---
 
+## 🔗 Tạo ảnh Ai
+
+Tạo ảnh theo promt.
+
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fluuquangvu%2Ftutorials%2Fblob%2Fmain%2Flink_multiple_devices.yaml)
+
+*Hãy đọc kỹ mô tả của từng blueprint và làm theo hướng dẫn trong đó nhé.*
 ## 📘 Hướng dẫn / Tutorials
 
 - [**Hướng dẫn cách tạo một bản chỉ dẫn hệ thống cho Voice Assist**](/home_assistant_voice_instructions.md)
