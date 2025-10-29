@@ -1,1 +1,13 @@
+# Common packages are included in many tools.
+aiohttp
+aiofiles
 
+# youtube_data_tool
+google-api-python-client
+
+# traffic_fine_lookup_tool
+pillow
+beautifulsoup4
+google-genai
+google-api-core
+typing-extensions
