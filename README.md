@@ -163,7 +163,7 @@ Gửi tin nhắn tới cá nhân hoặc nhóm thông qua bot Zalo tuỳ chỉnh 
 - Gửi danh sách quán ăn ngon ở Nha Trang lên nhóm Zalo gia đình
 - Gửi địa chỉ Hoàng thành Thăng Long cho Zalo của vợ anh
 
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/TriTue2011/Blueprint/blob/main/send_to_zalo_custom_bot_full_llm.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/TriTue2011/Blueprint/main/send_to_zalo_custom_bot_full_llm.yaml)
 
 *Hãy đọc kỹ mô tả của từng blueprint và làm theo hướng dẫn trong đó nhé.*
 
