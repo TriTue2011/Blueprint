@@ -406,7 +406,17 @@ Tạo ảnh theo promt.
 - [**Hướng dẫn cài đặt nhận thông báo khi có thiết bị mất kết nối**](/home_assistant_unavailable_devices.md)
 - [**Hướng dẫn cài đặt iOS Themes**](/home_assistant_ios_themes.md)
 - [**Hướng dẫn tra cứu vị trí thiết bị di động**](/home_assistant_device_location_lookup_guide_en.md)
-
+- Cài fapapi bác Vũ
+  git clone https://github.com/luuquangvu/Gemini-FastAPI
+  cd Gemini-FastAPI/
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+  uv --version
+  uv sync
+  vim (nano) config/config.yaml #sửa file điền __Secure-1PSIDTS và __Secure-1PSID của mình
+  nohup uv run run.py > server.log 2>&1
+  tail -f server.log
+Tích hợp trên hass https://github.com/luuquangvu/hass_local_openai_llm
 ---
 
 **Nếu bạn thấy những blueprint này hữu ích, hãy chia sẻ chúng với cộng đồng Home Assistant nhé! Đừng quên theo dõi để không bỏ lỡ nhiều bản thiết kế độc đáo sắp ra mắt!**
