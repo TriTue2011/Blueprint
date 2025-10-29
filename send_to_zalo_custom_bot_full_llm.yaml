@@ -71,6 +71,12 @@ blueprint:
               step: 1.0
               mode: slider
           default: 0
+        delete_after_send:
+          name: Delete Image After Sending
+          description: Automatically delete the image file after it has been sent to Zalo.
+          selector:
+            boolean:
+          default: true
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
@@ -213,6 +219,7 @@ sequence:
     default_account: !input account
     default_thread_id: !input thread_id
     default_receiver: !input receiver
+    delete_after_send: !input delete_after_send
     summary: '{{ summary | default('''') | trim }}'
     detail: '{{ detail | default('''') | trim }}'
     content_type: '{{ content_type | default('''') | trim }}'
@@ -280,6 +287,10 @@ sequence:
         message: '{{ summary }}{% if detail %}
           {{ detail }}{% endif %}'
         ttl: !input ttl
-    - action: delete.file  
-      data:
-        file: '{{ image_path_resolved }}'
+    - if:
+      - condition: template
+        value_template: '{{ delete_after_send }}'
+      then:
+      - action: delete.file  
+        data:
+          file: '{{ image_path_resolved }}'
