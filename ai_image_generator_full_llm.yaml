@@ -92,7 +92,7 @@ blueprint:
             This argument is optional.
             Provide a short descriptive name for this image generation task (for example "Cat Portrait" or "Sunset Landscape"). 
             If not provided, a name will be auto-generated from the instructions.
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/ai_image_generator_full_llm.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/edit/main/ai_image_generator_full_llm.yaml
 
 mode: parallel
 max: 10
@@ -196,4 +196,5 @@ sequence:
         response_variable: response
 
   - stop: ''
+
     response_variable: response
