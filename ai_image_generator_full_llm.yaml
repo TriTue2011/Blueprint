@@ -1,6 +1,6 @@
 blueprint:
   name: Voice - AI Image Generator
-  author: luuquangvu
+  author: TriTue2011
   description: |
     # Tool for generating images using AI based on text descriptions
     ## Blueprint Setup
@@ -16,6 +16,7 @@ blueprint:
   domain: script
   homeassistant:
     min_version: 2025.8.0
+
   input:
     ai_task_settings:
       name: Settings for AI Task
@@ -33,6 +34,7 @@ blueprint:
                 - ai_task
               multiple: false
           default:
+
     output_settings:
       name: Settings for Image Output
       icon: mdi:folder-image
@@ -63,6 +65,7 @@ blueprint:
               multiple: false
               multiline: false
           default: png
+
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
@@ -71,28 +74,39 @@ blueprint:
       input:
         instructions_prompt:
           name: Instructions Prompt
-          description: The prompt which will be used for the LLM can provide the image generation request.
+          description: The prompt used for the LLM to describe the image generation request in detail.
           selector:
             text:
               multiline: true
               multiple: false
           default: |
             This argument is mandatory and must always be provided.
-            Describe in detail what image you want to generate. Include information about subjects, style, colors, composition, lighting, and any other relevant details.
-            The more detailed the description, the better the result will be.
-            Examples: "A cute cat sleeping on a couch", "Modern minimalist living room with natural light", "Abstract geometric pattern in blue and gold".
+            Describe in rich detail what image you want to generate. Focus on realism, natural lighting, and ultra-detailed visual quality.
+            The image should look like a real high-resolution photo (8K), realistic, ultra-detailed, and naturally lit.
+            Do not include any text, watermark, logo, or hashtags. Do not add AI marks.
+            Always aim for photo-realistic, cinematic, and lifelike render quality.
+            Use descriptive elements like environment, perspective, lighting, and texture.
+            If you describe a person, describe gender, age, clothes, pose, camera angle, and background.
+            Examples:
+            - "A high-resolution (8K) photo of a golden retriever puppy lying on a wooden floor with sunlight through a window, realistic, ultra-detailed, natural lighting, no watermark, no text."
+            - "A realistic portrait photo of a Vietnamese woman wearing an Ao Dai in natural daylight, ultra-detailed face and skin, high-quality photo, no watermark, no logo."
+            - "A detailed photo of a futuristic city street at night, cinematic lighting, ultra-realistic reflections, 8K resolution, no watermark or text."
+
         task_name_prompt:
           name: Task Name Prompt
-          description: The prompt for the LLM to provide a task name (optional, will auto-generate if not provided).
+          description: The prompt for the LLM to provide a short and descriptive task name for the image generation.
           selector:
             text:
               multiline: true
               multiple: false
           default: |
             This argument is optional.
-            Provide a short descriptive name for this image generation task (for example "Cat Portrait" or "Sunset Landscape"). 
-            If not provided, a name will be auto-generated from the instructions.
-  source_url: https://github.com/TriTue2011/Blueprint/edit/main/ai_image_generator_full_llm.yaml
+            Provide a short, natural, and descriptive task name for the image generation request.
+            The name should reflect the subject or style of the image (for example "8K Realistic Portrait", "Ultra-detailed Street Scene", "Natural Lighting Landscape").
+            Avoid adding any hashtags, symbols, or AI-related terms.
+            If not provided, the name will be auto-generated based on the instructions.
+
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/ai_image_generator_full_llm.yaml
 
 mode: parallel
 max: 10
@@ -134,8 +148,6 @@ sequence:
       - alias: Stop the script
         stop: Unable to generate image because instructions are missing or empty.
         response_variable: response
-
-
 
   - variables:
       auto_task_name: |
@@ -196,5 +208,4 @@ sequence:
         response_variable: response
 
   - stop: ''
-
     response_variable: response
