@@ -415,7 +415,7 @@ Tạo ảnh theo promt.
 - uv --version
 - uv sync
 - vim (nano) config/config.yaml #sửa file điền __Secure-1PSIDTS và __Secure-1PSID của mình
-- nohup uv run run.py > server.log 2>&1
+- nohup uv run run.py > server.log 2>&1&
 - tail -f server.log
 Tích hợp trên hass https://github.com/luuquangvu/hass_local_openai_llm
 ---
