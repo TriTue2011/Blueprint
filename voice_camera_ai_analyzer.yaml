@@ -1,6 +1,6 @@
 blueprint:
   name: Voice - Smart Camera AI Analyzer (Auto)
-  author: luuquangvu_benbap
+  author: benbap
   description: |
     Smart AI-powered camera analysis script (auto)
     - Không cần cấu hình danh sách camera thủ công
@@ -379,3 +379,4 @@ sequence:
         data: "{{ ai_result.data }}"
   - stop: ""
     response_variable: response
+
