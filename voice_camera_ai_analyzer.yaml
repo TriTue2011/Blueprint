@@ -1,11 +1,13 @@
 blueprint:
-  name: Voice - Smart Camera AI Analyzer
+  name: Voice - Smart Camera AI Analyzer (Auto)
   author: luuquangvu_benbap
   description: |
-    Smart AI-powered camera analysis script
-    - Tự hiểu hỏi 1 cam hay nhiều cam
-    - Tự map tên tự nhiên (“phòng khách”, “ban công”, “cửa”) sang entity thật
-    - Nếu user nói sai tên cam → dùng default, KHÔNG quét hết
+    Smart AI-powered camera analysis script (auto)
+    - Không cần cấu hình danh sách camera thủ công
+    - Tự lấy toàn bộ camera thật trong Home Assistant
+    - Ưu tiên match friendly_name
+    - Nếu không khớp thì match theo sensor aliases (giống blueprint Capture Camera Snapshot)
+    - Nếu vẫn không khớp thì đoán theo từ khóa ("phòng khách", "ban công", "cửa")
     - Trả lời tiếng Việt, prompt tiếng Anh
     - Hỗ trợ structure (overview, cameras_with_people, cameras_no_people, cameras_error, summary)
   domain: script
@@ -13,6 +15,21 @@ blueprint:
     min_version: 2025.8.0
 
   input:
+    entity_aliases_settings:
+      name: Settings for Entity Aliases
+      icon: mdi:format-list-bulleted
+      description: Sensor alias giống blueprint Capture Camera Snapshot
+      input:
+        entity_aliases:
+          name: Entity Aliases
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - sensor
+                  integration: template
+              multiple: false
+
     ai_task_settings:
       name: AI Task Settings
       icon: mdi:robot-outline
@@ -28,34 +45,6 @@ blueprint:
                     - ai_task
               multiple: false
           default:
-
-    camera_settings:
-      name: Camera Settings
-      icon: mdi:cctv
-      collapsed: true
-      input:
-        default_camera:
-          name: Default Camera
-          description: Dùng khi user nói sai tên hoặc không nói
-          selector:
-            entity:
-              filter:
-                - domain:
-                    - camera
-              multiple: false
-          default: camera.my_home_pk2
-        available_cameras:
-          name: Available Cameras List
-          description: Danh sách camera để phân tích nhiều camera
-          selector:
-            entity:
-              domain:
-                - camera
-              multiple: true
-          default:
-            - camera.my_home_bc
-            - camera.my_home_pk2
-            - camera.my_home_pk1
 
     prompt_settings:
       name: Prompt Settings
@@ -120,37 +109,26 @@ mode: parallel
 max_exceeded: silent
 
 variables:
-  version: 20251030_final_fixed_with_selector_dict
+  version: 20251031_auto_alias_nocamselect
 
 fields:
   instructions:
     name: Camera Question
-    description: Hỏi bất kỳ về camera (1 cam hoặc nhiều cam)
+    description: Hỏi bất kỳ về camera
     selector:
       text:
         multiline: true
     required: true
-  camera_entity:
-    name: Specific Camera (Optional)
-    description: Chọn camera cụ thể, nếu bỏ trống sẽ đoán theo câu hỏi
-    selector:
-      entity:
-        filter:
-          - domain:
-              - camera
-        multiple: false
-    required: false
 
 sequence:
+  # 1. Lấy biến đầu vào
   - variables:
+      entity_aliases: !input entity_aliases
       ai_task_entity: !input ai_task_entity
-      default_camera: !input default_camera
-      available_cameras: !input available_cameras
       system_prompt: !input system_prompt
       user_question: "{{ instructions | default('') | trim }}"
-      camera_entity_raw: "{{ camera_entity | default('') | trim }}"
 
-  # Validate question
+  # 2. Kiểm tra câu hỏi rỗng
   - if:
       - condition: template
         value_template: "{{ not user_question }}"
@@ -161,69 +139,97 @@ sequence:
       - stop: "Missing question"
         response_variable: response
 
-  # Build camera list
+  # 3. Lấy toàn bộ camera trong hệ thống
   - variables:
+      all_cameras: >
+        {% set cams = states.camera | map(attribute='entity_id') | list %}
+        {{ cams }}
       camera_list_text: >
         {% set ns = namespace(list=[]) %}
-        {% for cam in available_cameras %}
-          {% if states(cam) is not none %}
-            {% set name = state_attr(cam, 'friendly_name') or cam %}
-            {% set ns.list = ns.list + ['- ' ~ name ~ ' (' ~ cam ~ ')'] %}
-          {% endif %}
+        {% for cam in all_cameras %}
+          {% set name = state_attr(cam, 'friendly_name') or cam %}
+          {% set ns.list = ns.list + ['- ' ~ name ~ ' (' ~ cam ~ ')'] %}
         {% endfor %}
         {{ ns.list | join('\n') }}
-
-  # Guess camera
-  - variables:
       user_question_lc: "{{ user_question | lower }}"
-      guessed_camera: >
+
+  # 4. Tự động dò camera
+  - variables:
+      matched_camera_from_friendly: >
+        {% set q = user_question | trim %}
+        {% set found = '' %}
+        {% for cam in all_cameras %}
+          {% set fn = (state_attr(cam, 'friendly_name') or '') | trim %}
+          {% if fn and (fn | lower) == (q | lower) %}
+            {% set found = cam %}
+          {% elif fn and (q | lower) in (fn | lower) %}
+            {% if not found %}
+              {% set found = cam %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {{ found }}
+
+      matched_camera_from_alias: >
+        {% set entities = state_attr(entity_aliases, 'entities') | default([]) %}
+        {% set ql = user_question_lc %}
+        {% set found = '' %}
+        {% for item in entities %}
+          {% set eid = item.entity_id %}
+          {% set als = item.aliases | default([]) %}
+          {% if 'camera.' in eid %}
+            {% for a in als %}
+              {% if (a | lower) == ql or (ql in (a | lower)) %}
+                {% set found = eid %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        {{ found }}
+
+      guessed_camera_hardcode: >
         {% if 'phòng khách' in user_question_lc %}
-          camera.my_home_pk2
+          {% for cam in all_cameras %}
+            {% if 'phòng khách' in (state_attr(cam, 'friendly_name') | default('') | lower) %}
+              {{ cam }}
+            {% endif %}
+          {% endfor %}
         {% elif 'ban công' in user_question_lc %}
-          camera.my_home_bc
+          {% for cam in all_cameras %}
+            {% if 'ban công' in (state_attr(cam, 'friendly_name') | default('') | lower) %}
+              {{ cam }}
+            {% endif %}
+          {% endfor %}
         {% elif 'cửa' in user_question_lc %}
-          camera.my_home_pk1
+          {% for cam in all_cameras %}
+            {% if 'cửa' in (state_attr(cam, 'friendly_name') | default('') | lower) %}
+              {{ cam }}
+            {% endif %}
+          {% endfor %}
         {% else %}
           {{ '' }}
         {% endif %}
 
-  # Validate cameras + select final camera
-  - variables:
-      user_camera_valid: >
-        {% if camera_entity_raw %}
-          {{ states(camera_entity_raw) is not none }}
+      fallback_camera: >
+        {% if all_cameras | length > 0 %}
+          {{ all_cameras[0] }}
         {% else %}
-          false
+          {{ '' }}
         {% endif %}
-      guessed_camera_valid: >
-        {% if guessed_camera %}
-          {{ states(guessed_camera) is not none }}
-        {% else %}
-          false
-        {% endif %}
-      default_camera_valid: >
-        {% if default_camera %}
-          {{ states(default_camera) is not none }}
-        {% else %}
-          false
-        {% endif %}
+
       final_single_camera: >
-        {% if user_camera_valid %}
-          {{ camera_entity_raw }}
-        {% elif guessed_camera_valid %}
-          {{ guessed_camera }}
-        {% elif default_camera_valid %}
-          {{ default_camera }}
+        {% if matched_camera_from_friendly %}
+          {{ matched_camera_from_friendly }}
+        {% elif matched_camera_from_alias %}
+          {{ matched_camera_from_alias }}
+        {% elif guessed_camera_hardcode %}
+          {{ guessed_camera_hardcode }}
         {% else %}
-          {% for cam in available_cameras %}
-            {% if states(cam) is not none %}
-              {{ cam }}
-              {% break %}
-            {% endif %}
-          {% endfor %}
+          {{ fallback_camera }}
         {% endif %}
+
       use_single_camera: >
-        {% set q = user_question | lower %}
+        {% set q = user_question_lc %}
         {% if 'tất cả' in q
               or 'all camera' in q
               or 'camera nào' in q
@@ -236,7 +242,7 @@ sequence:
           true
         {% endif %}
 
-  # Prepare attachments
+  # 5. Xây danh sách đính kèm camera
   - variables:
       single_attachment: >
         {
@@ -250,7 +256,7 @@ sequence:
         }
       all_attachments: >
         {% set ns = namespace(items=[]) %}
-        {% for cam in available_cameras %}
+        {% for cam in all_cameras %}
           {% if states(cam) is not none %}
             {% set name = state_attr(cam, 'friendly_name') or cam %}
             {% set item = {
@@ -266,23 +272,16 @@ sequence:
           {% endif %}
         {% endfor %}
         {{ ns.items }}
-      camera_count: >
-        {% set ok = [] %}
-        {% for cam in available_cameras %}
-          {% if states(cam) is not none %}
-            {% set ok = ok + [cam] %}
-          {% endif %}
-        {% endfor %}
-        {{ ok | length }}
+      camera_count: "{{ all_cameras | length }}"
 
-  # Build final prompt
+  # 6. Build prompt cuối
   - variables:
       final_prompt: >
         {{ system_prompt
            | replace('{camera_list}', camera_list_text)
            | replace('{user_question}', user_question) }}
 
-  # Call AI Task
+  # 7. Gọi AI task
   - choose:
       - conditions:
           - condition: template
@@ -368,11 +367,15 @@ sequence:
                     text: {}
             response_variable: ai_result
 
-  # Return
+  # 8. Trả kết quả + debug
   - variables:
       response:
         mode: "{{ 'single' if use_single_camera else 'multi' }}"
         camera_count: "{{ camera_count }}"
+        selected_camera: "{{ final_single_camera }}"
+        matched_camera_from_friendly: "{{ matched_camera_from_friendly }}"
+        matched_camera_from_alias: "{{ matched_camera_from_alias }}"
+        guessed_camera_hardcode: "{{ guessed_camera_hardcode }}"
         data: "{{ ai_result.data }}"
   - stop: ""
     response_variable: response
