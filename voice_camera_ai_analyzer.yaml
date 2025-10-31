@@ -1,5 +1,5 @@
 blueprint:
-  name: Voice - Smart Camera AI Analyzer (Auto)
+  name: Voice - Live Camera Analyzer
   author: benbap
   description: |
     Smart AI-powered camera analysis script (auto)
@@ -379,4 +379,5 @@ sequence:
         data: "{{ ai_result.data }}"
   - stop: ""
     response_variable: response
+
 
