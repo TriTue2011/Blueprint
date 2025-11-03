@@ -1,0 +1,744 @@
+blueprint:
+  name: AI Door Entry Event Summary with Zalo (v1.2.0)
+  author: Custom
+  homeassistant:
+    min_version: 2024.10.0
+  description: 'AI-powered summaries for door entry events with person detection and Zalo notification support. Analyzes camera when door opens and person is detected in the area.'
+  domain: automation
+  source_url: https://github.com/custom/door-entry-ai-summary
+  input:
+    door_contact_sensor:
+      name: Door Contact Sensor
+      description: Binary sensor that detects door opening (off=closed, on=open)
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+    door_from_state:
+      name: Door From State
+      description: State when door is closed
+      default: 'off'
+      selector:
+        select:
+          options:
+            - 'off'
+            - 'on'
+          custom_value: true
+    door_to_state:
+      name: Door To State
+      description: State when door is opened
+      default: 'on'
+      selector:
+        select:
+          options:
+            - 'on'
+            - 'off'
+          custom_value: true
+    person_occupancy_sensor:
+      name: Person Occupancy Sensor
+      description: Binary sensor that detects person presence in the area
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+    person_detected_state:
+      name: Person Detected State
+      description: State value when person is detected
+      default: 'on'
+      selector:
+        select:
+          options:
+            - 'on'
+            - 'off'
+          custom_value: true
+    wait_for_person:
+      name: Wait for Person Detection
+      description: Wait for person to be detected before analyzing
+      default: true
+      selector:
+        boolean: {}
+    person_wait_time:
+      name: Person Detection Wait Time
+      description: How long to wait for person detection after door opens (leave empty for unlimited wait)
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
+      selector:
+        duration: {}
+    max_wait_time:
+      name: Maximum Wait Time (Optional)
+      description: Maximum time to wait for person detection. Leave at 0 for unlimited wait.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+          mode: box
+          step: 1
+    run_conditions:
+      name: Run Conditions
+      description: All conditions must be true in order for the blueprint to run.
+      default: []
+      selector:
+        condition: {}
+    cooldown:
+      name: Cooldown
+      description: Time to wait before running automation again.
+      default:
+        minutes: 10
+      selector:
+        duration: {}
+    camera_sensor_section:
+      name: Camera & Sensor Settings
+      description: Settings for the camera and sensor entities.
+      icon: mdi:camera
+      input:
+        camera_entities:
+          name: Camera Entities
+          description: List of camera entities to monitor
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - camera
+              reorder: false
+        duration:
+          name: Duration
+          description: Duration to record for analysis (in seconds).
+          default: 5
+          selector:
+            number:
+              min: 1.0
+              max: 60.0
+              step: 1.0
+              mode: slider
+        max_frames:
+          name: Max Frames
+          description: How many frames to analyze. Picks frames with the most movement.
+          default: 3
+          selector:
+            number:
+              min: 1.0
+              max: 60.0
+              step: 1.0
+              mode: slider
+    ai_section:
+      name: AI Settings
+      description: AI settings for the analysis.
+      icon: mdi:brain
+      collapsed: true
+      input:
+        remember:
+            name: Store in Timeline
+            description: Stores this event in the Timeline so you can ask about it.
+            default: true
+            selector:
+              boolean: {}
+        use_memory:
+          name: Use Memory
+          description: Use information stored in memory to provide additional context. Memory must be set up.
+          default: false
+          selector:
+            boolean: {}
+        message:
+          name: Prompt
+          description: Model prompt for the video_analyzer action
+          default: 'Analyze the door entry event. Identify who entered (person description, clothing, items carried), their actions, and any notable details. If multiple people are present, describe each person. Focus on security-relevant information. Present the information naturally without mentioning images.'
+          selector:
+            text:
+              multiline: true
+              multiple: false
+        provider:
+          name: Provider
+          description: Provider to use for analysis. See docs for additional information.
+          selector:
+            config_entry:
+              integration: llmvision
+        model:
+          name: Model
+          description: Which model to use. Depends on chosen provider.
+          selector:
+            text:
+              multiline: false
+              multiple: false
+        target_width:
+          name: Target Width
+          description: Downscale images (uses less tokens and speeds up processing)
+          default: 1280
+          selector:
+            number:
+              min: 512.0
+              max: 3840.0
+              step: 1.0
+              mode: slider
+        max_tokens:
+          name: Maximum Tokens
+          description: 'Maximum number of tokens to generate.'
+          default: 5000
+          selector:
+            number:
+              step: 1.0
+              mode: box
+    notification_section:
+      name: Notification Settings
+      description: Settings for the notification delivery.
+      icon: mdi:bell
+      collapsed: true
+      input:
+        notify:
+          name: Notify
+          description: Send a notification to your phone.
+          default: true
+          selector:
+            boolean: {}
+        condition_notify:
+          name: Condition to Notify
+          description: Condition to notify the device.
+          default: []
+          selector:
+            condition: {}
+        notify_device:
+          name: Notify Device
+          description: The devices to send the notification to. Multiple devices may be used.
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+                - integration: mobile_app
+        notification_delivery:
+          name: Notification Delivery
+          description: "Controls how notifications are delivered. \n \n **Dynamic** immediately notifies before analysis and updates with summary. \n **Consolidated** Delays until summary is ready."
+          default: Dynamic
+          selector:
+            select:
+              options:
+                - Dynamic
+                - Consolidated
+              custom_value: false
+              multiple: false
+              sort: false
+        preview_mode:
+          name: Preview Mode
+          description: "Choose between a live preview or a snapshot."
+          default: Snapshot
+          selector:
+            select:
+              options:
+                - Snapshot
+                - Live Preview
+              custom_value: false
+              multiple: false
+              sort: false
+        analysis_mode:
+          name: Analysis Mode
+          description: "Choose between a live preview or a snapshot after analysis."
+          default: Snapshot
+          selector:
+            select:
+              options:
+                - Snapshot
+                - Live Preview
+              custom_value: false
+              multiple: false
+              sort: false
+        notification_time:
+          name: Notification Time
+          description: Add time to Notification Title
+          default: ''
+          selector:
+            select:
+              options:
+                - label: No Time Added
+                  value: ''
+                - label: 12 Hour
+                  value: at {{ now().strftime("%-I:%M %p") }}
+                - label: 24 Hour
+                  value: at {{ now().strftime("%H:%M") }}
+              custom_value: false
+              multiple: false
+              sort: false
+        file_path:
+          name: File Path
+          description: "File path to store snapshots."
+          default: /media/llmvision/door_entry/{{ camera_file_path }}/last_entry.jpg
+          selector:
+            select:
+              options:
+                - label: Media Folder - Secured
+                  value: /media/llmvision/door_entry/{{ camera_file_path }}/last_entry.jpg
+                - label: Public Folder - Unsecured
+                  value: /config/www/door_entry/{{ camera_file_path }}/last_entry.jpg
+              custom_value: true
+              multiple: false
+              sort: false
+        tap_navigate:
+          name: Tap Navigate
+          description: Home Assistant dashboard to navigate to when notification is opened.
+          default: /lovelace/0
+          selector:
+            text:
+              multiline: false
+              multiple: false
+        delay_notification:
+          name: Notification Cooldown
+          description: Time in seconds to wait before sending another notification.
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 86400.0
+              unit_of_measurement: seconds
+              mode: box
+              step: 1.0
+        notification_sticky:
+          name: Sticky - Android Only
+          description: 'Notification stays active after tapping.'
+          default: true
+          selector:
+            boolean: {}
+        notification_color:
+          name: Notification Color - Android Only
+          description: 'Set notification color in HEX.'
+          default: '#03a9f4'
+          selector:
+            select:
+              options:
+                - label: 'Steelblue - #03a9f4'
+                  value: '#03a9f4'
+                - label: 'Red - #f44336'
+                  value: '#f44336'
+                - label: 'Orange - #ff9800'
+                  value: '#ff9800'
+                - label: 'Green - #4caf50'
+                  value: '#4caf50'
+              custom_value: true
+              sort: false
+              multiple: false
+        notification_icon:
+          name: Notification Icon - Android Only
+          description: Icon for the notification.
+          default: mdi:door-open
+          selector:
+            icon:
+              placeholder: mdi:door-open
+        notification_channel:
+          name: Notification Channel - Android Only
+          description: Custom notification channel name.
+          default: 'Door Entry'
+          selector:
+            text: {}
+        notification_sound:
+          name: Notification Sound - iOS Only
+          description: 'Sound file for notification.'
+          default: default
+          selector:
+            select:
+              options:
+                - label: Default
+                  value: default
+                - label: None
+                  value: none
+              custom_value: true
+              sort: false
+              multiple: false
+        notification_volume:
+          name: Volume Sound - iOS Only
+          description: Sound level percentage
+          default: 1
+          selector:
+            number:
+              max: 1.0
+              min: 0.0
+              step: 0.1
+              mode: slider
+        notification_critical:
+          name: Critical Notification - iOS Only
+          description: Send as critical notification (ignores silent mode).
+          default: false
+          selector:
+            boolean: {}
+    zalo_section:
+      name: Zalo Settings
+      description: Settings for Zalo notification delivery.
+      icon: mdi:message-text
+      collapsed: true
+      input:
+        enable_zalo:
+          name: Enable Zalo Notification
+          description: Send notification via Zalo Bot.
+          default: false
+          selector:
+            boolean: {}
+        zalo_group_id:
+          name: Zalo Group ID
+          description: 'ID của user hoặc nhóm Zalo'
+          default: ''
+          selector:
+            text:
+              multiline: false
+        zalo_phone:
+          name: Zalo Account Phone
+          description: 'Số điện thoại của Zalo Bot (e.g. +84947762285 or 84947762285)'
+          default: '+84000000000'
+          selector:
+            text:
+              multiline: false
+        zalo_types:
+          name: Zalo Type Option
+          description: 'Chọn thông báo lên Zalo cá nhân hoặc group'
+          default: '0'
+          selector:
+            select:
+              options:
+                - label: User
+                  value: '0'
+                - label: Group
+                  value: '1'
+              sort: false
+              custom_value: false
+              multiple: false
+        zalo_ttl:
+          name: Zalo Message TTL
+          description: Time to live for Zalo message (0 for no expiration)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400000
+              unit_of_measurement: seconds
+              mode: slider
+              step: 1000
+        zalo_delay:
+          name: Delay After Zalo Send
+          description: Time to wait after sending Zalo message before continuing
+          default:
+            hours: 0
+            minutes: 1
+            seconds: 0
+          selector:
+            duration: {}
+    experimental_section:
+      name: Additional Settings
+      description: Additional automation actions.
+      icon: mdi:cog
+      collapsed: true
+      input:
+        additional_actions:
+          name: Additional Actions
+          description: Additional actions to run after AI analysis.
+          default: []
+          selector:
+            action: {}
+
+variables:
+  door_contact: !input door_contact_sensor
+  door_from_state: !input door_from_state
+  door_to_state: !input door_to_state
+  person_sensor: !input person_occupancy_sensor
+  person_detected_state: !input person_detected_state
+  wait_for_person: !input wait_for_person
+  person_wait_time: !input person_wait_time
+  max_wait_time: !input max_wait_time
+  remember: !input remember
+  cooldown: !input cooldown
+  preview_mode: !input preview_mode
+  analysis_mode: !input analysis_mode
+  notify_devices: !input notify_device
+  notification_delivery: !input notification_delivery
+  notification_sticky: !input notification_sticky
+  notification_color: !input notification_color
+  notification_icon: !input notification_icon
+  notification_channel: !input notification_channel
+  notification_sound: !input notification_sound
+  notification_volume: !input notification_volume
+  notification_critical: !input notification_critical
+  additional_actions: !input additional_actions
+  notify: !input notify
+  condition_notify: !input condition_notify
+  delay_notification: !input delay_notification
+  enable_zalo: !input enable_zalo
+  zalo_group_id: !input zalo_group_id
+  zalo_phone: !input zalo_phone
+  zalo_types: !input zalo_types
+  zalo_ttl: !input zalo_ttl
+  zalo_delay: !input zalo_delay
+  device_name_map: "{% set ns = namespace(device_names=[]) %} {% for device_id in notify_devices %}\n  {% set device_name = device_attr(device_id, \"name\") %}\n  {% set sanitized_name = \"mobile_app_\" + device_name | slugify  %}\n  {% set ns.device_names = ns.device_names + [sanitized_name] %}\n{% endfor %} {{ ns.device_names }}\n"
+  camera_entities_list: !input camera_entities
+  camera_entity: '{{ camera_entities_list[0] if camera_entities_list else '''' }}'
+  tag: '{{ camera_entity + int(as_timestamp(now()))|string }}'
+  label: Door Entry Detected
+  camera_message: '{{ camera_entity.replace("camera.", "").replace("_", " ")|capitalize }}'
+  camera: '{{ camera_entities_list[0].replace("camera.", "").replace("_", " ") | title }}'
+  camera_entity_snapshot: '{{ camera_entities_list[0] }}'
+  camera_file_path: '{{ camera_entity_snapshot.replace("camera.", "")}}'
+  file_path: !input file_path
+  snapshot_access_file_path: '{{ file_path | replace(''/config/www'', ''/local'') | replace(''/media'', ''/media/local'') }}'
+  snapshot_access_file_path_social: '{{ file_path | replace(''/media/local'', ''/media'') }}'
+  notification_time: !input notification_time
+
+max_exceeded: silent
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input door_contact_sensor
+    id: cua
+    from: !input door_from_state
+    to: !input door_to_state
+
+condition:
+  - condition: and
+    conditions: !input run_conditions
+
+action:
+  # 1. Chờ người nhưng bỏ qua nếu sensor đã ON sẵn
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ wait_for_person }}'
+        sequence:
+          # nếu đang ON sẵn thì thôi, không đợi
+          - if:
+              - condition: state
+                entity_id: !input person_occupancy_sensor
+                state: !input person_detected_state
+            then: []
+            else:
+              # nếu chưa ON thì mới đợi
+              - choose:
+                  # chờ vô hạn nhưng vẫn cho đi tiếp nếu timeout (thực tế là không timeout)
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ max_wait_time == 0 }}'
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        continue_on_timeout: true
+                  # chờ có giới hạn giây, hết giờ vẫn tiếp tục
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ max_wait_time > 0 }}'
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        timeout:
+                          seconds: '{{ max_wait_time }}'
+                        continue_on_timeout: true
+
+  # 2. Send initial notification if enabled
+  - if:
+      - condition: template
+        value_template: !input notify
+    then:
+      - if:
+          - condition: !input condition_notify
+        then:
+          - if:
+              - condition: template
+                value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds > delay_notification }}'
+            then:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ notification_delivery == ''Dynamic'' }}'
+                    sequence:
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: '{{ preview_mode==''Snapshot'' }}'
+                            sequence:
+                              - service: camera.snapshot
+                                entity_id: !input camera_entities
+                                data:
+                                  filename: !input file_path
+                              - alias: Send instant notification snapshot
+                                repeat:
+                                  for_each: '{{device_name_map}}'
+                                  sequence:
+                                    - action: notify.{{ repeat.item }}
+                                      data:
+                                        title: '{{ label }} {{ notification_time }}'
+                                        message: 'Door opened, analyzing entry...'
+                                        data:
+                                          url: !input tap_navigate
+                                          clickAction: !input tap_navigate
+                                          tag: '{{tag}}'
+                                          group: !input notification_channel
+                                          alert_once: true
+                                          ttl: 0
+                                          priority: high
+                                          channel: !input notification_channel
+                                          color: !input notification_color
+                                          notification_icon: !input notification_icon
+                                          sticky: !input notification_sticky
+                                          image: '{{ snapshot_access_file_path }}'
+                                          attachment:
+                                            url: '{{ snapshot_access_file_path }}'
+                                            content_type: JPEG
+                                          push:
+                                            interruption-level: 'active'
+                                            sound:
+                                              name: !input notification_sound
+                                              volume: !input notification_volume
+                                              critical: '{{ notification_critical }}'
+                          - conditions:
+                              - condition: template
+                                value_template: '{{ preview_mode==''Live Preview'' }}'
+                            sequence:
+                              - alias: Send Live Feed
+                                repeat:
+                                  for_each: '{{device_name_map}}'
+                                  sequence:
+                                    - action: notify.{{ repeat.item }}
+                                      data:
+                                        title: '{{ label }} {{ notification_time }}'
+                                        message: 'Door opened, analyzing entry...'
+                                        data:
+                                          entity_id: '{{camera_entity}}'
+                                          url: !input tap_navigate
+                                          tag: '{{tag}}'
+                                          group: !input notification_channel
+                                          alert_once: true
+                                          push:
+                                            interruption-level: 'active'
+                                            sound:
+                                              name: !input notification_sound
+                                              volume: !input notification_volume
+                                              critical: '{{ notification_critical }}'
+                                          ttl: 0
+                                          priority: high
+
+  # 3. Analyze event with AI
+  - alias: Analyze door entry event
+    action: llmvision.stream_analyzer
+    data:
+      image_entity: '{{[camera_entity]}}'
+      duration: !input duration
+      provider: !input provider
+      model: !input model
+      message: !input message
+      use_memory: !input use_memory
+      remember: !input remember
+      expose_images: '{{preview_mode == ''Snapshot'' or remember}}'
+      generate_title: !input remember
+      include_filename: true
+      max_frames: !input max_frames
+      target_width: !input target_width
+      max_tokens: !input max_tokens
+    response_variable: response
+
+  # 4. Update label with AI-generated title
+  - alias: Update label with title
+    variables:
+      label: '{{response.title}}'
+
+  # 5. Send/Update notification with AI summary
+  - if:
+      - condition: template
+        value_template: !input notify
+    then:
+      - if:
+          - condition: !input condition_notify
+        then:
+          - if:
+              - condition: template
+                value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds > delay_notification }}'
+            then:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ analysis_mode==''Snapshot'' }}'
+                    sequence:
+                      - alias: Update notification with AI summary
+                        repeat:
+                          for_each: '{{device_name_map}}'
+                          sequence:
+                            - action: notify.{{ repeat.item }}
+                              data:
+                                title: '{{ label }} {{ notification_time }}'
+                                message: '{{response.response_text}}'
+                                data:
+                                  image: '{{response.key_frame.replace(''/media'',''/media/local'') }}'
+                                  url: !input tap_navigate
+                                  clickAction: !input tap_navigate
+                                  tag: '{{tag}}'
+                                  group: !input notification_channel
+                                  alert_once: true
+                                  ttl: 0
+                                  priority: high
+                                  channel: !input notification_channel
+                                  color: !input notification_color
+                                  notification_icon: !input notification_icon
+                                  sticky: !input notification_sticky
+                                  push:
+                                    interruption-level: '{{''passive'' if notification_delivery==''Dynamic'' else ''active''}}'
+                                    sound:
+                                      name: !input notification_sound
+                                      volume: !input notification_volume
+                                      critical: '{{ notification_critical }}'
+                                  actions:
+                                    - action: URI
+                                      title: See Snapshot
+                                      uri: '{{response.key_frame.replace(''/media'',''/media/local'') }}'
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ analysis_mode==''Live Preview'' }}'
+                    sequence:
+                      - alias: Send Live Feed with summary
+                        repeat:
+                          for_each: '{{device_name_map}}'
+                          sequence:
+                            - action: notify.{{ repeat.item }}
+                              data:
+                                title: '{{ label }} {{ notification_time }}'
+                                message: '{{ response.response_text }}'
+                                data:
+                                  entity_id: '{{camera_entity}}'
+                                  url: !input tap_navigate
+                                  tag: '{{tag}}'
+                                  group: !input notification_channel
+                                  alert_once: true
+                                  push:
+                                    interruption-level: 'active'
+                                    sound:
+                                      name: !input notification_sound
+                                      volume: !input notification_volume
+                                      critical: '{{ notification_critical }}'
+                                  ttl: 0
+                                  priority: high
+                                  actions:
+                                    - action: URI
+                                      title: See Snapshot
+                                      uri: '{{response.key_frame.replace(''/media'',''/media/local'') }}'
+
+  # 6. Send Zalo notification if enabled
+  - if:
+      - condition: template
+        value_template: '{{ enable_zalo }}'
+    then:
+      - action: zalo_bot.send_image
+        metadata: {}
+        data:
+          type: '{{ zalo_types }}'
+          ttl: '{{ zalo_ttl }}'
+          image_path: '{{ snapshot_access_file_path_social }}'
+          message: '{{ response.response_text }}'
+          thread_id: '{{ zalo_group_id }}'
+          account_selection: '{{ zalo_phone | string }}'
+      - delay: !input zalo_delay
+
+  # 7. Run additional actions
+  - choose: []
+    default: !input additional_actions
+
+  # 8. Cooldown period
+  - delay: !input cooldown
