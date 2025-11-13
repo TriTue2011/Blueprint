@@ -225,15 +225,11 @@ sequence:
     content_type: '{{ content_type | default('''') | trim }}'
     location: '{{ location | default('''') | trim }}'
     image_path: '{{ image_path | default('''') | trim }}'
-    image_path_resolved: "{% set path = image_path %} {% set prefix = 'local/' %}
-      {% if path and path.startswith(prefix) %}\n  {{ '/media/' ~ path[prefix | length:]
-      }}\n{% else %}\n  {{ path }}\n{% endif %}"
+    image_path_resolved: "{% set path = image_path %} {% set prefix = 'local/' %} {% if path and path.startswith(prefix) %}\n  {{ '/media/' ~ path[prefix | length:] }}\n{% else %}\n  {{ path }}\n{% endif %}"
 - alias: Check if variables were set correctly
   if:
   - condition: template
-    value_template: "{{\n  (not summary)\n  or (content_type not in ['information',
-      'location', 'image'])\n  or (content_type == 'location' and not location)\n
-      \ or (content_type == 'image' and not image_path)\n}}"
+    value_template: "{{\n  (not summary)\n  or (content_type not in ['information',\n      'location', 'image'])\n  or (content_type == 'location' and not location)\n  or (content_type == 'image' and not image_path)\n}}"
   then:
   - alias: Set variable for error message
     variables:
@@ -256,8 +252,7 @@ sequence:
         type: !input receiver
         message: '{{ summary }}{% if detail %}
           {{ detail }}{% endif %}
-          {% set query = summary.split() | join(''+'') -%} {% set url = ''https://www.google.com/search?q=''
-          ~ query -%} Google Search ({{ url }})'
+          {% set query = summary.split() | join(''+'') -%} {% set url = ''https://www.google.com/search?q='' ~ query -%} Google Search ({{ url }})'
         ttl: !input ttl
   - conditions:
     - condition: template
@@ -291,6 +286,14 @@ sequence:
       - condition: template
         value_template: '{{ delete_after_send }}'
       then:
-      - action: delete.file  
+      - action: delete.file
         data:
           file: '{{ image_path_resolved }}'
+- alias: Prepare success response for Assist
+  variables:
+    response:
+      success: >-
+        Sent the {{ content_type }} "{{ summary }}" to Zalo (thread
+        {{ default_thread_id | default('unspecified') }}) successfully.
+- stop: Finish and return response data
+  response_variable: response
