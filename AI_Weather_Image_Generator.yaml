@@ -1,0 +1,337 @@
+blueprint:
+  name: Automation - AI Weather Image Generator (Dynamic + AQ Extended)
+  author: TriTue2011
+  description: |
+    # Tự động tạo ảnh thời tiết bằng AI (phiên bản mở rộng chất lượng không khí)
+    
+    - Tự động tạo ảnh khi thời tiết hoặc pha thời gian thay đổi.
+    - Cho phép tùy chọn cảm biến nhiệt độ, độ ẩm, gió, bụi mịn, khí độc, hướng gió.
+    - Tự sinh prompt mô tả thời tiết thông minh dựa trên dữ liệu có thật.
+    shell_command:
+       copy_weather_image: cp "{{ source }}" "{{ destination }}"
+    template:
+      - sensor:
+          - name: "Pha Thời Gian Trong Ngày"
+            unique_id: sensor_daylight_phase_vietnamese
+            icon: mdi:weather-sunset
+            state: >
+              {% set h = now().hour %}
+              {% set m = now().minute %}
+              {% set t = h + (m / 60) %}
+    
+              {% if t >= 0 and t < 4.5 %}
+                Đêm khuya
+              {% elif t >= 4.5 and t < 6 %}
+                Rạng sáng
+              {% elif t >= 6 and t < 8 %}
+                Bình minh
+              {% elif t >= 8 and t < 11 %}
+                Buổi sáng
+              {% elif t >= 11 and t < 13 %}
+                Buổi trưa
+              {% elif t >= 13 and t < 17 %}
+                Buổi chiều
+              {% elif t >= 17 and t < 18.5 %}
+                Hoàng hôn
+              {% elif t >= 18.5 and t < 22 %}
+                Buổi tối
+              {% else %}
+                Đêm muộn
+              {% endif %}
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.0
+
+  input:
+    weather_sensors:
+      name: Cảm biến thời tiết & không khí
+      icon: mdi:weather-partly-cloudy
+      input:
+        time_phase_sensor:
+          name: Sensor pha thời gian trong ngày
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+        weather_entity:
+          name: Weather Entity
+          selector:
+            entity:
+              filter:
+                - domain: weather
+        temperature_sensor:
+          name: Sensor nhiệt độ
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                
+        humidity_sensor:
+          name: Sensor độ ẩm
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        wind_speed_sensor:
+          name: Sensor tốc độ gió
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        wind_gust_sensor:
+          name: Sensor gió giật
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        wind_bearing_sensor:
+          name: Sensor hướng gió
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        pm25_sensor:
+          name: PM2.5
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        pm10_sensor:
+          name: PM10
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        carbon_monoxide_sensor:
+          name: Carbon Monoxide (CO)
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        sulfur_dioxide_sensor:
+          name: Sulfur Dioxide (SO₂)
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''                    
+        ozone_sensor:
+          name: Ozone (O₃)
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+          default: ''    
+    ai_task_settings:
+      name: Cài đặt AI Task
+      icon: mdi:robot-outline
+      input:
+        ai_task_entity:
+          name: AI Task Entity
+          selector:
+            entity:
+              filter:
+                - domain: ai_task
+
+    output_settings:
+      name: Cài đặt lưu ảnh
+      icon: mdi:folder-image
+      input:
+        save_image:
+          name: Lưu ảnh vào thư mục
+          selector:
+            boolean:
+          default: true
+        output_directory:
+          name: Thư mục đầu ra
+          selector:
+            text:
+          default: /media/weather
+        use_fixed_filename:
+          name: Sử dụng tên file cố định
+          selector:
+            boolean:
+          default: true
+        fixed_filename:
+          name: Tên file cố định
+          selector:
+            text:
+          default: weather_current
+        filename_prefix:
+          name: Tiền tố tên file
+          selector:
+            text:
+          default: weather_
+        file_extension:
+          name: Định dạng file
+          selector:
+            text:
+          default: png
+
+    prompt_settings:
+      name: Cài đặt Prompt
+      icon: mdi:text-box
+      input:
+        custom_prompt:
+          name: Prompt tùy chỉnh
+          description: |
+            Prompt có thể dùng biến `{weather_info}`.
+          selector:
+            text:
+              multiline: true
+          default: |
+            Tạo ảnh thời tiết chân thực với các thông tin: {weather_info}.
+            Yêu cầu ảnh: khung cảnh đô thị, có người sinh hoạt, ánh sáng tự nhiên, không chữ/logo.
+
+mode: single
+max_exceeded: silent
+
+variables:
+  time_phase_sensor: !input time_phase_sensor
+  weather_entity: !input weather_entity
+  temperature_sensor: !input temperature_sensor
+  humidity_sensor: !input humidity_sensor
+  wind_speed_sensor: !input wind_speed_sensor
+  wind_gust_sensor: !input wind_gust_sensor
+  wind_bearing_sensor: !input wind_bearing_sensor
+  pm25_sensor: !input pm25_sensor
+  pm10_sensor: !input pm10_sensor
+  carbon_monoxide_sensor: !input carbon_monoxide_sensor
+  sulfur_dioxide_sensor: !input sulfur_dioxide_sensor
+  ozone_sensor: !input ozone_sensor
+  ai_task_entity: !input ai_task_entity
+  save_image: !input save_image
+  output_directory: !input output_directory
+  use_fixed_filename: !input use_fixed_filename
+  fixed_filename: !input fixed_filename
+  filename_prefix: !input filename_prefix
+  file_extension: !input file_extension
+  custom_prompt: !input custom_prompt
+
+triggers:
+  - trigger: state
+    entity_id: !input weather_entity
+  - trigger: state
+    entity_id: !input time_phase_sensor
+
+actions:
+  - variables:
+      # Đọc giá trị có điều kiện (tránh lỗi None)
+      time_phase: "{{ states(time_phase_sensor) if time_phase_sensor else '' }}"
+      weather_state: "{{ states(weather_entity) if weather_entity else '' }}"
+      temperature: "{{ states(temperature_sensor) if temperature_sensor else '' }}"
+      humidity: "{{ states(humidity_sensor) if humidity_sensor else '' }}"
+      wind_speed: "{{ states(wind_speed_sensor) if wind_speed_sensor else '' }}"
+      wind_gust: "{{ states(wind_gust_sensor) if wind_gust_sensor else '' }}"
+      wind_bearing: "{{ states(wind_bearing_sensor) if wind_bearing_sensor else '' }}"
+      pm25: "{{ states(pm25_sensor) if pm25_sensor else '' }}"
+      pm10: "{{ states(pm10_sensor) if pm10_sensor else '' }}"
+      carbon_monoxide: "{{ states(carbon_monoxide_sensor) if carbon_monoxide_sensor else '' }}"
+      sulfur_dioxide: "{{ states(sulfur_dioxide_sensor) if sulfur_dioxide_sensor else '' }}"
+      ozone: "{{ states(ozone_sensor) if ozone_sensor else '' }}"
+
+  - variables:
+      weather_info: >-
+        {% set parts = [] %}
+        {% if time_phase not in ['unknown', '', None] %}
+          {% set parts = parts + ['hiện tại là ' ~ (time_phase|string)] %}
+        {% endif %}
+        {% if weather_state not in ['unknown', '', None] %}
+          {% set parts = parts + ['trời đang ' ~ (weather_state|string)] %}
+        {% endif %}
+        {% if temperature not in ['unknown', '', None] %}
+          {% set parts = parts + ['nhiệt độ ' ~ (temperature|string) ~ '°C'] %}
+        {% endif %}
+        {% if humidity not in ['unknown', '', None] %}
+          {% set parts = parts + ['độ ẩm ' ~ (humidity|string) ~ '%'] %}
+        {% endif %}
+        {% if wind_speed not in ['unknown', '', None] %}
+          {% set parts = parts + ['tốc độ gió ' ~ (wind_speed|string) ~ ' km/h'] %}
+        {% endif %}
+        {% if wind_gust not in ['unknown', '', None] %}
+          {% set parts = parts + ['gió giật ' ~ (wind_gust|string) ~ ' km/h'] %}
+        {% endif %}
+        {% if wind_bearing not in ['unknown', '', None] %}
+          {% set parts = parts + ['hướng gió ' ~ (wind_bearing|string) ~ '°'] %}
+        {% endif %}
+        {% if pm25 not in ['unknown', '', None] %}
+          {% set parts = parts + ['PM2.5 ' ~ (pm25|string) ~ ' µg/m³'] %}
+        {% endif %}
+        {% if pm10 not in ['unknown', '', None] %}
+          {% set parts = parts + ['PM10 ' ~ (pm10|string) ~ ' µg/m³'] %}
+        {% endif %}
+        {% if carbon_monoxide not in ['unknown', '', None] %}
+          {% set parts = parts + ['CO ' ~ (carbon_monoxide|string) ~ ' ppm'] %}
+        {% endif %}
+        {% if sulfur_dioxide not in ['unknown', '', None] %}
+          {% set parts = parts + ['SO₂ ' ~ (sulfur_dioxide|string) ~ ' ppb'] %}
+        {% endif %}
+        {% if ozone not in ['unknown', '', None] %}
+          {% set parts = parts + ['O₃ ' ~ (ozone|string) ~ ' ppb'] %}
+        {% endif %}
+        {{ parts | join(', ') }}
+      final_prompt: "{{ custom_prompt | replace('{weather_info}', weather_info) }}"
+      task_name: "Weather {{ time_phase }} - {{ weather_state }}"
+
+  - alias: Gọi AI tạo ảnh
+    if:
+      - condition: template
+        value_template: "{{ ai_task_entity != '' }}"
+    then:
+      - action: ai_task.generate_image
+        data:
+          task_name: "{{ task_name }}"
+          instructions: "{{ final_prompt }}"
+          entity_id: "{{ ai_task_entity }}"
+        response_variable: ai_result
+    else:
+      - action: ai_task.generate_image
+        data:
+          task_name: "{{ task_name }}"
+          instructions: "{{ final_prompt }}"
+        response_variable: ai_result
+
+  - alias: Lưu ảnh nếu có
+    if:
+      - condition: template
+        value_template: "{{ ai_result is defined and ai_result.media_source_id is defined }}"
+    then:
+      - variables:
+          source_id: "{{ ai_result.media_source_id }}"
+          image_path: >-
+            {% if source_id.startswith('media-source://ai_task/image/') %}
+              {{ '/media/ai_task/image/' ~ source_id.split('/')[-1] }}
+            {% else %}
+              {{ source_id }}
+            {% endif %}
+      - if:
+          - condition: template
+            value_template: "{{ save_image }}"
+        then:
+          - variables:
+              timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
+              filename: >-
+                {% if use_fixed_filename %}
+                  {{ fixed_filename }}.{{ file_extension }}
+                {% else %}
+                  {{ filename_prefix }}{{ timestamp }}.{{ file_extension }}
+                {% endif %}
+              dest_path: "{{ output_directory }}/{{ filename }}"
+          - action: shell_command.copy_weather_image
+            data:
+              source: "{{ image_path }}"
+              destination: "{{ dest_path }}"
+          - action: persistent_notification.create
+            data:
+              title: "Ảnh thời tiết đã tạo"
+              message: >-
+                Ảnh lưu tại: {{ dest_path }}
+                
+                Điều kiện: {{ weather_info }}
