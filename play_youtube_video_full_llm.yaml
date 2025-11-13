@@ -64,11 +64,13 @@ fields:
     name: Media ID
     description: !input media_id_prompt
     selector:
-        text:
+      text:
     required: true
 sequence:
   - variables:
       media_id: "{{ media_id | default('') | trim }}"
+      media_player_entity: !input media_player
+      media_player_name: "{{ state_attr(media_player_entity, 'friendly_name') | default('the selected TV') }}"
   - alias: Check if variables were set correctly
     if:
       - condition: template
@@ -83,11 +85,18 @@ sequence:
         response_variable: response
   - action: media_player.turn_on
     target:
-      entity_id: !input media_player
+      entity_id: "{{ media_player_entity }}"
   - action: media_player.play_media
     data:
       media_content_type: url
       media_content_id: "{{ 'https://www.youtube.com/watch?v=' ~ media_id }}"
       enqueue: play
     target:
-      entity_id: !input media_player
+      entity_id: "{{ media_player_entity }}"
+  - alias: Prepare success response for Assist
+    variables:
+      response:
+        success: >-
+          Playing YouTube video {{ media_id }} on {{ media_player_name }}.
+  - stop: Finish and return response data
+    response_variable: response

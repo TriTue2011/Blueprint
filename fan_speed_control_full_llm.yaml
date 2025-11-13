@@ -136,7 +136,7 @@ fields:
     name: Fan Entities
     description: !input fan_entities_prompt
     selector:
-        text:
+      text:
     required: true
   speed_adjustment:
     name: Speed Adjustment
@@ -203,6 +203,15 @@ sequence:
         {% endif -%}
         {% endfor -%}
         {{ device.entities }}
+  - variables:
+      friendly_fans: >-
+        {% set names = namespace(values=[]) -%}
+        {% for name in fan_entities.split(';') -%}
+        {% if name | trim -%}
+        {% set names.values = names.values + [name.strip()] -%}
+        {% endif -%}
+        {% endfor -%}
+        {{ names.values }}
   - choose:
       - conditions:
           - condition: template
@@ -247,3 +256,19 @@ sequence:
                   data:
                     percentage_step: >-
                       {{ (state_attr(devices[repeat.index - 1], 'percentage_step') | int(1)) if (state_attr(devices[repeat.index - 1], 'percentage_step') | int(1)) > 1 else speed_steps }}
+  - alias: Prepare success response for Assist
+    variables:
+      response:
+        success: >-
+          {%- if (percentage | int) >= 1 -%}
+          Set fan speed to {{ percentage | int }}% for {{ friendly_fans |
+          join(', ') }}.
+          {%- elif speed_adjustment is boolean and speed_adjustment -%}
+          Increased fan speed for {{ friendly_fans | join(', ') }}.
+          {%- elif speed_adjustment is boolean and (not speed_adjustment) -%}
+          Decreased fan speed for {{ friendly_fans | join(', ') }}.
+          {%- else -%}
+          Updated fan speed settings for {{ friendly_fans | join(', ') }}.
+          {%- endif -%}
+  - stop: Finish and return response data
+    response_variable: response

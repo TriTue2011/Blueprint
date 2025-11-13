@@ -106,7 +106,7 @@ fields:
     name: Fan Entities
     description: !input fan_entities_prompt
     selector:
-        text:
+      text:
     required: true
   oscillating:
     name: Oscillating
@@ -150,8 +150,25 @@ sequence:
         {% endif -%}
         {% endfor -%}
         {{ device.entities }}
+  - variables:
+      friendly_fans: >-
+        {% set names = namespace(values=[]) -%}
+        {% for name in fan_entities.split(';') -%}
+        {% if name | trim -%}
+        {% set names.values = names.values + [name.strip()] -%}
+        {% endif -%}
+        {% endfor -%}
+        {{ names.values }}
   - action: fan.oscillate
     target:
       entity_id: "{{ devices | join(', ') }}"
     data:
       oscillating: "{{ (oscillating | string) | lower }}"
+  - alias: Prepare success response for Assist
+    variables:
+      response:
+        success: >-
+          Turned {{ 'on' if oscillating else 'off' }} oscillation for {{
+          friendly_fans | join(', ') }}.
+  - stop: Finish and return response data
+    response_variable: response

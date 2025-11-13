@@ -131,7 +131,7 @@ fields:
     name: Entities
     description: !input entities_prompt
     selector:
-        text:
+      text:
     required: true
   control:
     name: Control
@@ -182,6 +182,15 @@ sequence:
         {% endif -%}
         {% endfor -%}
         {{ device.entities }}
+  - variables:
+      friendly_entities: >-
+        {% set names = namespace(values=[]) -%}
+        {% for name in entities.split(';') -%}
+        {% if name | trim -%}
+        {% set names.values = names.values + [name.strip()] -%}
+        {% endif -%}
+        {% endfor -%}
+        {{ names.values }}
   - action: script.turn_on
     target:
       entity_id: !input controller
@@ -190,3 +199,11 @@ sequence:
         devices: "{{ devices | join(', ') }}"
         control: "{{ control }}"
         timer: "{{ timer }}"
+  - alias: Prepare success response for Assist
+    variables:
+      response:
+        success: >-
+          Scheduled the {{ 'on' if control else 'off' }} action for {{
+          friendly_entities | join(', ') }} after {{ timer }}.
+  - stop: Finish and return response data
+    response_variable: response
