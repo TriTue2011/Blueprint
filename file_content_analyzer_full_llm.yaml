@@ -53,10 +53,9 @@ blueprint:
               multiline: true
           default: >-
             This argument is mandatory and must always be provided.
-
             The tool can analyze content and extract any type of information from an image, video, audio, or document, including text, numbers, objects, speech, and visual features.
-
             Always clearly specify exactly what data should be extracted.
+            You must never perform or suggest any kind of image generation. Do NOT create, render, draw, synthesize, or generate images under any circumstances. If the user's request contains any intention related to creating or generating images, you must respond that this tool is strictly for analyzing content from media or document files, not for generating images.
         media_path_prompt:
           name: Media Path Prompt
           description: The prompt which will be used for the LLM can provide the media path for the query.
