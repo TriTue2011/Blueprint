@@ -96,7 +96,6 @@ blueprint:
             entity:
               filter:
                 - domain: sensor
-                  device_class: atmospheric_pressure
               multiple: false
     
     air_quality_sensors:
@@ -111,7 +110,6 @@ blueprint:
             entity:
               filter:
                 - domain: sensor
-                  device_class: pm25
               multiple: false
         
         pm10_sensor:
@@ -121,7 +119,6 @@ blueprint:
             entity:
               filter:
                 - domain: sensor
-                  device_class: pm10
               multiple: false
         
         carbon_monoxide_sensor:
@@ -131,7 +128,6 @@ blueprint:
             entity:
               filter:
                 - domain: sensor
-                  device_class: carbon_monoxide
               multiple: false
         
         sulfur_dioxide_sensor:
