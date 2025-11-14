@@ -1,0 +1,269 @@
+DỮ LIỆU THỜI TIẾT HIỆN TẠI:
+{weather_info}
+
+YÊU CẦU TẠO ẢNH:
+Tạo một bức ảnh thành phố Hà Nội với độ chân thực cao (photorealistic), phản ánh chính xác các điều kiện thời tiết và thời gian trong ngày dựa trên dữ liệu trên.
+
+CHI TIẾT CỤ THỂ VỀ HÀ NỘI:
+
+🌅 ÁNH SÁNG & THỜI GIAN (ĐẶC TRƯNG HÀ NỘI):
+- Dựa vào thời gian trong ngày để tạo ánh sáng phù hợp:
+  + Rạng sáng (4h-6h): Sương mù dày đặc bao phủ Hồ Gươm, Hồ Tây, ánh sáng vàng nhạt xuyên qua sương, người tập thể dục buổi sáng, xe đạp, xe máy bật đèn trong sương
+  + Buổi sáng (6h-9h): Ánh sáng trắng vàng, giao thông đông đúc (xe máy, xe đạp, ô tô), người đi làm, học sinh mặc đồng phục, quán phở đông khách, cây xanh tươi mát
+  + Buổi trưa (11h-14h): Ánh nắng chói chang, phố phường vắng người hơn, bóng cây rậm rạp, người tìm bóng mát, quán cà phê đông khách trú nóng
+  + Buổi chiều (15h-18h): Ánh sáng vàng ấm, giao thông giờ tan tầm đông đúc nhất, học sinh tan học, người đi chợ, phố cổ nhộn nhịp
+  + Hoàng hôn (18h-19h): Ánh vàng đỏ tuyệt đẹp phản chiếu trên Hồ Tây, Hồ Gươm, người đi dạo, chụp ảnh, bầu trời gradient tím cam
+  + Buổi tối (19h-22h): Đèn đường sáng rực, biển hiệu neon nhiều màu, phố cổ đông người, xe cộ nhộn nhịp, đèn phản chiếu trên mặt nước
+  + Đêm khuya (22h-4h): Đèn đường thưa thớt, giao thông vắng, người thức khuya ít, bầu trời tối (khó thấy sao do ô nhiễm ánh sáng)
+
+🏙️ KIẾN TRÚC ĐẶC TRƯNG HÀ NỘI:
+
+A. PHỐ CỔ HÀ NỘI (36 Phố Phường):
+- Nhà ống kiểu Pháp: Mặt tiền hẹp (3-5m), chiều sâu dài, 2-4 tầng, sơn vàng/trắng/xanh pastel
+- Kiến trúc Đông Dương: Cửa gỗ cũ, ban công sắt rèn Pháp, cửa sổ cong, mái ngói đỏ
+- Biển hiệu: Chữ Hán, chữ Nôm cổ, biển hiệu gỗ, neon cũ (không hiển thị chữ rõ)
+- Đường phố: Hẹp (4-6m), đá lát, cây xanh rợp bóng mát (cây xà cừ, cây sấu)
+- Hoạt động: Bán hàng rong, quán cafe vỉa hè, cửa hàng thủ công mỹ nghệ
+- Tường: Tường ố vàng, bong tróc, rêu mốc, ẩm thấp
+
+B. KHU PHỐ PHÁP (Khu vực Hồ Gươm, Hai Bà Trưng):
+- Villa Pháp: 2-3 tầng, sơn màu pastel (vàng, hồng, trắng, xanh lá nhạt)
+- Kiến trúc Gothic: Nhà thờ Lớn Hà Nội, cửa sổ hình vòm, tháp chuông cao
+- Nhà hàng Tây: Tường gạch mộc, cửa kính lớn, bàn ghế ngoài trời, dù che
+- Vườn hoa: Cây cảnh, ghế đá, đèn công viên cổ điển kiểu Pháp
+- Cổng sắt: Sắt rèn hoa văn cổ điển, sơn đen hoặc xanh rêu
+
+C. CHUNG CƯ CŨ THỜI XÔ VIẾT:
+- Tập thể cũ: 4-5 tầng, tường xi măng xám đen, ban công hẹp, lan can sắt
+- Phơi quần áo: Dây phơi tràn lan, quần áo nhiều màu sắc
+- Dây điện rối: Dây điện, dây cáp chằng chịt như mạng nhện đen
+- Cửa hàng tầng 1: Tạp hóa, quán phở, cafe, tiệm sửa xe máy
+- Sân chung: Người già ngồi nói chuyện, trẻ em chơi đùa, xe máy đậu kín
+
+D. KHU HIỆN ĐẠI (Cầu Giấy, Mỹ Đình):
+- Tòa nhà văn phòng: Kính phản quang xanh/vàng, 10-30 tầng, kiến trúc hiện đại
+- Khu đô thị mới: Chung cư cao tầng màu sắc đa dạng, công viên quy hoạch
+- Trung tâm thương mại: Lotte, Vincom, biển hiệu LED lớn (không hiển thị chữ rõ)
+- Đường rộng: 6-8 làn xe, vỉa hè rộng, cây xanh tươi
+
+🌳 CÂY XANH ĐẶC TRƯNG HÀ NỘI:
+- Cây Xà Cừ: Tán lá rộng, lá nhỏ li ti màu xanh đậm, bóng mát dày, hoa tím nhạt (mùa hè)
+- Cây Sấu: Tán lớn hình ô, lá xanh đậm, hoa trắng (mùa hè), quả tròn
+- Cây Phượng Vĩ: Hoa đỏ rực (tháng 5-6), cành ngang, tán rộng, lá xanh mướt
+- Cây Bàng: Lá to màu xanh, tán rộng tròn, mùa thu lá vàng rụng đẹp
+- Cây Hoa Sữa: Hoa trắng nhỏ (tháng 10), cây nhỏ, tán tròn, thơm nồng
+- Cây Sung: Rễ khí thòng xuống, thân to, lá xanh đậm, trong công viên cổ
+
+🏞️ HỒ NƯỚC NỔI TIẾNG:
+
+A. HỒ GƯƠM (HỒ HOÀN KIẾM):
+- Tháp Rùa: Ở giữa hồ, kiến trúc Việt cổ, tháp vuông, mái cong, sơn đỏ hoặc xanh rêu cũ
+- Cầu Thê Húc: Cầu gỗ đỏ tươi uốn lượn, lan can gỗ, nối đền Ngọc Sơn
+- Đền Ngọc Sơn: Mái ngói cong màu đỏ, tường trắng, cổng tam quan, cột đỏ
+- Xung quanh hồ: Người tập thể dục, chơi cầu lông, đi bộ, ngồi ghế đá
+- Cây xanh: Cây cổ thụ to, cây sung rễ khí, cây đa, cây bàng rợp bóng
+- Ghế đá: Ghế đá màu xám ven hồ, người ngồi nghỉ, đọc sách, nói chuyện
+- Mặt nước: Phản chiếu cây, tháp, bầu trời, gợn sóng nhẹ
+
+B. HỒ TÂY (HỒ LỚN NHẤT HÀ NỘI):
+- Diện tích rộng: Tầm nhìn xa đến 2-3km, mặt nước lấp lánh
+- Chùa Trấn Quốc: Kiến trúc Việt cổ, tháp cao 15 tầng, mái cong nhiều tầng, sơn trắng đỏ
+- Đường ven hồ: Đường rộng 2 làn, cây xanh hai bên, người chạy bộ, đạp xe
+- Quán cafe: Nhiều quán cafe view hồ, ghế ngoài trời, dù che, bàn gỗ
+- Hoàng hôn: Ánh vàng đỏ tuyệt đẹp phản chiếu trên mặt nước, bầu trời gradient
+- Thuyền: Thuyền đạp vịt, thuyền kayak, thuyền buồm nhỏ (nếu có)
+
+🚦 GIAO THÔNG ĐẶC TRƯNG HÀ NỘI:
+- Xe máy: Chiếm 90% phương tiện, màu đa dạng (đen, trắng, đỏ, xanh), đi thành đàn dày đặc
+- Xe đạp: Người cao tuổi, học sinh, xe đạp điện màu trắng xanh
+- Ô tô: Sedan, SUV nhỏ, taxi màu xanh lá hoặc trắng, xe bus màu xanh lá
+- Xe tải nhỏ: Chở hàng, rau củ, vật liệu xây dựng
+- Hàng rong: Xe đẩy inox, gánh hàng rong tre, xe chở hoa, xe bán hàng di động
+- Cách đi: Đi chen chúc, sát nhau, vượt đèn vàng, dừng bừa bãi trên vỉa hè
+- Đèn giao thông: Đèn tròn hoặc chữ nhật, cột kim loại cao
+- Vỉa hè: Đá lát, gạch, xe máy đậu kín, quán cafe chiếm
+
+👥 CON NGƯỜI HÀ NỘI:
+
+A. TRANG PHỤC THEO MÙA:
+- Mùa hè (5-9): Áo thun ngắn tay, quần short, váy mỏng, nón, khẩu trang chống nắng, kính râm
+- Mùa đông (11-2): Áo khoác dày, áo phao, khăn quàng len, găng tay, mũ len, boots
+- Mùa mưa: Áo mưa màu xanh/vàng/đỏ, ô, ủng cao su, quần dài
+- Học sinh: Đồng phục trắng xanh, cặp sách, xe đạp, mũ lưỡi trai
+- Văn phòng: Áo sơ mi trắng/xanh, quần tây đen/xám, váy công sở, giày da
+
+B. HOẠT ĐỘNG NGƯỜI DÂN:
+- Buổi sáng (6h-9h): Tập thể dục ven hồ, chạy bộ, đi chợ, mua bánh mì, ăn phở vỉa hè
+- Buổi trưa (11h-14h): Ngồi quán cafe vỉa hè, ăn cơm trưa, nghỉ trưa trong nhà
+- Buổi chiều (15h-18h): Tan tầm đông đúc, mua sắm, đón con tan học, đi chợ chiều
+- Buổi tối (19h-22h): Đi dạo hồ Gươm, ăn kem Tràng Tiền, shopping phố đi bộ, cafe
+- Cuối tuần: Du lịch, tụ tập nhóm bạn ở cafe, đi công viên, ăn uống
+
+C. VĂN HÓA ĐẶC TRƯNG:
+- Ngồi cafe vỉa hè: Ghế nhựa nhỏ màu xanh/đỏ, bàn nhựa, cafe phin, trà đá
+- Quán phở: Bát phở trắng, đũa gỗ, thìa inox, tô rau sống (hành, ngò, giá)
+- Bún chả: Bếp than ngoài trời, khói bốc lên, bàn nhựa nhỏ, ghế nhựa
+- Chợ: Người mua bán đông đúc, hàng hóa đa dạng, rau củ, thịt cá
+- Phố đi bộ: Đông người, nghệ sĩ đường phố, bán hàng lưu niệm, ánh đèn neon
+
+🌤️ THỜI TIẾT & KHÍ HẬU HÀ NỘI:
+
+A. MÙA HẠ (5-9):
+- Nắng nóng: 32-38°C, ánh nắng chói chang, người tìm bóng mát
+- Độ ẩm cao: 70-90%, không khí nặng nề, mồ hôi nhiều
+- Mưa dông: Mưa to bất ngờ, sấm chớp, gió mạnh, nước ngập vỉa hè
+- Cây cối: Xanh tươi, lá sum suê, hoa phượng đỏ rực (tháng 5-6)
+- Con người: Mặc mỏng, nón, khẩu trang, tìm bóng mát, uống nước đá
+
+B. MÙA ĐÔNG (11-2):
+- Lạnh ẩm: 10-18°C, sương mù dày, độ ẩm cao 80-95%
+- Sương mù: Sương mù trắng đục bao phủ hồ, phố phường, tầm nhìn 50-100m
+- Mưa phùn: Mưa nhỏ li ti, không ngớt, trời xám xịt
+- Cây cối: Cây xanh đậm, một số cây rụng lá (cây bàng)
+- Con người: Mặc áo khoác dày, khăn quàng, găng tay, mũ len, boots
+
+C. MÙA XUÂN (3-4):
+- Ấm áp: 20-28°C, nắng vàng dịu, không khí trong lành
+- Hoa nở: Hoa đào, hoa mai, hoa ban, hoa sữa
+- Trời xanh: Bầu trời xanh trong, mây trắng nhẹ
+- Con người: Mặc áo mỏng, thoải mái, đi chơi xuân
+
+D. MÙA THU (9-11):
+- Mát mẻ: 22-28°C, nắng vàng ấm, độ ẩm giảm 60-70%
+- Lá vàng: Cây bàng lá vàng rụng, lá phủ kín đường
+- Hoa sữa: Hoa sữa nở trắng, thơm nồng nặc (tháng 10)
+- Con người: Mặc áo nhẹ, thoải mái, đi dạo, chụp ảnh
+
+🏭 CHẤT LƯỢNG KHÔNG KHÍ HÀ NỘI:
+
+A. AQI TỐT (<50):
+- Không khí trong lành, tầm nhìn xa 5-10km, bầu trời xanh trong
+- Màu sắc tươi sáng, rõ nét, chi tiết xa thấy rõ
+- Ánh nắng trong trẻo, bóng râm sắc nét
+
+B. AQI TRUNG BÌNH (50-100):
+- Hơi mờ nhẹ, tầm nhìn 3-5km, bầu trời xanh nhạt
+- Màu sắc bình thường, chi tiết xa hơi mờ
+- Ánh sáng bình thường
+
+C. AQI KÉM (100-150):
+- Sương mù nhẹ, tầm nhìn 1-3km, bầu trời xám trắng
+- Màu sắc xám hơn, chi tiết xa mờ
+- Ánh sáng khuếch tán, bóng mờ
+
+D. AQI XẤU (150-200):
+- Sương mù đậm, tầm nhìn 500m-1km, bầu trời xám đục
+- Màu sắc xám tro, chi tiết xa không rõ
+- Người đeo khẩu trang N95, ít người ngoài đường
+
+E. AQI RẤT XẤU (>200):
+- Sương mù rất dày, tầm nhìn <500m, bầu trời xám đen
+- Khói bụi rõ ràng, có thể thấy nhà máy xa xa xả khói
+- Người đeo khẩu trang kín mít, ít ra đường
+
+📸 GÓC CHỤP & KỸ THUẬT NHIẾP ẢNH:
+
+A. GÓC CHỤP TỪNG TRÊN CAO (AERIAL/BIRD'S EYE VIEW):
+- Độ cao: 50-200m, như chụp từ flycam/drone hoặc tầng cao của tòa nhà
+- Góc nhìn: 30-60 độ nghiêng xuống, bao quát toàn cảnh khu vực rộng
+- Tầm nhìn: Bao quát 500m-2km, thấy được nhiều tòa nhà, đường phố, hồ nước
+- Không tập trung: KHÔNG focus vào 1 điểm duy nhất, hiển thị toàn bộ khung cảnh đều sắc nét
+
+B. NỘI DUNG TRONG KHUNG HÌNH BÁO QUÁT:
+- Hệ thống đường phố: Nhiều con đường cắt nhau, giao lộ, vòng xoay
+- Mật độ nhà cửa: Hàng trăm ngôi nhà, tòa nhà chen chúc, mái ngói đỏ xen kẽ mái tôn
+- Giao thông: Dòng xe máy, ô tô như dòng kiến, di chuyển trên nhiều tuyến đường
+- Cây xanh: Các tán cây xà cừ, sấu rải rác giữa nhà cửa, công viên xanh mướt
+- Hồ nước: Hồ Gươm hoặc Hồ Tây chiếm một phần khung hình, mặt nước lấp lánh
+- Địa danh nổi bật: Nhà thờ Lớn, Tháp Rùa, Chùa Trấn Quốc (nhỏ trong khung cảnh rộng)
+- Khu vực đa dạng: Phố cổ chen chúc, khu hiện đại với tòa nhà cao, khu dân cư
+
+C. CHI TIẾT TRONG TOÀN CẢNH:
+- Mái nhà: Hàng nghìn mái nhà, màu đỏ, xám, xanh, tôn bạc lấp lánh
+- Đường phố: Đường lớn, đường nhỏ, ngõ hẻm, tạo thành mạng lưới phức tạp
+- Xe cộ: Dòng xe chảy như sông, đèn xe (nếu tối), đông đúc giờ cao điểm
+- Người: Nhỏ như kiến, hoạt động trên phố, trong sân, trên vỉa hè
+- Sân thượng: Phơi quần áo, bể nước, ăng-ten, bồn nước
+- Công viên: Khu xanh giữa thành phố, cây cối rậm rạp
+
+D. KỸ THUẬT CHỤP:
+- Lens: Wide angle (24-35mm tương đương), bao quát rộng
+- Focus: Deep depth of field (f/8-f/16), mọi thứ từ gần đến xa đều sắc nét
+- Phong cách: Photorealistic aerial photography, như chụp từ drone DJI Mavic/Phantom
+- Độ phân giải: 4K, chi tiết sắc nét đến từng mái nhà nhỏ
+- Texture: Chi tiết mái nhà, cây cối, đường phố, mặt nước đều rõ ràng
+- Lighting: Ánh sáng tự nhiên phân bổ đều, tạo bóng đổ của tòa nhà, cây cối
+- Color grading: Tự nhiên, màu sắc phong phú nhưng không quá bão hòa
+- Dynamic range: Cân bằng giữa bóng tối (trong ngõ hẻm) và sáng (mái nhà phản chiếu)
+- Composition: Balanced composition, không có điểm focus trung tâm, toàn cảnh đồng đều
+
+🚫 LƯU Ý TRÁNH:
+- STRICTLY NO text, letters, words, signatures, logos, watermarks, or any written characters anywhere in the image
+- ABSOLUTELY NO branding, company names, store names, or identification marks of any kind
+- NO visible text on signs, billboards, storefronts, vehicles, or anywhere else
+- KHÔNG có yếu tố quá hiện đại (smartphone rõ mặt, laptop, màn hình LED lớn)
+- KHÔNG có chi tiết phi thực tế, kỳ ảo, siêu nhiên
+- KHÔNG làm mờ hoặc pixel hóa quá mức
+- KHÔNG có lỗi giải phẫu người (tay chân dị dạng, mặt méo)
+- KHÔNG có xe hơi quá hiện đại (chỉ xe máy Việt Nam, ô tô phổ thông)
+- The image must be completely clean without any overlay text, UI elements, or graphics
+
+🎯 MỤC TIÊU CUỐI CÙNG:
+Tạo một bức ảnh mà người xem có thể "cảm nhận" được không khí, văn hóa, và nhịp sống của Hà Nội qua từng chi tiết nhỏ. Ảnh phải chân thực đến mức như thể được chụp bởi một nhiếp ảnh gia chuyên nghiệp đang đứng tại một góc phố Hà Nội vào đúng thời điểm thời tiết đó. Người xem phải nhận ra ngay "Đây là Hà Nội!" chỉ qua kiến trúc, cây cối, con người, và không khí đặc trưng.
+##########################################
+DỮ LIỆU THỜI TIẾT HIỆN TẠI:
+{weather_info}
+
+YÊU CẦU TẠO ẢNH:
+Tạo một bức ảnh thành phố Nha Trang photorealistic, bắt buộc phải có biển trong khung hình, phản ánh chính xác điều kiện thời tiết, thời gian trong ngày, mùa, AQI và nhịp sống đặc trưng của Nha Trang.
+
+ÁNH SÁNG & THỜI GIAN TRONG NGÀY (ĐẶC TRƯNG NHA TRANG):
+Rạng sáng (4h–6h): Biển xanh xám, sương nhẹ, ngư dân kéo lưới, thuyền thúng cập bờ, ánh hồng tím phản chiếu trên mặt biển.
+Buổi sáng (6h–9h): Ánh vàng nhẹ, người chạy bộ, tắm biển, du khách đông, tàu cao tốc đi đảo.
+Buổi trưa (11h–14h): Nắng chói, biển xanh ngọc bích, du khách tắm nắng, ghế dù trắng xanh.
+Buổi chiều (15h–18h): Ánh vàng ấm, giao thông ven biển đông, chợ hải sản tấp nập.
+Hoàng hôn (18h–19h): Bầu trời cam tím, mặt biển phản chiếu ánh hoàng hôn, tàu du lịch quay về.
+Buổi tối (19h–22h): Đèn neon ven biển, quán bar, nhà hàng sáng, biển tối xanh sâu.
+Đêm khuya (22h–4h): Bãi biển vắng, đèn thưa, taxi chạy lác đác.
+
+KIẾN TRÚC ĐẶC TRƯNG NHA TRANG:
+Ven biển Trần Phú: Khách sạn cao tầng 15–40 tầng kiến trúc kính, ban công kính, tông trắng và xanh biển. Đường ven biển rộng, hàng dừa thẳng tắp, bãi biển dài cát vàng.
+Trung tâm – Chợ Đầm: Nhà ống 3–5 tầng, tường vàng hoặc pastel, chợ kiến trúc mái cong, người mua bán hải sản.
+Làng chài – Khu dân cư cũ: Nhà cấp 4, mái tôn xanh đỏ, thuyền thúng, thuyền gỗ, ngư dân phơi lưới, phơi cá.
+Khu hiện đại: Tòa nhà văn phòng kính xanh, khu đô thị mới, công viên ven biển.
+
+THIÊN NHIÊN & CÂY CỐI:
+Hàng dừa ven biển, cây phi lao, cây bàng biển lá to, hoa giấy hồng tím trắng, cây bàng Đài Loan trồng dọc vỉa hè.
+
+BIỂN NHA TRANG (BẮT BUỘC CÓ TRONG ẢNH):
+Biển xanh ngọc hoặc xanh đậm tùy thời tiết, sóng trắng, cát vàng mịn, ghế dù trắng hoặc xanh biển, tàu du lịch, cano, thuyền thúng, các đảo xa như Hòn Tre, Hòn Mun xuất hiện nhỏ ở đường chân trời. Ánh sáng phản chiếu trên mặt biển.
+
+GIAO THÔNG ĐẶC TRƯNG:
+Xe máy phổ thông, taxi xanh trắng, xe điện du lịch, du khách đi bộ ven biển, đường rộng nhiều làn, vỉa hè lát gạch đỏ xám.
+
+CON NGƯỜI NHA TRANG:
+Trang phục mùa nóng: áo thun, quần short, váy maxi, trang phục biển, bikini, khăn choàng. Ngư dân: áo thun, quần ngắn, nón lá hoặc nón lưỡi trai. Mùa mưa: áo mưa mỏng.
+Hoạt động đặc trưng: tắm biển, chạy bộ, bóng chuyền bãi biển, ăn hải sản, uống dừa, đi cano, lặn biển, ngư dân kéo lưới sáng sớm.
+
+THỜI TIẾT NHA TRANG (TÙY THEO {weather_info}):
+Mùa hè (4–9): Nắng mạnh, biển trong, trời ít mây.
+Mùa mưa (10–12): Trời xám, sóng mạnh, biển tối màu.
+Mùa khô mát (1–3): Trời trong, biển xanh nhạt, gió nhẹ.
+
+CHẤT LƯỢNG KHÔNG KHÍ (AQI):
+AQI tốt <50: biển xanh trong, đảo xa rõ nét.
+AQI 50–100: hơi mờ nhẹ.
+AQI kém >150: sương mờ, đường chân trời nhạt, màu biển xám nhẹ.
+
+GÓC CHỤP – PHOTOREALISTIC AERIAL:
+Ảnh chụp từ độ cao 50–200m, góc nhìn chéo 30–60 độ, biển chiếm 30–60% khung hình. Thấy rõ bãi biển dài, hàng dừa, khách sạn ven biển, đường Trần Phú, du khách tắm biển, xe máy, taxi, đảo xa. Phong cách ảnh: photorealistic 4K, độ sâu trường ảnh lớn (f/8–f/16), bố cục kiểu drone DJI, ánh sáng tự nhiên, màu sắc chân thực.
+
+NỘI DUNG BẮT BUỘC TRONG KHUNG HÌNH:
+Biển Nha Trang, bãi biển cát vàng, hàng dừa, đường Trần Phú hoặc khu ven biển, khách sạn cao tầng ven biển, người tắm biển hoặc du khách, xe máy và taxi xanh trắng, tàu thuyền xa bờ, các đảo ở đường chân trời.
+
+LƯU Ý TRÁNH:
+Không chữ, không logo, không watermark, không text trên biển hiệu hay xe, không yếu tố kỳ ảo, không xe quá hiện đại, không lỗi giải phẫu người, không overlay, không glitch.
+
+MỤC TIÊU CUỐI CÙNG:
+Ảnh phải khiến người xem nhận ra ngay “Đây là Nha Trang”, với biển xanh, thành phố ven biển, kiến trúc khách sạn đặc trưng, hàng dừa, nhịp sống du lịch và không khí biển nhiệt đới.
+
