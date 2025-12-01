@@ -98,6 +98,7 @@ blueprint:
   source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/voice_camera_ai_analyzer.yaml
 mode: parallel
 max_exceeded: silent
+description: 'Use this tool for ANY questions about cameras, such as: checking who is in view, detecting people/pets/motion, describing what cameras see, checking camera status. This tool directly analyzes live camera streams.'
 variables:
   version: 20251031_auto_alias_nocamselect
 fields:

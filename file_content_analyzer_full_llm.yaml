@@ -1,8 +1,8 @@
 blueprint:
   name: Voice - File Content Analyzer
   author: luuquangvu
-  description: >-
-    # Tool designed to analyze and extract all types of information from media and document files
+  description: '# Tool designed to analyze and extract all types of information from
+    media and document files
 
     ## Blueprint Setup
 
@@ -12,15 +12,23 @@ blueprint:
 
     ### Optional
 
-    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+    * Adjust the prompts for each field used in the script. The descriptions guide
+    the LLM to provide the correct input.
 
     ### Note
 
-    * Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to extract data from a media or document file.
+    * Provide a concise and precise description for the script. This description will
+    enable the LLM to recognize that the script is designed to extract data from a
+    media or document file.
 
     * Make sure to expose the script to Assist after the script has been saved.
 
     * Do not alter the default script name.
+
+    * Once the script is created, click the three dots in the top right corner, choose
+    "Edit in YAML," and remove the `description: ...` line to restore the default.
+    This step is important because it helps the LLM better understand the script''s
+    purpose.'
   domain: script
   homeassistant:
     min_version: 2025.8.0
@@ -28,59 +36,76 @@ blueprint:
     ai_task_settings:
       name: Settings for AI Task
       icon: mdi:robot-outline
-      description: These settings allow you to set up the AI Task responsible for handling the analyzer task.
+      description: These settings allow you to set up the AI Task responsible for
+        handling the analyzer task.
       collapsed: true
       input:
         ai_task_entity:
           name: AI Task Entity
-          description: If left empty, the system will use the default settings under System - General.
+          description: If left empty, the system will use the default settings under
+            System - General.
           selector:
             entity:
               filter:
-                domain: ai_task
+              - domain:
+                - ai_task
+              multiple: false
+              reorder: false
           default:
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
-      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      description: You can use these settings to finetune the prompts for your specific
+        LLM (model). In most cases the defaults should be fine.
       collapsed: true
       input:
         instructions_prompt:
           name: Instructions Prompt
-          description: The prompt which will be used for the LLM can provide the request for the query.
+          description: The prompt which will be used for the LLM can provide the request
+            for the query.
           selector:
             text:
               multiline: true
-          default: >-
-            This argument is mandatory and must always be provided.
-            The tool can analyze content and extract any type of information from an image, video, audio, or document, including text, numbers, objects, speech, and visual features.
-            Always clearly specify exactly what data should be extracted.
-            You must never perform or suggest any kind of image generation. Do NOT create, render, draw, synthesize, or generate images under any circumstances. If the user's request contains any intention related to creating or generating images, you must respond that this tool is strictly for analyzing content from media or document files, not for generating images.
-        media_path_prompt:
-          name: Media Path Prompt
-          description: The prompt which will be used for the LLM can provide the media path for the query.
-          selector:
-            text:
-              multiline: true
-          default: >-
-            This argument is mandatory and must always be provided.
+              multiple: false
+          default: 'This argument is mandatory and must always be included.
 
-            Always provide a media path that starts with `local/` (for example `local/snapshots/latest.jpg` or `local/documents/report.pdf`).
+            The tool can analyze and extract any type of information from an image,
+            video, audio, or document, including text, numbers, objects, speech, and
+            visual features.
+
+            Always specify exactly what data should be extracted.
+
+            This tool returns plain text only.'
+        file_path_prompt:
+          name: File Path Prompt
+          description: The prompt which will be used for the LLM can provide the file
+            path for the query.
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: 'This argument is mandatory and must always be included.
+
+            Always specify a relative file path that starts with `local/`.'
         mime_type_prompt:
           name: MIME Type Prompt
-          description: The prompt which will be used for the LLM can provide the MIME type of media for the query.
+          description: The prompt which will be used for the LLM can provide the MIME
+            type of file for the query.
           selector:
             text:
               multiline: true
-          default: >-
-            This argument is mandatory and must always be provided.
+              multiple: false
+          default: 'This argument is mandatory and must always be included.
 
-            Always specify the MIME type of the media.
-            Choose a value that matches the file contents (for example image/jpeg, video/mp4, audio/mp3, text/plain, or application/pdf).
+            Always specify the MIME type of the file. Choose a value that matches
+            the file contents (for example image/jpeg, video/mp4, audio/mp3, text/plain,
+            or application/pdf).'
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/file_content_analyzer_full_llm.yaml
 mode: parallel
 max_exceeded: silent
+description: 'Takes a snapshot from a camera and saves it as an image file. Use ONLY when the user explicitly requests to capture/save/take a photo from a camera, NOT for analyzing or checking what the camera sees.'
 variables:
-  version: 20251019
+  version: 20251116
 fields:
   instructions:
     name: Instructions
@@ -89,9 +114,9 @@ fields:
       text:
         multiline: true
     required: true
-  media_path:
+  file_path:
     name: Media Path
-    description: !input media_path_prompt
+    description: !input file_path_prompt
     selector:
       text:
     required: true
@@ -102,77 +127,74 @@ fields:
       text:
     required: true
 sequence:
-  - variables:
-      ai_task_entity: !input ai_task_entity
-      instructions: "{{ instructions | default('') | trim }}"
-      media_path: "{{ media_path | default('') | trim }}"
-      mime_type: "{{ mime_type | default('') | trim }}"
-  - if:
-      - alias: Check if variables were set correctly
-        condition: template
-        value_template: "{{ not instructions }}"
-    then:
-      - alias: Set variable for error message
-        variables:
-          response:
-            error: >-
-              Unable to extract data because instructions is missing or incorrect.
-      - alias: Stop the script
-        stop: >-
-          Unable to extract data because instructions is missing or incorrect.
-        response_variable: response
-  - if:
-      - alias: Check if variables were set correctly
-        condition: template
-        value_template: "{{ (media_path | length == 0) or (not media_path.startswith('local/')) }}"
-    then:
-      - alias: Set variable for error message
-        variables:
-          response:
-            error: >-
-              Unable to extract data because media path is missing or invalid. Provide a path beginning with `local/`, such as `local/folder/file.ext`.
-      - alias: Stop the script
-        stop: >-
-          Unable to extract data because media path is missing or invalid.
-        response_variable: response
-  - if:
-      - alias: Check if variables were set correctly
-        condition: template
-        value_template: "{{ not mime_type.startswith(('image/', 'video/', 'audio/', 'text/', 'application/')) }}"
-    then:
-      - alias: Set variable for error message
-        variables:
-          response:
-            error: >-
-              Unable to extract data because MIME type is missing or incorrect.
-      - alias: Stop the script
-        stop: >-
-          Unable to extract data because MIME type is missing or incorrect.
-        response_variable: response
-  - variables:
-      attachments:
-        media_content_id: media-source://media_source/{{ media_path }}
-        media_content_type: "{{ mime_type }}"
-  - if:
-      - condition: template
-        value_template: "{{ not ai_task_entity }}"
-    then:
-      - action: ai_task.generate_data
-        data:
-          task_name: Analyze content from a media or document file
-          instructions: "{{ instructions }}"
-          attachments: "{{ attachments }}"
-        response_variable: result
-    else:
-      - action: ai_task.generate_data
-        data:
-          task_name: Analyze content from a media or document file
-          instructions: "{{ instructions }}"
-          attachments: "{{ attachments }}"
-          entity_id: "{{ ai_task_entity }}"
-        response_variable: result
-  - variables:
+- variables:
+    ai_task_entity: !input ai_task_entity
+    instructions: '{{ instructions | default('''') | trim }}'
+    file_path: '{{ file_path | default('''') | trim }}'
+    mime_type: '{{ mime_type | default('''') | trim }}'
+- if:
+  - alias: Check if variables were set correctly
+    condition: template
+    value_template: '{{ not instructions }}'
+  then:
+  - alias: Set variable for error message
+    variables:
       response:
-        data: "{{ result.data }}"
-  - stop: ""
+        error: Unable to extract data because instructions is missing or incorrect.
+  - alias: Stop the script
+    stop: Unable to extract data because instructions is missing or incorrect.
     response_variable: response
+- if:
+  - alias: Check if variables were set correctly
+    condition: template
+    value_template: '{{ (file_path | length == 0) or (not file_path.startswith(''local/''))
+      }}'
+  then:
+  - alias: Set variable for error message
+    variables:
+      response:
+        error: Unable to extract data because file path is missing or invalid. Specify
+          a path beginning with `local/`, such as `local/folder/file.ext`.
+  - alias: Stop the script
+    stop: Unable to extract data because file path is missing or invalid.
+    response_variable: response
+- if:
+  - alias: Check if variables were set correctly
+    condition: template
+    value_template: '{{ not mime_type.startswith((''image/'', ''video/'', ''audio/'',
+      ''text/'', ''application/'')) }}'
+  then:
+  - alias: Set variable for error message
+    variables:
+      response:
+        error: Unable to extract data because MIME type is missing or incorrect.
+  - alias: Stop the script
+    stop: Unable to extract data because MIME type is missing or incorrect.
+    response_variable: response
+- variables:
+    attachments:
+      media_content_id: media-source://media_source/{{ file_path }}
+      media_content_type: '{{ mime_type }}'
+- if:
+  - condition: template
+    value_template: '{{ not ai_task_entity }}'
+  then:
+  - action: ai_task.generate_data
+    data:
+      task_name: Analyze content from a media or document file
+      instructions: '{{ instructions }}'
+      attachments: '{{ attachments }}'
+    response_variable: result
+  else:
+  - action: ai_task.generate_data
+    data:
+      task_name: Analyze content from a media or document file
+      instructions: '{{ instructions }}'
+      attachments: '{{ attachments }}'
+      entity_id: '{{ ai_task_entity }}'
+    response_variable: result
+- variables:
+    response:
+      data: '{{ result.data }}'
+- stop: ''
+  response_variable: response
