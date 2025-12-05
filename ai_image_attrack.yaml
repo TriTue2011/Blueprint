@@ -1,7 +1,7 @@
 blueprint:
-  name: Voice - AI Image Generator with Reference Image (Simplified)
-  author: TriTue2011
-  description: 'Tool for generating images using AI based on a reference image and text descriptions.'
+  name: Voice - AI Image Generator with Reference Image & Memory (Fixed)
+  author: luuquangvu
+  description: 'Tool for generating images using AI with reference image and additional reference items (glasses, clothing, accessories) - Fixed error handling version.'
   domain: script
   homeassistant:
     min_version: 2025.8.0
@@ -53,6 +53,22 @@ blueprint:
               multiple: false
               multiline: false
           default: png
+    memory_settings:
+      name: Memory Storage Settings
+      icon: mdi:memory
+      description: 'Configure temporary storage for reference items (glasses, clothing, accessories).'
+      collapsed: true
+      input:
+        memory_helper:
+          name: Memory Helper Entity
+          description: 'Input text helper to store reference item paths temporarily. Create one via Settings > Devices & Services > Helpers > Add Helper > Text.'
+          selector:
+            entity:
+              filter:
+              - domain:
+                - input_text
+              multiple: false
+          default:
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
@@ -135,7 +151,7 @@ mode: parallel
 max: 10
 max_exceeded: silent
 variables:
-  version: 20251205
+  version: 20251205_v3_fixed
 fields:
   instructions:
     name: Instructions
@@ -179,14 +195,88 @@ fields:
         - label: All Elements
           value: all
     required: false
+  reference_item_path:
+    name: Reference Item Path (Optional)
+    description: 'Path to reference item image (glasses, clothing, accessories). Format: local/folder/item.jpg. Leave empty to use stored memory or no reference item.'
+    selector:
+      text:
+    required: false
+  reference_item_type:
+    name: Reference Item Type (Optional)
+    description: 'Type of reference item: glasses, clothing, accessory, background, etc.'
+    selector:
+      text:
+    required: false
+  save_to_memory:
+    name: Save Reference Item to Memory
+    description: 'Save the reference item path to memory for future use without re-uploading.'
+    selector:
+      boolean:
+    default: false
+    required: false
+  clear_memory:
+    name: Clear Memory
+    description: 'Clear the stored reference item from memory.'
+    selector:
+      boolean:
+    default: false
+    required: false
 sequence:
 - variables:
     ai_task_entity: !input ai_task_entity
+    memory_helper: !input memory_helper
     instructions_input: '{{ instructions | default("") | trim }}'
     media_path: '{{ media_path | default("") | trim }}'
     mime_type: '{{ mime_type | default("") | trim }}'
     task_name_input: '{{ task_name | default("") | trim }}'
     preservation_mode: '{{ preservation_mode | default("face") | trim }}'
+    reference_item_path_input: '{{ reference_item_path | default("") | trim }}'
+    reference_item_type_input: '{{ reference_item_type | default("") | trim }}'
+    save_to_memory_flag: '{{ save_to_memory | default(false) }}'
+    clear_memory_flag: '{{ clear_memory | default(false) }}'
+- alias: Clear memory if requested
+  if:
+  - condition: template
+    value_template: '{{ clear_memory_flag and memory_helper }}'
+  then:
+  - action: input_text.set_value
+    target:
+      entity_id: '{{ memory_helper }}'
+    data:
+      value: ''
+- alias: Get stored reference item from memory (with error handling)
+  variables:
+    stored_reference_item: >
+      {% if memory_helper %}
+        {% set helper_state = states(memory_helper) %}
+        {% if helper_state not in ['unknown', 'unavailable', 'none', 'None', ''] %}
+          {{ helper_state | trim }}
+        {% else %}
+
+        {% endif %}
+      {% else %}
+
+      {% endif %}
+- alias: Determine final reference item path
+  variables:
+    final_reference_item_path: >
+      {% if reference_item_path_input %}
+        {{ reference_item_path_input }}
+      {% elif stored_reference_item %}
+        {{ stored_reference_item }}
+      {% else %}
+
+      {% endif %}
+- alias: Save reference item to memory if requested
+  if:
+  - condition: template
+    value_template: '{{ save_to_memory_flag and memory_helper and reference_item_path_input }}'
+  then:
+  - action: input_text.set_value
+    target:
+      entity_id: '{{ memory_helper }}'
+    data:
+      value: '{{ reference_item_path_input }}'
 - alias: Validate instructions
   if:
   - condition: template
@@ -223,20 +313,78 @@ sequence:
   - alias: Stop the script
     stop: Unable to generate image because MIME type is missing or incorrect.
     response_variable: response
+- alias: Validate reference item path if it exists
+  if:
+  - condition: template
+    value_template: >
+      {% set path = final_reference_item_path | string | trim %}
+      {{ path | length > 0 and 
+         (not path.startswith("local/") or 
+          path in ['unknown', 'unavailable', 'none', 'None', "''", '""']) }}
+  then:
+  - alias: Set variable for error message
+    variables:
+      response:
+        error: 'Reference item path is invalid: {{ final_reference_item_path }}. Must start with "local/" or be empty.'
+        stored_value: '{{ stored_reference_item }}'
+        memory_helper_state: '{{ states(memory_helper) if memory_helper else "no helper configured" }}'
+  - alias: Stop the script
+    stop: Reference item path is invalid.
+    response_variable: response
 - variables:
     strict_change_control: 'QUY TẮC VÀNG - TUYỆT ĐỐI KHÔNG TỰ Ý THAY ĐỔI: CHỈ thay đổi CHÍNH XÁC những gì được yêu cầu trong instructions. Nếu yêu cầu "thêm kính" thì CHỈ thêm kính, KHÔNG được tự ý thay đổi trang phục, tóc, tư thế, nền, ánh sáng hay bất kỳ yếu tố nào khác. Nếu yêu cầu "đổi nền" thì CHỈ đổi nền, giữ nguyên tất cả các yếu tố khác. Nếu yêu cầu "thay áo" thì CHỉ thay áo, giữ nguyên tất cả các yếu tố khác. NGHIÊM CẤM thêm, bớt, hoặc điều chỉnh bất kỳ chi tiết nào không được đề cập rõ ràng trong yêu cầu. STRICT RULE: ONLY change what is EXPLICITLY requested in the instructions. If the request says "add glasses", ONLY add glasses - DO NOT change clothing, hair, pose, background, lighting, or any other element. If it says "change background", ONLY change background - keep everything else identical. If it says "change shirt", ONLY change shirt - preserve all other elements. FORBIDDEN to add, remove, or modify any detail not explicitly mentioned in the request. Do not make creative additions or improvements unless specifically asked.'
-    mandatory_prompt: 'QUAN TRỌNG TỐI CAO, LỆNH BẮT BUỘC: Giữ nguyên 100% khuôn mặt, nét mặt, nụ cười, màu da, và mái tóc từ ảnh gốc. TUYỆT ĐỐI KHÔNG thay đổi bất kỳ đặc điểm, danh tính hay biểu cảm nào. CỰC KỲ QUAN TRỌNG: Mọi chi tiết độc nhất như sẹo, nốt ruồi, mụn, nếp nhăn, và kết cấu da PHẢI được giữ lại y hệt. Khuôn mặt đã được khóa hoàn toàn. Chỉ thay đổi bối cảnh, trang phục và phong cách. face lock, identity lock, high fidelity face, do not change face, keep original face, skin texture must be preserved, all marks like acne, scars, moles must be kept. 16K ultra-high definition, masterpiece, professional photography. Avoid the following: blurriness, low resolution, overexposure, underexposure, distorted faces, extra fingers, distorted hands, incorrect anatomy, unnatural poses, doll-like skin, plastic textures, cartoons, oversaturated colors, flat lighting, grain, noise, watermarks, text, logos, duplicated objects, cropped body parts, unrealistic shadows, floating objects.'
+    reference_item_instruction: >
+      {% if final_reference_item_path and final_reference_item_path.startswith("local/") %}
+        QUAN TRỌNG - SỬ DỤNG ẢNH THAM KHẢO PHỤ KIỆN: Một ảnh tham khảo bổ sung đã được cung cấp cho {{ reference_item_type_input | default('item') }}. BẮT BUỘC phải sao chép CHÍNH XÁC thiết kế, màu sắc, hình dáng, chi tiết từ ảnh tham khảo này. Đây là ảnh phụ thứ 2 trong attachments. IMPORTANT - USE REFERENCE ITEM IMAGE: An additional reference image has been provided for {{ reference_item_type_input | default('item') }}. You MUST copy the EXACT design, color, shape, and details from this reference image. This is the 2nd image in attachments.
+      {% else %}
+        
+      {% endif %}
+    mandatory_prompt: 'QUAN TRỌNG TỐI CAO, LỆNH BẮT BUỘC: Giữ nguyên 100% khuôn mặt, nét mặt, nụ cười, màu da, và mái tóc từ ảnh gốc. TUYỆT ĐỐI KHÔNG thay đổi bất kỳ đặc điểm, danh tính hay biểu cảm nào. CỰC KỲ QUAN TRỌNG: Mọi chi tiết độc nhất như sẹo, nốt ruồi, mụn, nếp nhăn, và kết cấu da PHẢI được giữ lại y hệt. Khuôn mặt đã được khóa hoàn toàn. face lock, identity lock, high fidelity face, do not change face, keep original face, skin texture must be preserved, all marks like acne, scars, moles must be kept. 16K ultra-high definition, masterpiece, professional photography. Avoid the following: blurriness, low resolution, overexposure, underexposure, distorted faces, extra fingers, distorted hands, incorrect anatomy, unnatural poses, doll-like skin, plastic textures, cartoons, oversaturated colors, flat lighting, grain, noise, watermarks, text, logos, duplicated objects, cropped body parts, unrealistic shadows, floating objects.'
     face_lock_instruction: 'QUAN TRỌNG TỐI CAO - LỆNH BẮT BUỘC GIỮ KHUÔN MẶT: Giữ nguyên 100% khuôn mặt, nét mặt, nụ cười, màu da, và mái tóc từ ảnh gốc. TUYỆT ĐỐI KHÔNG thay đổi bất kỳ đặc điểm, danh tính hay biểu cảm nào. CỰC KỲ QUAN TRỌNG: Mọi chi tiết độc nhất như sẹo, nốt ruồi, mụn, nếp nhăn, và kết cấu da PHẢI được giữ lại y hệt. Khuôn mặt đã được khóa hoàn toàn. face lock, identity lock, high fidelity face, do not change face, keep original face exactly, skin texture must be preserved, all marks like acne, scars, moles must be kept, facial expression locked.'
     product_lock_instruction: 'QUAN TRỌNG - GIỮ NGUYÊN CON NGƯỜI VÀ SẢN PHẨM: Giữ nguyên 100% khuôn mặt, hình dáng cơ thể của con người. Đồng thời giữ nguyên sản phẩm trong ảnh (hình dáng, màu sắc, logo, nhãn hiệu). Có thể thay đổi: bối cảnh, ánh sáng, góc chụp, hiệu ứng. preserve person identity and body shape, keep product original, flexible background and lighting.'
     accessory_lock_instruction: 'QUAN TRỌNG - GIỮ NGUYÊN CON NGƯỜI VÀ PHỤ KIỆN: Giữ nguyên 100% khuôn mặt, hình dáng cơ thể của con người. Đồng thời giữ nguyên các phụ kiện chính (túi xách, kính mắt, trang sức, đồng hồ - màu sắc, thiết kế, logo). Có thể thay đổi: bối cảnh, trang phục, ánh sáng, tư thế. preserve person identity and body shape, keep accessories original, flexible clothing and background.'
     clothing_lock_instruction: 'QUAN TRỌNG - GIỮ NGUYÊN CON NGƯỜI VÀ TRANG PHỤC: Giữ nguyên 100% khuôn mặt, hình dáng cơ thể của con người. Đồng thời giữ nguyên trang phục đang mặc (màu sắc, kiểu dáng, họa tiết, logo). Có thể thay đổi: bối cảnh, phụ kiện, ánh sáng, tư thế. preserve person identity and body shape, keep clothing original, flexible accessories and background.'
     all_elements_instruction: 'QUAN TRỌNG TỐI CAO - CHUYỂN ĐỔI BỐI CẢNH: Giữ nguyên 100% khuôn mặt và hình dáng cơ thể của con người. CHỈ thay đổi bối cảnh, môi trường xung quanh. Có thể điều chỉnh: ánh sáng, màu sắc tổng thể, không khí của ảnh để phù hợp bối cảnh mới. preserve person identity and body shape completely, change only background and environment, adjust lighting to match new scene.'
-    preservation_instruction: "{% if preservation_mode == \"product\" %}\n  {{ product_lock_instruction }}\n{% elif preservation_mode == \"accessory\" %}\n  {{ accessory_lock_instruction }}\n{% elif preservation_mode == \"clothing\" %}\n  {{ clothing_lock_instruction }}\n{% elif preservation_mode == \"all\" %}\n  {{ all_elements_instruction }}\n{% else %}\n  {{ face_lock_instruction }}\n{% endif %}"
-    full_instructions: '{{ strict_change_control }} {{ mandatory_prompt }} {{ preservation_instruction }} {{ instructions_input }}'
-    auto_task_name: "{% if task_name_input %}\n  {{ task_name_input }}\n{% else %}\n  {% set words = instructions_input.split()[:6] %}\n  {{ words | join(' ') | truncate(80, True, '') }}\n{% endif %}"
-    attachments:
-      media_content_id: media-source://media_source/{{ media_path }}
-      media_content_type: '{{ mime_type }}'
+    preservation_instruction: >
+      {% if preservation_mode == "product" %}
+        {{ product_lock_instruction }}
+      {% elif preservation_mode == "accessory" %}
+        {{ accessory_lock_instruction }}
+      {% elif preservation_mode == "clothing" %}
+        {{ clothing_lock_instruction }}
+      {% elif preservation_mode == "all" %}
+        {{ all_elements_instruction }}
+      {% else %}
+        {{ face_lock_instruction }}
+      {% endif %}
+    full_instructions: '{{ strict_change_control }} {{ mandatory_prompt }} {{ preservation_instruction }} {{ reference_item_instruction }} {{ instructions_input }}'
+    auto_task_name: >
+      {% if task_name_input %}
+        {{ task_name_input }}
+      {% else %}
+        {% set words = instructions_input.split()[:6] %}
+        {{ words | join(' ') | truncate(80, True, '') }}
+      {% endif %}
+- alias: Build attachments list (with validation)
+  variables:
+    attachments: >
+      {% if final_reference_item_path and final_reference_item_path.startswith("local/") %}
+        [
+          {
+            "media_content_id": "media-source://media_source/{{ media_path }}",
+            "media_content_type": "{{ mime_type }}"
+          },
+          {
+            "media_content_id": "media-source://media_source/{{ final_reference_item_path }}",
+            "media_content_type": "image/jpeg"
+          }
+        ]
+      {% else %}
+        {
+          "media_content_id": "media-source://media_source/{{ media_path }}",
+          "media_content_type": "{{ mime_type }}"
+        }
+      {% endif %}
 - alias: Generate image using AI Task
   if:
   - condition: template
@@ -262,13 +410,22 @@ sequence:
     value_template: '{{ ai_result is defined and ai_result.media_source_id is defined }}'
   then:
   - variables:
-      image_path_from_media_source: "{% set source_id = ai_result.media_source_id %} {% if source_id.startswith('media-source://ai_task/image/') %}\n  {{ '/media/ai_task/image/' ~ source_id.split('/')[-1] }}\n{% else %}\n  {{ source_id }}\n{% endif %}"
+      image_path_from_media_source: >
+        {% set source_id = ai_result.media_source_id %}
+        {% if source_id.startswith('media-source://ai_task/image/') %}
+          {{ '/media/ai_task/image/' ~ source_id.split('/')[-1] }}
+        {% else %}
+          {{ source_id }}
+        {% endif %}
       response:
         image_path: '{{ image_path_from_media_source }}'
         task_name: '{{ auto_task_name }}'
         instructions: '{{ full_instructions }}'
         reference_image: '{{ media_path }}'
+        reference_item: '{{ final_reference_item_path }}'
+        reference_item_type: '{{ reference_item_type_input }}'
         preservation_mode: '{{ preservation_mode }}'
+        memory_stored: '{{ stored_reference_item }}'
         status: Image generated successfully with {{ preservation_mode }} preservation
         media_source_id: '{{ ai_result.media_source_id }}'
         url: '{{ ai_result.url | default("") }}'
