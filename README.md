@@ -553,7 +553,42 @@ Save it
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_image_attrack.yaml
 )
 ## 🔗 Tạo ảnh theo thời tiết
-
+template
+- sensor:
+    - name: "Buổi trong ngày"
+      unique_id: time_of_day_vn
+      icon: >-
+        {% set h = now().hour %}
+        {% if 6 <= h < 11 %} mdi:weather-sunny
+        {% elif 11 <= h < 13 %} mdi:white-balance-sunny
+        {% elif 13 <= h < 18 %} mdi:weather-sunset
+        {% elif 18 <= h < 21 %} mdi:weather-night
+        {% else %} mdi:weather-night
+        {% endif %}
+      state: >-
+        {% set h = now().hour %}
+        {% if 6 <= h < 11 %} Sáng
+        {% elif 11 <= h < 13 %} Trưa
+        {% elif 13 <= h < 18 %} Chiều
+        {% elif 18 <= h < 21 %} Tối
+        {% else %} Đêm
+        {% endif %}
+      attributes:
+        hour: "{{ now().hour }}"
+        is_night: >-
+          {% set h = now().hour %}
+          {{ h < 6 or h >= 21 }}
+        is_daytime: >-
+          {% set h = now().hour %}
+          {{ h >= 6 and h < 18 }}
+        period_english: >-
+          {% set h = now().hour %}
+          {% if 6 <= h < 11 %} Morning
+          {% elif 11 <= h < 13 %} Noon
+          {% elif 13 <= h < 18 %} Afternoon
+          {% elif 18 <= h < 21 %} Evening
+          {% else %} Night
+          {% endif %}
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2FAI_Weather_Image_Generator.yaml
 )
 ## 🔗 Blueprint Phân tích (LLM):** Gửi ảnh chụp cho mô hình ngôn ngữ để phân tích và trả lời.
