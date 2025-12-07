@@ -156,9 +156,10 @@ sequence:
     # Normalize user question để match dễ hơn
     user_question_for_matching: >
       {% set q = user_question | lower %}
+      {% set q = q.replace('xem ', '').replace('kiểm tra ', '').replace('check ', '').replace('show ', '') %}
       {% set q = q.replace('camera ', '').replace('cam ', '') %}
-      {% set q = q.replace('xem ', '').replace('kiểm tra ', '').replace('check ', '') %}
-      {% set q = q.replace(' có ai không', '').replace(' có người không', '').replace(' có gì', '') %}
+      {% set q = q.replace(' có ai không', '').replace(' có người không', '').replace(' có gì', '').replace(' có đồ gì không', '') %}
+      {% set q = q.replace(' không', '').replace(' hay không', '') %}
       {{ q | trim }}
     
     # Step 1: Try EXACT match with friendly_name
@@ -365,21 +366,25 @@ sequence:
                 }
               }
             sequential_prompt: |
-              Camera: {{ current_camera_name }}
-              Question: {{ user_question }}
+              You are analyzing camera: {{ current_camera_name }}
+              
+              User's original question: {{ user_question }}
+              
+              IMPORTANT: Analyze ONLY the camera {{ current_camera_name }}, not any other camera mentioned in the user's question.
               
               Target detection:
               - "có người"/"có ai" → humans ONLY
               - "có mèo" → cats ONLY
               - "có chó" → dogs ONLY
               - "có xe" → vehicles ONLY
+              - "có gì"/"có đồ gì"/"thấy gì" → describe everything visible
               
-              CRITICAL: Response format (NO extra text):
-              - Found: "Có [count] [target]"
-              - Not found: "Không có [target]"
+              CRITICAL: Response format (NO extra text, NO questions):
+              - Found target: "Có [count] [target]" or describe what you see
+              - Not found: "Không có [target]" or "Không thấy gì đặc biệt"
               - Error: "Lỗi: [reason]"
               
-              Vietnamese, under 80 chars, ONE LINE ONLY, target only, NO questions.
+              Vietnamese, under 100 chars, ONE LINE ONLY, NO questions about other cameras.
         
         - choose:
           - conditions:
