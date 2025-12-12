@@ -1,5 +1,7 @@
 # Bộ sưu tập Blueprint và Hướng dẫn độc đáo cho Home Assistant
 
+**Gần đây, Google đã cắt giảm đáng kể API Gemini miễn phí, khiến nó gần như không thể đáp ứng nhu cầu sử dụng của Home Assistant. Các bạn có thể tham khảo [một giải pháp thay thế hoàn toàn miễn phí tại đây](https://github.com/luuquangvu/ha-addons).**
+
 _Tất cả blueprint trong bộ sưu tập này được tinh chỉnh để hoạt động tối ưu với **Gemini 2.5 Flash**. Các mô hình ngôn ngữ khác có thể cần điều chỉnh nhỏ để đạt hiệu quả tương tự._
 
 Biến Home Assistant thành một trợ lý cá nhân thực thụ với bộ sưu tập blueprint và hướng dẫn chi tiết. Mọi kịch bản đều đã được kiểm chứng trong thực tế, đi kèm giải thích rõ ràng, ví dụ lệnh thoại và mẹo triển khai để bạn có thể áp dụng ngay cho ngôi nhà thông minh của mình.
@@ -10,29 +12,36 @@ Biến Home Assistant thành một trợ lý cá nhân thực thụ với bộ s
 
 ## Mục lục
 
-- [Voice Assist - Hẹn giờ & Lên lịch Thông minh](#voice-assist---hẹn-giờ--lên-lịch-thông-minh)
-- [Voice Assist - Ghi nhớ và Truy xuất Thông tin](#voice-assist---ghi-nhớ-và-truy-xuất-thông-tin)
-- [Voice Assist - Phân tích Hình ảnh Camera](#voice-assist---phân-tích-hình-ảnh-camera)
-- [Voice Assist - Quản lý Lịch trình & Sự kiện](#voice-assist---quản-lý-lịch-trình--sự-kiện)
-- [Voice Assist - Tra cứu & Chuyển đổi Lịch Âm](#voice-assist---tra-cứu--chuyển-đổi-lịch-âm)
-- [Chatbot Tương tác & Điều khiển Nhà thông minh](#chatbot-tương-tác--điều-khiển-nhà-thông-minh)
-- [Voice Assist - Gửi Tin nhắn & Hình ảnh](#voice-assist---gửi-tin-nhắn--hình-ảnh)
-- [Voice Assist - Tra cứu Thông tin Internet](#voice-assist---tra-cứu-thông-tin-internet)
-- [Voice Assist - Tìm kiếm & Phát Video YouTube](#voice-assist---tìm-kiếm--phát-video-youtube)
-- [Voice Assist - Theo dõi Kênh YouTube Yêu thích](#voice-assist---theo-dõi-kênh-youtube-yêu-thích)
-- [Voice Assist - Điều khiển Quạt Thông minh](#voice-assist---điều-khiển-quạt-thông-minh)
-- [Voice Assist - Định vị & Tìm kiếm Thiết bị](#voice-assist---định-vị--tìm-kiếm-thiết-bị)
-- [Voice Assist - Tra cứu Phạt nguội](#voice-assist---tra-cứu-phạt-nguội)
-- [Tự động Cảnh báo Phạt nguội](#tự-động-cảnh-báo-phạt-nguội)
-- [Đồng bộ Trạng thái Thiết bị](#đồng-bộ-trạng-thái-thiết-bị)
-- [Các Blueprint đã lỗi thời](#các-blueprint-đã-lỗi-thời)
-- [Hướng dẫn Thêm](#hướng-dẫn-thêm)
-  - [Tùy chỉnh Prompt/Chỉ dẫn cho Voice Assist](/home_assistant_voice_instructions.md)
-  - [Tự động phát video YouTube mới](/home_assistant_play_favorite_youtube_channel_videos.md)
-  - [Tóm tắt tin tức hàng ngày với AI](/home_assistant_get_and_summary_daily_news.md)
-  - [Cảnh báo thiết bị mất kết nối (Unavailable)](/home_assistant_unavailable_devices.md)
-  - [Tự động đổi Theme Sáng/Tối](/home_assistant_ios_themes.md)
-  - [Hướng dẫn cài đặt Tìm Điện thoại & Thiết bị](/home_assistant_device_location_lookup_guide_en.md)
+- [Bộ sưu tập Blueprint và Hướng dẫn độc đáo cho Home Assistant](#bộ-sưu-tập-blueprint-và-hướng-dẫn-độc-đáo-cho-home-assistant)
+  - [Mục lục](#mục-lục)
+  - [Voice Assist - Hẹn giờ \& Lên lịch Thông minh](#voice-assist---hẹn-giờ--lên-lịch-thông-minh)
+  - [Voice Assist - Ghi nhớ và Truy xuất Thông tin](#voice-assist---ghi-nhớ-và-truy-xuất-thông-tin)
+  - [Voice Assist - Phân tích Hình ảnh Camera](#voice-assist---phân-tích-hình-ảnh-camera)
+  - [Voice Assist - Quản lý Lịch trình \& Sự kiện](#voice-assist---quản-lý-lịch-trình--sự-kiện)
+    - [Tạo Sự kiện Lịch](#tạo-sự-kiện-lịch)
+    - [Tra cứu Sự kiện trong Lịch](#tra-cứu-sự-kiện-trong-lịch)
+  - [Voice Assist - Tra cứu \& Chuyển đổi Lịch Âm](#voice-assist---tra-cứu--chuyển-đổi-lịch-âm)
+    - [Tra cứu \& chuyển đổi Lịch Âm](#tra-cứu--chuyển-đổi-lịch-âm)
+    - [Tạo Sự kiện theo Lịch Âm](#tạo-sự-kiện-theo-lịch-âm)
+  - [Chatbot Tương tác \& Điều khiển Nhà thông minh](#chatbot-tương-tác--điều-khiển-nhà-thông-minh)
+  - [Voice Assist - Gửi Tin nhắn \& Hình ảnh](#voice-assist---gửi-tin-nhắn--hình-ảnh)
+  - [Voice Assist - Tra cứu Thông tin Internet](#voice-assist---tra-cứu-thông-tin-internet)
+  - [Voice Assist - Tìm kiếm \& Phát Video YouTube](#voice-assist---tìm-kiếm--phát-video-youtube)
+  - [Voice Assist - Theo dõi Kênh YouTube Yêu thích](#voice-assist---theo-dõi-kênh-youtube-yêu-thích)
+  - [Voice Assist - Điều khiển Quạt Thông minh](#voice-assist---điều-khiển-quạt-thông-minh)
+  - [Voice Assist - Điều khiển Điều hòa Thông minh](#voice-assist---điều-khiển-điều-hòa-thông-minh)
+  - [Voice Assist - Định vị \& Tìm kiếm Thiết bị](#voice-assist---định-vị--tìm-kiếm-thiết-bị)
+  - [Voice Assist - Tra cứu Phạt nguội](#voice-assist---tra-cứu-phạt-nguội)
+  - [Tự động Cảnh báo Phạt nguội](#tự-động-cảnh-báo-phạt-nguội)
+  - [Đồng bộ Trạng thái Thiết bị](#đồng-bộ-trạng-thái-thiết-bị)
+  - [Các Blueprint đã lỗi thời](#các-blueprint-đã-lỗi-thời)
+    - [Voice Assist - Hẹn giờ Bật/Tắt Thiết bị (Cũ)](#voice-assist---hẹn-giờ-bậttắt-thiết-bị-cũ)
+  - [Hướng dẫn Thêm](#hướng-dẫn-thêm)
+    - [Tùy chỉnh chỉ dẫn hệ thống (system instruction) cho Voice Assist](#tùy-chỉnh-chỉ-dẫn-hệ-thống-system-instruction-cho-voice-assist)
+    - [Phát video mới từ kênh YouTube yêu thích](#phát-video-mới-từ-kênh-youtube-yêu-thích)
+    - [Theo dõi các thiết bị mất kết nối (unavailable)](#theo-dõi-các-thiết-bị-mất-kết-nối-unavailable)
+    - [Tự động chuyển đổi giao diện (theme) sáng/tối](#tự-động-chuyển-đổi-giao-diện-theme-sángtối)
+    - [Hướng dẫn cài đặt tìm kiếm vị trí thiết bị](#hướng-dẫn-cài-đặt-tìm-kiếm-vị-trí-thiết-bị)
 
 ---
 
@@ -42,27 +51,31 @@ Biến Home Assistant thành một trợ lý cá nhân thực thụ với bộ s
 
 ## Voice Assist - Hẹn giờ & Lên lịch Thông minh
 
-Tự động tạo, gia hạn, tạm dừng, tiếp tục hoặc hủy **lịch trình điều khiển thiết bị** bằng giọng nói tự nhiên. Mỗi lịch trình có thể áp dụng cho một hoặc nhiều thiết bị và sẽ **tự động khôi phục sau khi Home Assistant khởi động lại**.
+Bạn muốn bật điều hòa trong 30 phút rồi tự tắt? Hay muốn đèn ngủ tự động giảm độ sáng sau 1 tiếng?
+Blueprint này biến Voice Assist thành một trợ lý quản lý thời gian thực thụ. Bạn có thể ra lệnh giọng nói tự nhiên để **tạo, gia hạn, tạm dừng, tiếp tục hoặc hủy** lịch trình cho bất kỳ thiết bị nào.
 
 **Tính năng nổi bật:**
 
-- **Quản lý linh hoạt:** Hỗ trợ đầy đủ các hành động: `start` (bắt đầu), `extend` (gia hạn), `pause` (tạm dừng), `resume` (tiếp tục), `cancel` (hủy), `list` (liệt kê).
-- **Đa nhiệm:** Quản lý đồng thời nhiều thiết bị và nhiều lịch trình độc lập.
-- **Bền bỉ:** Tự động khôi phục tất cả lịch trình đang hoạt động sau khi Home Assistant khởi động lại.
-- **Thông minh:** Tích hợp sẵn với Voice Assist (LLM) để hiểu lệnh thoại đa ngôn ngữ một cách tự nhiên.
+- **Hiểu ngôn ngữ tự nhiên:** Chỉ cần nói "Bật quạt 1 tiếng nữa tắt", không cần đúng cú pháp cứng nhắc.
+- **Quản lý toàn diện:** Hỗ trợ đầy đủ các lệnh như tạo mới, gia hạn thêm giờ, tạm dừng lịch đang chạy hoặc hủy bỏ.
+- **Bền bỉ & Tin cậy:** Mọi lịch trình đều được lưu lại và **tự động khôi phục** nếu Home Assistant khởi động lại. Bạn không lo bị mất hẹn giờ khi mất điện.
+- **Điều khiển đa dạng:** Hỗ trợ hầu hết các loại thiết bị: Đèn (độ sáng, màu), Rèm (đóng/mở/vị trí), Quạt (tốc độ/tuốc năng), Điều hòa, Robot hút bụi, Media Player, v.v.
+- **Nhận diện thông minh:** Tự động nhận diện thiết bị qua tên gọi thân mật (alias) mà bạn hay dùng.
+- **Phản hồi chi tiết:** Khi hỏi "Có lịch nào đang chạy không?", trợ lý sẽ liệt kê rõ ràng tên thiết bị và thời gian còn lại.
 
 **Ví dụ lệnh thoại:**
 
-- "Đặt lịch tắt quạt phòng khách sau 15 phút."
-- "Gia hạn lịch tắt đèn bếp thêm 10 phút."
-- "Thêm lịch tắt điều hòa phòng ngủ lúc 6 giờ sáng."
-- "Các lịch trình đang chạy là gì?"
+- "Bật đèn phòng khách màu vàng 50% trong 2 tiếng."
+- "Mở rèm phòng ngủ 15 phút để thoáng khí rồi đóng lại."
+- "Gia hạn thêm 30 phút cho quạt phòng bé."
+- "Tạm dừng lịch tưới cây."
+- "Có thiết bị nào đang hẹn giờ không?"
 
 **Ứng dụng thực tế:**
 
-- Hẹn giờ tắt các thiết bị như đèn, quạt, điều hòa, bình nóng lạnh để tiết kiệm điện.
-- Đặt lịch cho các công việc cần chạy trong một khoảng thời gian nhất định, ví dụ: sạc xe điện trong 2 giờ.
-- Dễ dàng thay đổi hoặc hủy lịch trình bằng giọng nói mà không cần mở ứng dụng.
+- **Tiết kiệm điện:** Hẹn giờ tắt máy sưởi, bình nóng lạnh hoặc quạt khi đi ngủ.
+- **Tiện nghi:** Tự động điều chỉnh ánh sáng, rèm cửa theo ngữ cảnh sinh hoạt mà không cần cầm điện thoại.
+- **Yên tâm:** Không lo quên tắt các thiết bị quan trọng nhờ tính năng tự động khôi phục sau khởi động lại.
 
 Để sử dụng đầy đủ tính năng, bạn cần cài đặt **cả 3 blueprint** sau:
 
@@ -77,28 +90,31 @@ Tự động tạo, gia hạn, tạm dừng, tiếp tục hoặc hủy **lịch 
 
 ## Voice Assist - Ghi nhớ và Truy xuất Thông tin
 
-Biến Voice Assist thành "bộ nhớ mở rộng" của bạn để lưu trữ, tra cứu, và quản lý các thông tin cá nhân hoặc gia đình.
+Bạn hay quên mật khẩu Wi-Fi? Hay không nhớ đã để xe ở cột nào dưới hầm? Hãy để Voice Assist làm "bộ não thứ hai" của bạn.
 
 **Tính năng nổi bật:**
 
-- **Lưu trữ đa dạng:** Ghi nhớ mọi thứ từ mật khẩu, địa chỉ, đến các ghi chú nhanh.
-- **Tìm kiếm linh hoạt:** Truy xuất thông tin theo "key" chính xác (`get`) hoặc tìm kiếm theo từ khóa/ngữ nghĩa (`search`).
-- **Phạm vi lưu trữ:** Có thể chọn lưu thông tin cho riêng bạn (`user`), cả nhà (`household`), hoặc chỉ trong phiên làm việc (`session`).
-- **Tự động hết hạn:** Tùy chọn đặt thời gian để ghi nhớ tự động xóa sau một số ngày nhất định.
+- **Ghi nhớ mọi thứ:** Từ những việc nhỏ nhặt như "Chìa khóa để ở ngăn kéo bàn" đến những nhắc nhở cần thiết như "Mã số khách hàng của cửa hàng ABC".
+- **Truy xuất thông minh:** Không cần nhớ từ khóa chính xác. Chỉ cần hỏi "Xe đậu ở đâu?" hay "Pass wifi là gì?", trợ lý sẽ tự tìm thông tin liên quan nhất.
+- **Phân loại linh hoạt:**
+  - **Cá nhân (User):** Dành cho thông tin riêng (ví dụ: size quần áo, thực đơn ăn kiêng).
+  - **Gia đình (Household):** Chia sẻ cho cả nhà (ví dụ: mật khẩu cổng, lịch đổ rác).
+  - **Tạm thời (Session):** Chỉ nhớ trong lúc trò chuyện.
+- **Tự động dọn dẹp:** Thiết lập thời gian tự hủy cho các ghi nhớ ngắn hạn (ví dụ: vị trí đỗ xe tại trung tâm thương mại).
 
 **Ví dụ lệnh thoại:**
 
-- "Ghi nhớ mật khẩu Wi-Fi cho khách là `khachdenchoi123`."
-- "Ghi nhớ chỗ đậu xe là hầm B2, cột D5, và tự xóa sau 1 ngày."
-- "Nhắc tôi địa chỉ công ty ABC là 18 Lý Thường Kiệt, Hà Nội."
-- "Tìm ghi nhớ về chỗ đậu xe."
-- "Mật khẩu Wi-Fi cho khách là gì?"
+- "Ghi nhớ mật khẩu Wi-Fi khách là `khachdenchoi123`."
+- "Lưu lại vị trí đỗ xe là hầm B2 cột D5, nhớ trong 1 ngày thôi."
+- "Nhắc tôi số điện thoại của bác sĩ là 0912345678."
+- "Tìm xem xe đang đỗ ở đâu?"
+- "Mật khẩu Wi-Fi khách là gì nhỉ?"
 
 **Ứng dụng thực tế:**
 
-- **An toàn & cá nhân:** Lưu các thông tin cá nhân ít dùng nhưng quan trọng (số hộ chiếu, mã thành viên, thông tin bảo hành) với phạm vi `user`.
-- **Tiện ích gia đình:** Lưu thông tin dùng chung cho cả nhà (mật khẩu Wi-Fi khách, mã cửa) với phạm vi `household`.
-- **Ghi chú tạm thời:** Lưu các thông tin có thời hạn (vị trí đỗ xe, địa chỉ lạ, tên một cuốn sách được giới thiệu).
+- Lưu trữ an toàn các thông tin ít dùng nhưng quan trọng.
+- Chia sẻ thông tin chung cho các thành viên trong gia đình mà không cần nhắn tin đi lại.
+- Ghi chú nhanh các việc cần làm hoặc vị trí đồ vật ngay khi vừa nghĩ ra.
 
 _Tùy chọn phiên bản bạn muốn sử dụng:_
 
@@ -112,24 +128,26 @@ _Tùy chọn phiên bản bạn muốn sử dụng:_
 
 ## Voice Assist - Phân tích Hình ảnh Camera
 
-Cho phép Voice Assist truy cập vào các camera an ninh của bạn để trả lời các câu hỏi về những gì đang diễn ra.
+Biến camera an ninh thành "đôi mắt" thông minh cho trợ lý ảo. Không cần mở ứng dụng soi từng góc, hãy để Voice Assist nhìn giúp bạn.
 
 **Tính năng nổi bật:**
 
-- **Phân tích hình ảnh:** Trích xuất nội dung từ ảnh chụp camera và trả lời câu hỏi của bạn.
-- **Hỗ trợ đa camera:** Cho phép cấu hình nhiều camera để Voice Assist có "tầm nhìn" rộng hơn.
-- **Phản hồi tức thì:** Nhận câu trả lời gần như ngay lập tức sau khi đặt câu hỏi.
+- **Thị giác máy tính:** Voice Assist có thể "xem" hình ảnh từ camera và mô tả chi tiết những gì đang diễn ra.
+- **Quan sát toàn diện:** Hỗ trợ kết nối nhiều camera cùng lúc (cổng, sân, phòng khách...) để có cái nhìn bao quát.
+- **Phản hồi tức thì:** Chụp ảnh và phân tích ngay tại thời điểm bạn hỏi.
 
 **Ví dụ lệnh thoại:**
 
-- "Xem các camera xem con mèo đang ở đâu."
-- "Kiểm tra cam cổng xem có ai ở đó không."
-- "Trong sân có xe lạ không?"
+- "Xem camera cổng có ai đang đứng đó không?"
+- "Kiểm tra xem con mèo đang ở sân trước hay sân sau?"
+- "Nhìn xem cửa gara đã đóng chưa?"
+- "Ngoài sân có xe lạ nào không?"
 
 **Ứng dụng thực tế:**
 
-- Kiểm tra nhanh sân trước, sân sau hoặc phòng của trẻ nhỏ mà không cần mở ứng dụng camera.
-- Tìm kiếm thú cưng hoặc xác nhận một hoạt động bất thường khi bạn không ở gần màn hình.
+- **An ninh:** Kiểm tra nhanh tình hình quanh nhà khi nghe tiếng động lạ vào ban đêm.
+- **Giám sát:** Trông chừng trẻ nhỏ hoặc thú cưng mà không cần dán mắt vào màn hình điện thoại.
+- **Tiện lợi:** Xác nhận nhanh các trạng thái vật lý (cửa đóng/mở, đèn sáng/tắt) mà cảm biến có thể bỏ sót.
 
 Để sử dụng tính năng này, bạn cần cài đặt **cả 2 blueprint**:
 
@@ -187,28 +205,30 @@ Hỏi và nhận thông tin về các sự kiện đã có trong lịch của b�
 
 ## Voice Assist - Tra cứu & Chuyển đổi Lịch Âm
 
-Các công cụ giúp bạn theo dõi và quản lý các sự kiện theo lịch Âm một cách chính xác.
+Mang văn hóa truyền thống vào ngôi nhà thông minh. Tra cứu ngày âm, xem ngày tốt xấu hay đếm ngược đến Tết ngay trên Home Assistant.
 
 ### Tra cứu & chuyển đổi Lịch Âm
 
-Chuyển đổi tức thì giữa lịch Âm và lịch Dương, hoạt động 100% offline. Cung cấp đầy đủ thông tin Can Chi, tiết khí, ngày tốt/xấu, và giờ hoàng đạo.
+Công cụ chuyển đổi lịch Âm - Dương mạnh mẽ, hoạt động hoàn toàn **Offline** (không cần internet), đảm bảo tốc độ phản hồi tức thì.
 
 **Tính năng nổi bật:**
 
-- **Hoạt động Offline:** Xử lý cực nhanh và không cần Internet.
-- **Thông tin chi tiết:** Cung cấp đầy đủ dữ liệu lịch Âm truyền thống.
-- **Đếm ngược sự kiện:** Cho biết số ngày còn lại đến các ngày lễ lớn như Tết Nguyên Đán.
+- **Siêu tốc & Riêng tư:** Xử lý nội bộ, không phụ thuộc vào API bên ngoài.
+- **Thông tin chuyên sâu:** Cung cấp đầy đủ Can Chi (Giáp Thìn, Ất Tỵ...), Tiết khí, Giờ hoàng đạo.
+- **Tư vấn ngày tốt/xấu:** Biết ngay hôm nay nên làm gì, kiêng gì theo phong tục.
+- **Đếm ngược sự kiện:** Luôn biết chính xác còn bao nhiêu ngày nữa đến Tết Nguyên Đán hay các ngày lễ lớn.
 
 **Ví dụ lệnh thoại:**
 
-- "Chủ nhật tuần này là ngày bao nhiêu âm?"
-- "Rằm Trung Thu vào thứ mấy?"
+- "Hôm nay là bao nhiêu âm?"
+- "Chủ nhật tuần này là ngày tốt hay xấu?"
 - "Còn bao nhiêu ngày nữa đến Tết?"
+- "Đổi ngày 20/11 dương lịch sang âm lịch."
 
 **Ứng dụng thực tế:**
 
-- Xem ngày âm để chuẩn bị cho các ngày lễ, giỗ, cúng bái.
-- Tra cứu ngày tốt/xấu, giờ hoàng đạo cho các công việc quan trọng.
+- Lên kế hoạch cho các công việc quan trọng (cưới hỏi, động thổ, khai trương).
+- Theo dõi các ngày rằm, mùng 1 để chuẩn bị đồ cúng lễ.
 
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fluuquangvu%2Ftutorials%2Fblob%2Fmain%2Fdate_lookup_and_conversion_full_llm.yaml)
 
@@ -234,18 +254,18 @@ Tự động thêm các sự kiện quan trọng tính theo lịch Âm (giỗ, n
 
 ## Chatbot Tương tác & Điều khiển Nhà thông minh
 
-Xây dựng bot để trò chuyện và điều khiển Home Assistant qua Telegram hoặc Zalo. Bot có thể hỏi lại để làm rõ yêu cầu và nhận/gửi hình ảnh.
+Đừng chỉ ra lệnh, hãy trò chuyện với ngôi nhà của bạn. Tạo Bot Telegram hoặc Zalo để điều khiển nhà từ xa với khả năng hiểu ngữ cảnh và phản hồi thông minh.
 
 **Tính năng nổi bật:**
 
-- **Hội thoại hai chiều:** Bot có thể đặt câu hỏi để làm rõ yêu cầu của bạn trước khi thực hiện.
-- **Hỗ trợ đa phương tiện:** Gửi ảnh từ camera để phân tích, hoặc nhận file từ bot.
-- **Điều khiển nhà thông minh:** Ra lệnh trực tiếp trong giao diện chat để điều khiển thiết bị.
+- **Hội thoại hai chiều:** Bot không chỉ nhận lệnh mà còn biết hỏi lại để làm rõ ý bạn (ví dụ: "Bạn muốn bật điều hòa phòng nào?").
+- **Nhận diện hình ảnh:** Gửi ảnh một thiết bị hỏng hay một loài cây lạ, bot sẽ phân tích và trả lời bạn.
+- **Điều khiển mọi lúc mọi nơi:** Tắt đèn, mở cổng hay kiểm tra camera ngay trên giao diện chat quen thuộc.
 
 **Ứng dụng thực tế:**
 
-- Điều khiển nhà từ xa qua app chat mà không cần mở ứng dụng Home Assistant.
-- Gửi ảnh một cái cây trong vườn và hỏi "Đây là cây gì và cần chăm sóc thế nào?".
+- Bạn đang đi làm và muốn kiểm tra xem đã tắt bếp chưa? Chỉ cần nhắn tin hỏi bot.
+- Gửi ảnh đồng hồ điện/nước để bot đọc chỉ số giúp bạn.
 
 _Cài đặt blueprint webhook cho nền tảng bạn chọn. Để phân tích hình ảnh, cài thêm blueprint Phân tích._
 
@@ -265,24 +285,24 @@ _Cài đặt blueprint webhook cho nền tảng bạn chọn. Để phân tích 
 
 ## Voice Assist - Gửi Tin nhắn & Hình ảnh
 
-Dùng giọng nói để gửi tin nhắn, hình ảnh, địa điểm, hoặc kết quả tìm kiếm tới bạn bè và nhóm chat qua Telegram hoặc Zalo.
+Đang lái xe hoặc tay dính dầu mỡ? Hãy dùng giọng nói để gửi tin nhắn, chia sẻ vị trí hoặc hình ảnh camera tới người thân qua Telegram/Zalo.
 
 **Tính năng nổi bật:**
 
-- **Hỗ trợ đa nội dung:** Gửi tin nhắn văn bản, ảnh chụp từ camera, hoặc file media.
-- **Tích hợp bản đồ & tìm kiếm:** Tự động đính kèm liên kết Google Maps cho địa điểm và Google Search cho các nội dung khác.
-- **Gửi đến nhóm hoặc cá nhân:** Hỗ trợ gửi tin nhắn đến cả cuộc trò chuyện riêng tư và nhóm.
+- **Nhắn tin rảnh tay:** Đọc nội dung tin nhắn và Assistant sẽ gửi đi ngay lập tức.
+- **Chia sẻ thông minh:** Tự động đính kèm link Google Maps khi bạn nhắc đến một địa điểm.
+- **Báo cáo hình ảnh:** Ra lệnh chụp ảnh từ camera an ninh và gửi ngay vào nhóm chat gia đình.
 
 **Ví dụ lệnh thoại:**
 
 - "Gửi danh sách quán ăn ngon ở Nha Trang lên nhóm Telegram gia đình."
-- "Gửi địa chỉ Hoàng Thành Thăng Long lên Zalo cho vợ anh."
-- "Gửi ảnh ở cam cổng cho nhóm Telegram."
+- "Gửi vị trí Hoàng Thành Thăng Long qua Zalo cho vợ."
+- "Chụp ảnh camera cổng gửi vào nhóm chat."
 
 **Ứng dụng thực tế:**
 
-- Chia sẻ nhanh một địa điểm, hình ảnh hay thông tin thú vị cho người thân khi đang di chuyển.
-- Gửi kết quả tìm kiếm bằng giọng nói cho người khác để họ tham khảo.
+- Thông báo nhanh cho người thân khi bạn đang bận không thể cầm điện thoại.
+- Chia sẻ ngay lập tức một khoảnh khắc thú vị hoặc một địa điểm đẹp vừa tìm thấy.
 
 _Cài đặt blueprint cho nền tảng bạn muốn gửi tin đến:_
 
@@ -299,23 +319,27 @@ _Cài đặt blueprint cho nền tảng bạn muốn gửi tin đến:_
 
 ## Voice Assist - Tra cứu Thông tin Internet
 
-Thực hiện các truy vấn Google phức tạp bằng giọng nói và nhận về câu trả lời đã được tóm tắt, súc tích và cập nhật.
+Đừng để Assistant chỉ biết tắt/bật đèn. Hãy biến nó thành một cuốn bách khoa toàn thư sống, sẵn sàng giải đáp mọi thắc mắc của bạn với dữ liệu cập nhật từ Google.
+
+**Lưu ý:** Tính năng này chỉ áp dụng cho Gemini, vì nó được tích hợp với Google Tìm kiếm để truy cập và cung cấp thông tin cập nhật.
 
 **Tính năng nổi bật:**
 
-- **Tóm tắt thông minh:** Trả về câu trả lời ngắn gọn thay vì một danh sách kết quả dài.
-- **Hiểu câu hỏi mở:** Xử lý tốt các câu hỏi phức tạp, đòi hỏi tổng hợp thông tin.
-- **Luôn cập nhật:** Lấy dữ liệu mới nhất trực tiếp từ kết quả tìm kiếm của Google.
+- **Kiến thức vô tận:** Truy cập kho dữ liệu khổng lồ của Google để trả lời mọi câu hỏi từ lịch sử, địa lý đến tin tức thời sự.
+- **Tóm tắt thông minh:** Không đọc một danh sách link dài dòng. Assistant sẽ tổng hợp và trả lời ngắn gọn, súc tích đúng trọng tâm.
+- **Cập nhật realtime:** Biết được giá vàng hôm nay, kết quả bóng đá tối qua hay sự kiện đang hot trên mạng xã hội.
 
 **Ví dụ lệnh thoại:**
 
 - "Điểm chuẩn Đại học Bách Khoa Hà Nội năm nay là bao nhiêu?"
-- "Những công nghệ AI nào đang là xu hướng trong tuần này?"
+- "Tóm tắt diễn biến chính của trận chung kết World Cup vừa rồi."
+- "Giá iPhone 17 Pro Max hiện tại là bao nhiêu?"
+- "Công thức nấu món Phở bò chuẩn vị Bắc."
 
 **Ứng dụng thực tế:**
 
-- Nhanh chóng tra cứu thông tin, sự kiện, kiến thức mà không cần đọc qua nhiều trang web.
-- Giải đáp các câu hỏi bất chợt trong cuộc sống hàng ngày ("diễn viên chính của phim X là ai?").
+- Tra cứu nhanh thông tin khi đang làm bếp, lái xe hoặc trò chuyện cùng bạn bè.
+- Giải đáp thắc mắc của trẻ nhỏ về thế giới xung quanh một cách chính xác.
 
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fluuquangvu%2Ftutorials%2Fblob%2Fmain%2Fadvanced_google_search_full_llm.yaml)
 
@@ -323,23 +347,24 @@ Thực hiện các truy vấn Google phức tạp bằng giọng nói và nhận
 
 ## Voice Assist - Tìm kiếm & Phát Video YouTube
 
-Tìm kiếm nội dung YouTube rồi phát trên TV hoặc thiết bị media bằng giọng nói.
+Biến TV của bạn thành rạp chiếu phim thông minh. Không cần remote, không cần gõ phím, chỉ cần nói những gì bạn muốn xem.
 
 **Tính năng nổi bật:**
 
-- **Tìm kiếm theo ngữ nghĩa:** Tìm video dựa trên chủ đề, nhân vật, sự kiện thay vì chỉ từ khóa.
-- **Phát tự động:** Tự động chọn video phù hợp nhất và phát trên thiết bị bạn chỉ định.
-- **Hỗ trợ đa dạng câu hỏi:** Trả lời các câu hỏi kiến thức bằng cách tìm và phát video liên quan.
+- **Hiểu ý người xem:** Tìm video theo mô tả nội dung ("nhạc thư giãn buổi sáng", "review xe VinFast") thay vì từ khóa cứng nhắc.
+- **Chọn lọc thông minh:** Tự động chọn video phù hợp nhất (nhiều view, chất lượng cao) để phát.
+- **Học tập & Giải trí:** Tìm video bài giảng cho con hoặc video ca nhạc cho bố mẹ chỉ trong tích tắc.
 
 **Ví dụ lệnh thoại:**
 
-- "Tìm video về cuộc đời và sự nghiệp của ông Lê Đức Thọ."
-- "Ai là nhà khoa học nữ xuất sắc nhất thế kỷ 20? Tìm video về bà ấy."
+- "Mở video nhạc không lời nhẹ nhàng để đọc sách."
+- "Tìm phim tài liệu về chiến thắng Điện Biên Phủ."
+- "Xem review iPhone 17 Pro Max mới nhất."
 
 **Ứng dụng thực tế:**
 
-- Tìm và phát một video hướng dẫn nấu ăn, sửa chữa khi đang bận tay.
-- Mở nhanh các chương trình giải trí, âm nhạc cho cả gia đình.
+- Giúp người lớn tuổi và trẻ nhỏ dễ dàng xem nội dung yêu thích mà không cần thao tác phức tạp trên remote.
+- Vừa nấu ăn vừa ra lệnh mở video hướng dẫn công thức.
 
 Để sử dụng tính năng này, bạn cần cài đặt **cả 2 blueprint**:
 
@@ -352,23 +377,23 @@ Tìm kiếm nội dung YouTube rồi phát trên TV hoặc thiết bị media b�
 
 ## Voice Assist - Theo dõi Kênh YouTube Yêu thích
 
-Tự động phát hiện video mới nhất từ các kênh bạn theo dõi và phát ngay trên thiết bị mong muốn.
+Bạn là fan cứng của "Trực Tiếp Game" hay "MixiGaming"? Blueprint này giúp bạn không bao giờ bỏ lỡ video mới nhất từ các idol.
 
 **Tính năng nổi bật:**
 
-- **Kiểm tra video mới:** Tự động kiểm tra các kênh YouTube bạn đã định sẵn.
-- **Phát video mới nhất:** Dễ dàng phát video vừa được đăng tải chỉ bằng một câu lệnh.
-- **Thông báo tùy chọn:** Có thể cài đặt để nhận thông báo ngay khi có video mới.
+- **Cập nhật liên tục:** Tự động kiểm tra các kênh bạn theo dõi.
+- **Phát ngay lập tức:** Lệnh "Có video mới không?" sẽ tự động phát video vừa ra lò lên TV.
+- **Thông báo chủ động:** Nhận tin nhắn ngay khi kênh yêu thích đăng tải nội dung mới.
 
 **Ví dụ lệnh thoại:**
 
-- "Hoa Ban Food có video mới không?"
-- "Phát video mới nhất của Sang vlog lên TV."
+- "Kênh Khoai Lang Thang có gì mới không?"
+- "Mở video mới nhất của HOA BAN FOOD"
 
 **Ứng dụng thực tế:**
 
-- Tạo một kịch bản "chào buổi sáng" tự động phát video tin tức mới nhất từ kênh bạn tin tưởng.
-- Đảm bảo bạn không bao giờ bỏ lỡ nội dung từ các nhà sáng tạo yêu thích.
+- Xem tin tức buổi sáng từ các kênh thời sự uy tín chỉ với một câu lệnh khi vừa thức dậy.
+- Giải trí buổi tối với các vlog du lịch mới nhất mà không cần lướt điện thoại tìm kiếm.
 
 [**Xem hướng dẫn chi tiết**](/home_assistant_play_favorite_youtube_channel_videos.md)
 
@@ -383,24 +408,24 @@ Tự động phát hiện video mới nhất từ các kênh bạn theo dõi và
 
 ## Voice Assist - Điều khiển Quạt Thông minh
 
-Điều chỉnh tốc độ và chế độ xoay của một hoặc nhiều quạt trong nhà bằng giọng nói.
+Nóng quá? Chỉ cần than thở một câu, quạt sẽ tự tăng tốc. Blueprint giúp bạn điều khiển luồng gió chính xác theo ý muốn.
 
 **Tính năng nổi bật:**
 
-- **Điều khiển tốc độ:** Tăng, giảm hoặc đặt tốc độ quạt theo phần trăm.
-- **Điều khiển chế độ xoay:** Bật hoặc tắt chế độ xoay của quạt.
-- **Hỗ trợ nhiều quạt:** Ra lệnh cho nhiều quạt cùng lúc.
+- **Điều chỉnh linh hoạt:** Tăng/giảm tốc độ theo phần trăm cụ thể hoặc mức độ mong muốn.
+- **Kiểm soát hướng gió:** Bật/tắt tuốc năng (quay) bằng giọng nói.
+- **Đồng bộ:** Ra lệnh cho một quạt cụ thể hoặc tất cả quạt trong nhà cùng lúc.
 
 **Ví dụ lệnh thoại:**
 
-- "Tăng tốc độ quạt phòng bếp."
-- "Chỉnh tốc độ quạt phòng ngủ xuống 50%."
-- "Bật chế độ xoay cho quạt phòng khách."
+- "Tăng quạt phòng khách lên mạnh nhất."
+- "Cho quạt phòng ngủ quay đi, nóng quá."
+- "Giảm tốc độ quạt bàn ăn xuống 30%."
 
 **Ứng dụng thực tế:**
 
-- Thay đổi mức gió hoặc hướng gió của quạt mà không cần di chuyển.
-- Nhanh chóng điều chỉnh không khí trong phòng cho phù hợp với nhu cầu.
+- Điều chỉnh gió cho phù hợp với nhiệt độ phòng mà không cần rời khỏi giường hay ghế sofa.
+- Tắt nhanh tất cả quạt khi ra khỏi nhà.
 
 _Cài đặt blueprint cho chức năng bạn muốn sử dụng:_
 
@@ -412,27 +437,54 @@ _Cài đặt blueprint cho chức năng bạn muốn sử dụng:_
 
 ---
 
-## Voice Assist - Định vị & Tìm kiếm Thiết bị
+## Voice Assist - Điều khiển Điều hòa Thông minh
 
-Định vị thiết bị di động hoặc thẻ BLE trong nhà bằng giọng nói và kích hoạt chuông để tìm kiếm dễ dàng hơn.
+Giữ không khí trong lành và nhiệt độ lý tưởng trong nhà chỉ bằng giọng nói. Blueprint này giúp bạn kiểm soát máy điều hòa một cách toàn diện, từ chế độ hoạt động đến tốc độ quạt.
 
 **Tính năng nổi bật:**
 
-- **Xác định vị trí:** Báo cáo vị trí gần đúng của thiết bị trong nhà (theo phòng).
-- **Kích hoạt chuông:** Khiến thiết bị đổ chuông để bạn có thể tìm thấy bằng âm thanh.
-- **Hỗ trợ nhiều thiết bị:** Tìm kiếm đồng thời nhiều điện thoại, máy tính bảng.
+- **Kiểm soát chế độ:** Chuyển đổi giữa các chế độ làm mát, sưởi ấm, hút ẩm, chỉ quạt hoặc tự động một cách dễ dàng.
+- **Điều chỉnh tốc độ quạt:** Thiết lập tốc độ quạt theo các mức cài đặt sẵn (thấp, trung bình, cao) hoặc các giá trị định lượng như "mạnh nhất", "nhẹ nhất".
+- **Hỗ trợ alias:** Nhận diện điều hòa qua tên thân mật hoặc tên bạn đã đặt trong Home Assistant.
+- **Xử lý nhiều thiết bị:** Điều khiển một hoặc nhiều điều hòa cùng lúc.
 
 **Ví dụ lệnh thoại:**
 
-- "Tìm xem mấy cái điện thoại đang ở đâu?"
-- "Tìm cái iPad và cho nó đổ chuông."
+- "Bật điều hòa phòng khách sang chế độ làm mát và quạt tốc độ trung bình."
+- "Chuyển điều hòa phòng ngủ sang chế độ khô."
+- "Tăng quạt điều hòa ở hành lang lên tốc độ cao."
+- "Tắt tất cả điều hòa."
 
 **Ứng dụng thực tế:**
 
-- Nhanh chóng tìm thấy điện thoại, máy tính bảng bị thất lạc trong nhà.
-- Kiểm tra xem con cái có để quên thiết bị ở nhà hay không.
+- Điều chỉnh môi trường sống theo ý muốn mà không cần tìm remote.
+- Tiết kiệm năng lượng bằng cách thiết lập chế độ phù hợp.
 
-[**Xem hướng dẫn chi tiết**](/home_assistant_device_location_lookup_guide_en.md)
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fluuquangvu%2Ftutorials%2Fblob%2Fmain%2Fac_mode_and_fan_control_full_llm.yaml)
+
+---
+
+## Voice Assist - Định vị & Tìm kiếm Thiết bị
+
+"Điện thoại mình đâu rồi?" - Câu hỏi kinh điển mỗi sáng. Hãy để Assistant giúp bạn tìm nó ngay lập tức.
+
+**Tính năng nổi bật:**
+
+- **Định vị trong nhà:** Cho biết điện thoại đang ở phòng nào (dựa trên sóng Bluetooth/Wi-Fi).
+- **Kích hoạt chuông:** Bắt điện thoại đổ chuông ầm ĩ kể cả khi đang để chế độ im lặng.
+- **Hỗ trợ đa thiết bị:** Tìm iPhone, Android, iPad hay bất kỳ thiết bị nào có cài app Home Assistant.
+
+**Ví dụ lệnh thoại:**
+
+- "Tìm xem điện thoại của bố đang ở đâu?"
+- "Làm cho cái iPad đổ chuông đi, mình tìm không thấy."
+
+**Ứng dụng thực tế:**
+
+- Tiết kiệm thời gian tìm kiếm đồ đạc mỗi khi vội ra khỏi nhà.
+- Giám sát xem con cái đã đi học về nhà an toàn chưa (thiết bị đã kết nối mạng nhà).
+
+[**Xem hướng dẫn chi tiết**](/home_assistant_device_location_lookup_guide.md)
 
 Để sử dụng tính năng này, bạn cần cài đặt **cả 2 blueprint**:
 
@@ -514,16 +566,20 @@ Nhận cảnh báo ngay khi có vi phạm giao thông mới được ghi nhận 
 
 ## Hướng dẫn Thêm
 
-- [**Tùy chỉnh chỉ dẫn hệ thống (system instruction) cho Voice Assist**](/home_assistant_voice_instructions.md)
-- [**Phát video mới từ kênh YouTube yêu thích**](/home_assistant_play_favorite_youtube_channel_videos.md)
-- [**Tự động cập nhật và tóm tắt tin tức mỗi ngày**](/home_assistant_get_and_summary_daily_news.md)
-- [**Theo dõi các thiết bị mất kết nối (unavailable)**](/home_assistant_unavailable_devices.md)
-- [**Tự động chuyển đổi giao diện (theme) sáng/tối**](/home_assistant_ios_themes.md)
-- [**Hướng dẫn cài đặt tìm kiếm vị trí thiết bị**](/home_assistant_device_location_lookup_guide_en.md)
+### [Tùy chỉnh chỉ dẫn hệ thống (system instruction) cho Voice Assist](/home_assistant_voice_instructions.md)
+
+### [Phát video mới từ kênh YouTube yêu thích](/home_assistant_play_favorite_youtube_channel_videos.md)
+
+### [Theo dõi các thiết bị mất kết nối (unavailable)](/home_assistant_unavailable_devices.md)
+
+### [Tự động chuyển đổi giao diện (theme) sáng/tối](/home_assistant_ios_themes.md)
+
+### [Hướng dẫn cài đặt tìm kiếm vị trí thiết bị](/home_assistant_device_location_lookup_guide.md)
 
 ---
 
 **Nếu bạn thấy bộ sưu tập này hữu ích, đừng ngần ngại chia sẻ với cộng đồng Home Assistant nhé! Hãy theo dõi để cập nhật thêm nhiều blueprint độc đáo khác trong tương lai!**
+
 
 
 ## 🔗 Tạo ảnh Ai
@@ -542,6 +598,9 @@ Tạo ảnh theo promt.
 )
 ## 🔗 Gửi zalo có delete
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_custom_bot_full_llm.yaml
+)
+## 🔗 Gửi tele có delete
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_telegram_full_llm.yaml
 )
 ## 🔗 Tạo ảnh có đính kèm ảnh
 Go to Settings → Devices & Services → Helpers
