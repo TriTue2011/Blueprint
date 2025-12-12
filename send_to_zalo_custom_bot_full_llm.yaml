@@ -1,29 +1,25 @@
 blueprint:
   name: Voice - Send to Zalo
   author: luuquangvu
-  description: >-
+  description: |
     # Tool for sending content to Zalo used for Voice Assistant
 
     ## Blueprint Setup
 
     ### Required
 
-    * The Zalo Bot integration must be installed through HACS and properly configured.
+    - The Zalo Bot integration must be installed through HACS and properly configured.
 
     ### Optional
 
-    * Adjust the prompts for each field used in the script. The descriptions guide
-      the LLM to provide the correct input.
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
 
     ### Note
 
-    * Provide a concise and precise description for the script. This will be utilized
-      by the LLM to understand it should use this script for sending user requested
-      content to Zalo.
-
-    * Make sure to expose the script to Assist after the script has been saved.
-
-    * Do not alter the default script name.
+    - Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for sending user requested content to Zalo.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
   domain: script
   homeassistant:
     min_version: 2024.10.0
@@ -38,15 +34,11 @@ blueprint:
           description: The account (phone number) to send the message.
           selector:
             text:
-              multiple: false
-              multiline: false
         thread_id:
           name: Thread ID
           description: The thread to send the message to.
           selector:
             text:
-              multiple: false
-              multiline: false
         receiver:
           name: Type of Receiver
           description: The type of receiver to send the message to.
@@ -54,22 +46,18 @@ blueprint:
             select:
               options:
                 - label: User
-                  value: '0'
+                  value: "0"
                 - label: Group
-                  value: '1'
-              multiple: false
-              sort: false
-              custom_value: false
-          default: '0'
+                  value: "1"
+          default: "0"
         ttl:
           name: TTL
           description: Message auto-recall time in milliseconds. Default is 0 (no auto-recall).
           selector:
             number:
-              min: 0.0
-              max: 86400000.0
-              step: 1.0
-              mode: slider
+              min: 0
+              max: 86400000
+              step: 1
           default: 0
         delete_after_send:
           name: Delete Image After Sending
@@ -89,15 +77,12 @@ blueprint:
           selector:
             text:
               multiline: true
-              multiple: false
-          default: >-
-            This argument is mandatory and must always be provided.
-
-            Provide a brief overview, such as the name of a person, object, or location title.
+          default: |
+            This argument is mandatory and must always be included.
+            Specify a brief overview, such as the name of a person, object, or location title.
             Keep it short (ideally <= 10 words). No extra commentary, no markdown, emojis, or HTML.
             If content_type is image, write a concise caption that clearly describes the image subject.
             Return only the plain text value.
-
             When submitting multiple items, make sure each one must be sent separately through a separate tool call.
         detail_prompt:
           name: Detail Prompt
@@ -105,15 +90,12 @@ blueprint:
           selector:
             text:
               multiline: true
-              multiple: false
-          default: >-
+          default: |
             This argument is optional.
-
-            Provide clear and specific details, such as comprehensive information or a detailed description of the subject.
+            Specify clear and specific details, such as comprehensive information or a detailed description of the subject.
             No links, no markdown/emojis, no additional commentary, and avoid repeating the summary.
             If content_type is image, provide short optional supporting text to appear under the image (leave blank if not needed).
             Return only the plain text value.
-
             When submitting multiple items, make sure each one must be sent separately through a separate tool call.
         content_type_prompt:
           name: Content Type Prompt
@@ -121,34 +103,25 @@ blueprint:
           selector:
             text:
               multiline: true
-              multiple: false
-          default: >-
-            This argument is mandatory and must always be provided.
-
+          default: |
+            This argument is mandatory and must always be included.
             Return exactly one of the following options: information, location, image.
             Return only the word, without quotes or extra text.
-
-            Choose location for any place/address/directions/map intent. Do not choose information in these cases.
-
+            Choose location for any place/address/directions/map intent.
+            Do not choose information in these cases.
             Choose image when the user requests an image or photo to be sent and provides or implies a path.
-
             Otherwise choose information.
-
             When submitting multiple items, make sure each one must be sent separately through a separate tool call.
         location_prompt:
           name: Location Prompt
-          description: The prompt which will be used for the LLM to provide the location for the place.
+          description: The prompt which will be used for the LLM can provide the location for the place.
           selector:
             text:
               multiline: true
-              multiple: false
-          default: >-
+          default: |
             This argument is optional. Use only when content_type is location.
-
             Return the address of the location. Names only; no commas, prefixes or punctuation; single spaces.
-
             If content_type is not location: leave this blank.
-
             Return only the value.
         image_path_prompt:
           name: Image Path Prompt
@@ -156,33 +129,31 @@ blueprint:
           selector:
             text:
               multiline: true
-              multiple: false
-          default: >-
+          default: |
             This argument is optional. Use only when content_type is image.
-
-            Provide the local or media path to the image that should be sent (for example: /media/... or local/...). The path must already exist in Home Assistant and point to an actual image file. When unknown or not provided by the user, leave this blank and do not guess.
-
+            Specify the local or media path to the image that should be sent (for example: /media/... or local/...).
+            The path must already exist in Home Assistant and point to an actual image file.
+            When unknown or not specified by the user, leave this blank and do not guess.
             If content_type is not image: leave this blank.
-
             Return only the value.
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/send_to_zalo_custom_bot_full_llm.yaml
 mode: queued
 max: 30
 max_exceeded: silent
+description: Sends a message to a specified Zalo chat.
 variables:
-  version: 20251020
+  version: 20251116
 fields:
   summary:
     name: Summary
     description: !input summary_prompt
     selector:
-      text: {}
+      text:
     required: true
   detail:
     name: Detail
     description: !input detail_prompt
     selector:
-      text: {}
+      text:
   content_type:
     name: Content Type
     description: !input content_type_prompt
@@ -197,12 +168,12 @@ fields:
     name: Location
     description: !input location_prompt
     selector:
-      text: {}
+      text:
   image_path:
     name: Image Path
     description: !input image_path_prompt
     selector:
-      text: {}
+      text:
 sequence:
   - variables:
       default_account: !input account
@@ -214,7 +185,7 @@ sequence:
       content_type: "{{ content_type | default('') | trim }}"
       location: "{{ location | default('') | trim }}"
       image_path: "{{ image_path | default('') | trim }}"
-      image_path_resolved: >-
+      image_path_resolved: |
         {% set path = image_path %}
         {% set prefix = 'local/' %}
         {% if path and path.startswith(prefix) %}
@@ -225,7 +196,7 @@ sequence:
   - alias: Check if variables were set correctly
     if:
       - condition: template
-        value_template: >-
+        value_template: |
           {{
             (not summary)
             or (content_type not in ['information', 'location', 'image'])
@@ -236,9 +207,8 @@ sequence:
       - alias: Set variable for error message
         variables:
           response:
-            error: >-
-              Unable to send the message to Zalo because one or more
-              inputs are missing or invalid (summary, content_type, account, thread_id, receiver, location, or image_path).
+            error: |
+              Unable to send the message to Zalo because one or more inputs are missing or invalid (summary, content_type, account, thread_id, receiver, location, or image_path).
       - alias: Stop the script
         stop: Unable to send the message to Zalo due to invalid inputs.
         response_variable: response
@@ -252,7 +222,7 @@ sequence:
               account_selection: !input account
               thread_id: !input thread_id
               type: !input receiver
-              message: >-
+              message: |
                 {{ summary }}{% if detail %}
 
                 {{ detail }}{% endif %}
@@ -270,7 +240,7 @@ sequence:
               account_selection: !input account
               thread_id: !input thread_id
               type: !input receiver
-              message: >-
+              message: |
                 {{ summary }}{% if detail %}
 
                 {{ detail }}{% endif %}
@@ -289,7 +259,7 @@ sequence:
               thread_id: !input thread_id
               type: !input receiver
               image_path: "{{ image_path_resolved }}"
-              message: >-
+              message: |
                 {{ summary }}{% if detail %}
 
                 {{ detail }}{% endif %}
@@ -304,7 +274,8 @@ sequence:
   - alias: Prepare success response for Assist
     variables:
       response:
-        success: >-
-          Sent the {{ content_type }} "{{ summary }}" to Zalo (thread {{ default_thread_id | default('unspecified') }}) successfully.
+        success: |
+          Sent the {{ content_type }} "{{ summary }}" to Zalo (thread
+          {{ default_thread_id | default('unspecified') }}) successfully.
   - stop: Finish and return response data
     response_variable: response
