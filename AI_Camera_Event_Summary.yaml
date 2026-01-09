@@ -1,0 +1,690 @@
+blueprint:
+  name: AI Door Entry with AI Task Analysis (v2.0.0)
+  author: valentinfrlch + Custom + AI Task Integration
+  homeassistant:
+    min_version: 2024.10.0
+  description: 'Phân tích sự kiện ra vào cửa bằng AI Task. Gửi thông báo với ảnh và phân tích AI qua điện thoại, Telegram, và TTS ra loa.'
+  domain: automation
+  
+  input:
+    trigger_section:
+      name: Trigger Settings
+      icon: mdi:play-circle
+      input:
+        trigger_sensor:
+          name: Trigger Sensor
+          description: Cảm biến kích hoạt automation (cửa, motion sensor)
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+        trigger_from_state:
+          name: Trigger From State
+          default: "off"
+          selector:
+            select:
+              options: ["off","on"]
+              custom_value: true
+        trigger_to_state:
+          name: Trigger To State
+          default: "on"
+          selector:
+            select:
+              options: ["on","off"]
+              custom_value: true
+        
+        person_occupancy_sensor:
+          name: Person Occupancy Sensor (Optional)
+          description: Đợi phát hiện người trước khi phân tích
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+        person_detected_state:
+          name: Person Detected State
+          default: "on"
+          selector:
+            select:
+              options: ["on","off"]
+              custom_value: true
+        wait_for_person:
+          name: Wait for Person Detection
+          default: false
+          selector:
+            boolean: {}
+        max_wait_time:
+          name: Maximum Wait Time (Optional)
+          description: Thời gian tối đa đợi phát hiện người (0 = không giới hạn)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 3600
+              unit_of_measurement: seconds
+              mode: box
+              step: 1
+
+    run_conditions:
+      name: Run Conditions
+      description: Tất cả điều kiện phải đúng để automation chạy
+      default: []
+      selector:
+        condition: {}
+    
+    cooldown:
+      name: Cooldown
+      description: Thời gian chờ trước khi chạy lại automation
+      default:
+        minutes: 10
+      selector:
+        duration: {}
+    
+    camera_sensor_section:
+      name: Camera & Snapshot Settings
+      icon: mdi:camera
+      input:
+        camera_entities:
+          name: Camera Entities
+          description: Danh sách camera để giám sát
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+              - domain:
+                - camera
+              reorder: false
+        
+        num_snapshots:
+          name: ⌛ Number of Snapshots
+          description: Số ảnh sẽ chụp để so sánh (từ 1 đến 5)
+          selector:
+            number:
+              min: 1.0
+              max: 5.0
+              step: 1.0
+              unit_of_measurement: snapshots
+              mode: slider
+          default: 3
+        
+        num_delay:
+          name: ⌛ Delay after Snapshots
+          description: Thời gian trễ sau mỗi lần Snapshots (tính theo giây)
+          selector:
+            number:
+              min: 0.0
+              max: 10.0
+              step: 1.0
+              unit_of_measurement: seconds
+              mode: slider
+          default: 1
+        
+        overwrite_image:
+          name: 🏞️ Overwrite Image (Optional)
+          description: Ghi đè ảnh cũ (ảnh cũ sẽ bị ghi đè bởi ảnh mới)
+          default: true
+          selector:
+            boolean: {}
+        
+        file_path:
+          name: File Path
+          description: Đường dẫn lưu snapshot
+          default: /media/llmvision/snapshots_blueprint/{{ camera_file_path }}/last_motion.jpg
+          selector:
+            select:
+              options:
+              - label: Media Folder - Secured
+                value: /media/llmvision/snapshots_blueprint/{{ camera_file_path }}/last_motion.jpg
+              - label: Public Folder - Unsecured
+                value: /config/www/snapshots/{{ camera_file_path }}/last_motion.jpg
+              custom_value: true
+    
+    ai_task_section:
+      name: AI Task Settings
+      icon: mdi:brain
+      collapsed: true
+      input:
+        ai_powered:
+          name: ✅ AI-powered (Optional)
+          description: Sử dụng AI Task để phân tích ảnh
+          default: true
+          selector:
+            boolean: {}
+        
+        ai_provider:
+          name: 🤖 AI Task Provider
+          description: Chọn AI Task provider để phân tích ảnh
+          selector:
+            entity:
+              domain:
+              - ai_task
+              multiple: false
+          default: []
+        
+        ai_task_instructions:
+          name: ✏️ AI Task Instructions
+          description: Hướng dẫn cho AI khi phân tích ảnh
+          selector:
+            text:
+              multiline: true
+          default: |
+            Đây là chuỗi hình ảnh từ máy ảnh của tôi.
+            Hãy phân tích chuỗi ảnh này.
+            Qui tắc trả về kết quả phân tích chuỗi ảnh:
+            - Phải sử dụng Tiếng Việt có đầy đủ dấu
+            - Bỏ qua các ký tự đặc biệt như *, emoji, /,...
+            - Bỏ qua các dòng trống
+            - Chỉ thể hiện văn bản thuần
+            - Tin nhắn của bạn cần đủ ngắn để có thể đưa vào thông báo trên điện thoại.
+        
+        ai_structure_description:
+          name: 📝 AI Task Structure Description
+          description: Từ điển xác định cấu trúc của dữ liệu đầu ra
+          selector:
+            text:
+              multiline: true
+          default: |
+            Hãy so sánh và mô tả rất ngắn gọn những gì bạn thấy trong chuỗi hình ảnh sau từ máy ảnh của tôi.
+            - Nếu có người, động vật, xe máy hoặc ô tô, hãy mô tả chi tiết về chúng.
+            - Chỉ rõ giới tính, người lớn hay trẻ em.
+            - Không mô tả các vật thể hoặc tòa nhà cố định.
+            - Nếu trong chuỗi ảnh không có người hãy trả lời "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+    
+    notification_section:
+      name: Mobile App Notify Settings
+      icon: mdi:bell
+      collapsed: true
+      input:
+        include_notify:
+          name: ✅ Mobile App Notify Option
+          default: false
+          selector:
+            boolean: {}
+        
+        is_ios_android:
+          name: 🔔 Android or iOS device?
+          default: android_device
+          selector:
+            select:
+              options:
+              - label: Android
+                value: android_device
+              - label: iOS
+                value: ios_device
+        
+        notify_device:
+          name: 📱 Devices Notified
+          default: []
+          selector:
+            device:
+              filter:
+              - integration: mobile_app
+              multiple: true
+        
+        notify_title:
+          name: 📝 Title
+          default: "🔔 <b><span style=\"color: red\">Có chuyển động</span></b>\n"
+          selector:
+            text:
+        
+        tap_navigate:
+          name: 📲 Tap Navigate
+          default: /lovelace/camera
+          selector:
+            text:
+        
+        status_bar_icon:
+          name: 🌠 Status Bar Icon (Android)
+          default: mdi:motion-sensor
+          selector:
+            icon:
+        
+        notification_color:
+          name: 🎨 Notification Color (Android)
+          default:
+          - 255
+          - 0
+          - 0
+          selector:
+            color_rgb: {}
+        
+        notification_time:
+          name: Notification Time
+          default: ''
+          selector:
+            select:
+              options:
+              - label: No Time Added
+                value: ''
+              - label: 12 Hour
+                value: at {{ now().strftime("%-I:%M %p") }}
+              - label: 24 Hour
+                value: at {{ now().strftime("%H:%M") }}
+
+    telegram_section:
+      name: Telegram Settings
+      icon: mdi:send
+      collapsed: true
+      input:
+        include_telegram_notify:
+          name: ✅ Telegram Option
+          default: false
+          selector:
+            boolean: {}
+        
+        telegram_config_entry:
+          name: Telegram Bot
+          default: ''
+          selector:
+            config_entry:
+              integration: telegram_bot
+        
+        telegram_target:
+          name: Target Chat ID
+          default: ''
+          selector:
+            text: {}
+        
+        telegram_thread_id:
+          name: Thread ID (Optional)
+          default: ''
+          selector:
+            text: {}
+        
+        telegram_initial_caption:
+          name: Initial Caption
+          default: '🔔 Phát hiện chuyển động!'
+          selector:
+            text: {}
+
+    tts_speaker_section:
+      name: TTS Speaker Settings
+      icon: mdi:speaker
+      collapsed: true
+      input:
+        include_tts_announcement:
+          name: ✅ Use TTS Announcement
+          default: false
+          selector:
+            boolean: {}
+        
+        num_volume_speaker:
+          name: 🔊 Volume Set
+          selector:
+            number:
+              min: 0.1
+              max: 1.0
+              step: 0.1
+              mode: slider
+          default: 0.5
+        
+        text_to_speech_engine:
+          name: 🗣️ Text-to-Speech Service Provider
+          default: []
+          selector:
+            entity:
+              filter:
+              - domain:
+                - tts
+              multiple: false
+        
+        media_player:
+          name: 🎶 Media Player
+          default: []
+          selector:
+            entity:
+              filter:
+              - domain:
+                - media_player
+              multiple: true
+
+    delay_settings:
+      name: Delay Settings
+      icon: mdi:clock-start
+      collapsed: true
+      input:
+        num_delay_actions:
+          name: ⌛ Delays
+          description: Thời gian chờ sau khi hoàn thành tất cả các hành động
+          selector:
+            number:
+              min: 5.0
+              max: 120.0
+              step: 5.0
+              unit_of_measurement: seconds
+              mode: slider
+          default: 10
+
+variables:
+  trigger_sensor: !input trigger_sensor
+  person_sensor: !input person_occupancy_sensor
+  person_detected_state: !input person_detected_state
+  wait_for_person: !input wait_for_person
+  max_wait_time: !input max_wait_time
+  cooldown: !input cooldown
+  
+  camera_entities_list: !input camera_entities
+  camera_entity: "{{ camera_entities_list[0] if camera_entities_list else '' }}"
+  camera_name: '{{ state_attr(camera_entity, "friendly_name") }}'
+  camera_file_path: '{{ camera_entity.replace("camera.", "")}}'
+  
+  num_snapshots: !input num_snapshots
+  num_delay: !input num_delay
+  overwrite_image: !input overwrite_image
+  file_path: !input file_path
+  
+  ai_powered: !input ai_powered
+  ai_provider: !input ai_provider
+  ai_task_instructions: !input ai_task_instructions
+  ai_structure_description: !input ai_structure_description
+  
+  include_notify: !input include_notify
+  notify_device: !input notify_device
+  is_ios_android: !input is_ios_android
+  notify_title: !input notify_title
+  tap_navigate: !input tap_navigate
+  notification_time: !input notification_time
+  filtered_devices: '{{ notify_device }}'
+  
+  include_telegram_notify: !input include_telegram_notify
+  telegram_config_entry: !input telegram_config_entry
+  telegram_target: !input telegram_target
+  telegram_thread_id: !input telegram_thread_id
+  telegram_initial_caption: !input telegram_initial_caption
+  
+  include_tts_announcement: !input include_tts_announcement
+  num_volume_speaker: !input num_volume_speaker
+  text_to_speech_engine: !input text_to_speech_engine
+  media_player: !input media_player
+  
+  num_delay_actions: !input num_delay_actions
+  
+  snapshot_access_file_path: '{{ file_path | replace(''/config/www'', ''/local'') | replace(''/media'', ''/media/local'') }}'
+  snapshot_access_file_path_social: '{{ file_path | replace(''/media/llmvision'', ''/media'') }}'
+  tag: '{{ camera_entity + int(as_timestamp(now()))|string }}'
+  notification_color: !input notification_color
+  notification_color_hex: '#{{ ''%02x%02x%02x'' | format(notification_color[0], notification_color[1], notification_color[2]) }}'
+
+max_exceeded: silent
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input trigger_sensor
+    from: !input trigger_from_state
+    to: !input trigger_to_state
+
+condition:
+  - condition: and
+    conditions: !input run_conditions
+
+action:
+  # === WAIT FOR PERSON ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ wait_for_person and person_sensor | length > 0 }}"
+        sequence:
+          - if:
+              - condition: state
+                entity_id: !input person_occupancy_sensor
+                state: !input person_detected_state
+            then: []
+            else:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ max_wait_time == 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        continue_on_timeout: true
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ max_wait_time > 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        timeout:
+                          seconds: "{{ max_wait_time }}"
+                        continue_on_timeout: true
+
+  # === CHỤP ẢNH ===
+  - variables:
+      file_path_dynamic: "{% if overwrite_image %}\n  {{camera_file_path}}\n{% else %}\n  {{camera_file_path}}_{{context.id}}\n{% endif %}\n"
+  
+  - repeat:
+      count: '{{ num_snapshots }}'
+      sequence:
+        - action: camera.snapshot
+          data:
+            filename: /media/snapshots/{{ file_path_dynamic }}_snapshot{{ repeat.index }}.jpg
+          target:
+            entity_id: '{{ camera_entity }}'
+        - delay:
+            seconds: '{{ num_delay }}'
+  
+  - variables:
+      snapshots_url: "{% set snap_count = num_snapshots | int %} {% set camera = file_path_dynamic %} {% set ns = namespace(images=[]) %} {%- for i in range(1, snap_count + 1) -%}\n  {% set ns.images = ns.images + [{'media_content_id': 'media-source://media_source/local/snapshots/' ~ camera ~ '_snapshot' ~ i ~ '.jpg', 'media_content_type': 'image/jpeg'}] %}\n{%- endfor -%} {{ ns.images }}\n"
+      snapshot_first: /media/local/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
+
+  # === TELEGRAM: Gửi ảnh ngay lập tức ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ include_telegram_notify }}'
+        sequence:
+          - alias: "Gửi ảnh qua Telegram"
+            service: telegram_bot.send_photo
+            data: >
+              {% set data = {
+                'config_entry_id': telegram_config_entry,
+                'file': '/media/snapshots/' + file_path_dynamic + '_snapshot1.jpg',
+                'caption': telegram_initial_caption
+              } %}
+              {% if telegram_target != "" %}
+                {% set data = dict(data, target=telegram_target|int) %}
+              {% endif %}
+              {% if telegram_thread_id != "" %}
+                {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+              {% endif %}
+              {{ data }}
+
+  # === NOTIFICATION: Gửi ảnh trước ===
+  - if:
+      - condition: template
+        value_template: '{{ include_notify and (filtered_devices | length > 0) }}'
+    then:
+      - choose:
+          - alias: Check if Android
+            conditions:
+              - '{{ is_ios_android == ''android_device'' }}'
+            sequence:
+              - alias: Send initial notification to each device
+                repeat:
+                  for_each: '{{ filtered_devices }}'
+                  sequence:
+                    - action: notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                      data:
+                        title: !input notify_title
+                        message: 'Đang phân tích...'
+                        data:
+                          priority: high
+                          notification_icon: !input status_bar_icon
+                          color: '{{ notification_color_hex }}'
+                          image: '{{ snapshot_first }}'
+                          url: '{{ tap_navigate }}'
+                          clickAction: '{{ tap_navigate }}'
+                          tag: '{{ tag }}'
+          
+          - alias: Check if iOS
+            conditions:
+              - '{{ is_ios_android == ''ios_device'' }}'
+            sequence:
+              - alias: Send initial notification to each device
+                repeat:
+                  for_each: '{{ filtered_devices }}'
+                  sequence:
+                    - action: notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                      data:
+                        title: !input notify_title
+                        message: 'Đang phân tích...'
+                        data:
+                          attachment:
+                            url: '{{ snapshot_first }}'
+                            content_type: JPEG
+                          tag: '{{ tag }}'
+
+  # === AI TASK ANALYSIS ===
+  - choose:
+      - alias: Check if AI is enabled
+        conditions:
+          - '{{ ai_powered }}'
+        sequence:
+          - action: ai_task.generate_data
+            data:
+              task_name: Phan tich anh khi co chuyen dong
+              instructions: '{{ ai_task_instructions }}'
+              entity_id: '{{ ai_provider }}'
+              attachments: '{{ snapshots_url }}'
+              structure:
+                humans_detected:
+                  description: Đếm số người trong chuỗi ảnh
+                  required: true
+                  selector:
+                    number:
+                humans_detected_description:
+                  description: '{{ ai_structure_description }}'
+                  required: true
+                  selector:
+                    text:
+            response_variable: humans_detected_report
+          
+          - wait_template: '{{ humans_detected_report is defined and humans_detected_report.data is defined }}'
+            timeout: 00:01:00
+            continue_on_timeout: true
+          
+          - if:
+              - condition: template
+                value_template: '{{ wait.completed }}'
+            then:
+              - variables:
+                  ai_messages: "📍 {{camera_name}} | 🚶: {{ humans_detected_report.data.humans_detected }}\n🏞️👉 {{ humans_detected_report.data.humans_detected_description }}\n🕒 {{now().strftime('%H:%M:%S %a, %d-%b-%Y')}}\n"
+              
+              - if:
+                  - condition: template
+                    value_template: '{{ not ( (humans_detected_report.data.humans_detected_description | default(''''))| lower | regex_search(''tuy nhiên không có người trong chuỗi ảnh|không có người|không có chuỗi hình ảnh nào được cung cấp'') and (humans_detected_report.data.humans_detected|int(0) == 0) ) }}'
+                then:
+                  # === CẬP NHẬT NOTIFICATION ===
+                  - if:
+                      - condition: template
+                        value_template: '{{ include_notify and (filtered_devices | length > 0) }}'
+                    then:
+                      - choose:
+                          - alias: Android - Update notification
+                            conditions:
+                              - '{{ is_ios_android == ''android_device'' }}'
+                            sequence:
+                              - repeat:
+                                  for_each: '{{ filtered_devices }}'
+                                  sequence:
+                                    - action: notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                                      data:
+                                        title: !input notify_title
+                                        message: '{{ ai_messages }}'
+                                        data:
+                                          priority: high
+                                          notification_icon: !input status_bar_icon
+                                          color: '{{ notification_color_hex }}'
+                                          image: '{{ snapshot_first }}'
+                                          url: '{{ tap_navigate }}'
+                                          clickAction: '{{ tap_navigate }}'
+                                          tag: '{{ tag }}'
+                          
+                          - alias: iOS - Update notification
+                            conditions:
+                              - '{{ is_ios_android == ''ios_device'' }}'
+                            sequence:
+                              - repeat:
+                                  for_each: '{{ filtered_devices }}'
+                                  sequence:
+                                    - action: notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                                      data:
+                                        title: !input notify_title
+                                        message: '{{ ai_messages }}'
+                                        data:
+                                          attachment:
+                                            url: '{{ snapshot_first }}'
+                                            content_type: JPEG
+                                          tag: '{{ tag }}'
+                  
+                  # === TELEGRAM: Gửi phân tích AI ===
+                  - if:
+                      - condition: template
+                        value_template: '{{ include_telegram_notify }}'
+                    then:
+                      - service: telegram_bot.send_message
+                        data: >
+                          {% set data = {
+                            'config_entry_id': telegram_config_entry,
+                            'message': '📊 Phân tích AI:\n\n' ~ ai_messages
+                          } %}
+                          {% if telegram_target != "" %}
+                            {% set data = dict(data, target=telegram_target|int) %}
+                          {% endif %}
+                          {% if telegram_thread_id != "" %}
+                            {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+                          {% endif %}
+                          {{ data }}
+                  
+                  # === TTS RA LOA ===
+                  - if:
+                      - condition: template
+                        value_template: '{{ include_tts_announcement }}'
+                    then:
+                      - alias: Send TTS to each speaker
+                        repeat:
+                          for_each: '{{ media_player }}'
+                          sequence:
+                            - action: media_player.volume_set
+                              data:
+                                volume_level: '{{ num_volume_speaker }}'
+                              target:
+                                entity_id: '{{ repeat.item }}'
+                            - action: tts.speak
+                              data:
+                                entity_id: !input text_to_speech_engine
+                                media_player_entity_id: '{{ repeat.item }}'
+                                message: '{{ humans_detected_report.data.humans_detected_description }}'
+            else:
+              - variables:
+                  error_message: "⚠️ AI phân tích ảnh chụp không thành công.\n🕒 {{now().strftime('%H:%M:%S %a, %d-%b-%Y')}}\n"
+              
+              # Gửi thông báo lỗi
+              - if:
+                  - condition: template
+                    value_template: '{{ include_telegram_notify }}'
+                then:
+                  - service: telegram_bot.send_message
+                    data: >
+                      {% set data = {
+                        'config_entry_id': telegram_config_entry,
+                        'message': error_message
+                      } %}
+                      {% if telegram_target != "" %}
+                        {% set data = dict(data, target=telegram_target|int) %}
+                      {% endif %}
+                      {% if telegram_thread_id != "" %}
+                        {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+                      {% endif %}
+                      {{ data }}
+
+  # === COOLDOWN ===
+  - delay:
+      seconds: '{{ num_delay_actions }}'
+  - delay: !input cooldown
