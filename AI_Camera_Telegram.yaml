@@ -789,7 +789,7 @@ action:
               entity_id: '{{ tts_engine }}'
             data:
               media_player_entity_id: '{{ tts_media_player[0] if tts_media_player is iterable and tts_media_player is not string else tts_media_player }}'
-              message: '{{ tts_announcement_prefix }} {{ label }}. {{ response.response_text }}'
+              message: '{{ tts_announcement_prefix }}. {{ response.response_text }}'
               language: '{{ tts_language_speaker }}'
 
   # === TELEGRAM: Gửi phân tích AI ===
