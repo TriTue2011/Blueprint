@@ -148,7 +148,7 @@ blueprint:
         message:
           name: Prompt
           description: Model prompt for the video_analyzer action
-          default: 'Analyze the door entry event. Identify who entered (person description, clothing, items carried), their actions, and any notable details. If multiple people are present, describe each person. Focus on security-relevant information. Present the information naturally without mentioning images.'
+          default: 'Phân tích sự kiện ra vào cửa. Mô tả người vào: đặc điểm nhận dạng, trang phục, đồ vật mang theo, hành động và các chi tiết đáng chú ý. Nếu có nhiều người, mô tả từng người. Tập trung vào thông tin liên quan đến an ninh. Trình bày thông tin tự nhiên, KHÔNG đề cập đến hình ảnh, KHÔNG ghi ngày tháng năm giờ. Chỉ mô tả những gì bạn nhìn thấy.'
           selector:
             text:
               multiline: true
@@ -788,8 +788,8 @@ action:
             target:
               entity_id: '{{ tts_engine }}'
             data:
-              media_player_entity_id: '{{ tts_media_player }}'
-              message: '{{ tts_announcement_prefix }}{{ label }}. {{ response.response_text }}'
+              media_player_entity_id: '{{ tts_media_player[0] if tts_media_player is iterable and tts_media_player is not string else tts_media_player }}'
+              message: '{{ tts_announcement_prefix }} {{ label }}. {{ response.response_text }}'
               language: '{{ tts_language_speaker }}'
 
   # === TELEGRAM: Gửi phân tích AI ===
