@@ -1,0 +1,921 @@
+blueprint:
+  name: AI Event Summary with Telegram (v1.6.0 - Fixed)
+  author: valentinfrlch + Custom
+  homeassistant:
+    min_version: 2024.10.0
+  description: 'AI-powered summaries for security camera events. Sends a notification with a preview to your phone that is updated dynamically when the AI summary is available. Optional Telegram integration for instant photo + AI analysis.'
+  domain: automation
+  source_url: https://raw.githubusercontent.com/valentinfrlch/ha-llmvision/refs/heads/main/blueprints/event_summary.yaml
+  
+  input:
+    trigger_section:
+      name: Trigger Settings
+      icon: mdi:play-circle
+      input:
+        trigger_sensor:
+          name: Trigger Sensor
+          description: Sensor that triggers the automation (e.g. door contact, motion sensor)
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+        trigger_from_state:
+          name: Trigger From State
+          default: "off"
+          selector:
+            select:
+              options: ["off","on"]
+              custom_value: true
+        trigger_to_state:
+          name: Trigger To State
+          default: "on"
+          selector:
+            select:
+              options: ["on","off"]
+              custom_value: true
+        
+        person_occupancy_sensor:
+          name: Person Occupancy Sensor (Optional)
+          description: Wait for person detection before analyzing
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+        person_detected_state:
+          name: Person Detected State
+          default: "on"
+          selector:
+            select:
+              options: ["on","off"]
+              custom_value: true
+        wait_for_person:
+          name: Wait for Person Detection
+          default: false
+          selector:
+            boolean: {}
+        person_wait_time:
+          name: Person Detection Wait Time
+          description: Delay before checking person detection
+          default:
+            hours: 0
+            minutes: 0
+            seconds: 0
+          selector:
+            duration: {}
+        max_wait_time:
+          name: Maximum Wait Time (Optional)
+          description: Maximum time to wait for person detection (0 = unlimited)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 3600
+              unit_of_measurement: seconds
+              mode: box
+              step: 1
+
+    run_conditions:
+      name: Run Conditions
+      description: All conditions must be true in order for the blueprint to run.
+      default: []
+      selector:
+        condition: {}
+    
+    cooldown:
+      name: Cooldown
+      description: Time to wait before running automation again. Strongly recommended for busy areas.
+      default:
+        minutes: 10
+      selector:
+        duration: {}
+    
+    camera_sensor_section:
+      name: Camera & Sensor Settings
+      description: Settings for the camera and sensor entities.
+      icon: mdi:camera
+      input:
+        camera_entities:
+          name: Camera Entities
+          description: List of camera entities to monitor
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+              - domain:
+                - camera
+              reorder: false
+        duration:
+          name: Duration
+          description: Duration to record for analysis (in seconds).
+          default: 5
+          selector:
+            number:
+              min: 1.0
+              max: 60.0
+              step: 1.0
+              mode: slider
+        max_frames:
+          name: Max Frames
+          description: How many frames to analyze. Picks frames with the most movement.
+          default: 3
+          selector:
+            number:
+              min: 1.0
+              max: 60.0
+              step: 1.0
+              mode: slider
+    
+    ai_section:
+      name: AI Settings
+      description: AI settings for the analysis.
+      icon: mdi:brain
+      collapsed: true
+      input:
+        remember:
+          name: Store in Timeline
+          description: Stores this event in the Timeline so you can ask about it. If important is enabled, only events classified as Normal or Critical will be saved.
+          default: true
+          selector:
+            boolean: {}
+        use_memory:
+          name: Use Memory
+          description: Use information stored in memory to provide additional context. Memory must be set up.
+          default: false
+          selector:
+            boolean: {}
+        message:
+          name: Prompt
+          description: Model prompt for the video_analyzer action
+          default: 'Analyze the door entry event. Identify who entered (person description, clothing, items carried), their actions, and any notable details. If multiple people are present, describe each person. Focus on security-relevant information. Present the information naturally without mentioning images.'
+          selector:
+            text:
+              multiline: true
+              multiple: false
+        provider:
+          name: Provider
+          description: Provider to use for analysis. See docs for additional information.
+          selector:
+            config_entry:
+              integration: llmvision
+        model:
+          name: Model
+          description: Which model to use. Depends on chosen provider.
+          selector:
+            text:
+              multiline: false
+              multiple: false
+        target_width:
+          name: Target Width
+          description: Downscale images (uses less tokens and speeds up processing)
+          default: 1280
+          selector:
+            number:
+              min: 512.0
+              max: 3840.0
+              step: 1.0
+              mode: slider
+        max_tokens:
+          name: Maximum Tokens
+          description: 'Maximum number of tokens to generate. **Note: Newer and reasoning models may require significantly more tokens. At least 5000 is recommended.**'
+          default: 5000
+          selector:
+            number:
+              step: 1.0
+              mode: box
+    
+    notification_section:
+      name: Notification Settings
+      description: Settings for the notification delivery.
+      icon: mdi:bell
+      collapsed: true
+      input:
+        notify:
+          name: Notify
+          description: Send a notification to your phone.
+          default: true
+          selector:
+            boolean: {}
+        condition_notify:
+          name: Condition to Notify
+          description: Condition to notify the device.
+          default: []
+          selector:
+            condition: {}
+        notify_device:
+          name: Notify Device
+          description: The devices to send the notification to. Multiple devices may be used. Only works with Home Assistant mobile app.
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+              - integration: mobile_app
+        notification_delivery:
+          name: Notification Delivery
+          description: "Controls how notifications are delivered. \n \n **Dynamic** immediately notifies with a Live Preview (iOS only) or Snapshot before analysis and updates the notification silently with a summary once it is available, or after analysis. \n **Consolidated** Delays the notification until the event summary is generated. Use this if you're receiving multiple notifications for the same event."
+          default: Dynamic
+          selector:
+            select:
+              options:
+              - Dynamic
+              - Consolidated
+              custom_value: false
+              sort: false
+              multiple: false
+        preview_mode:
+          name: Preview Mode
+          description: "Choose between a live preview or a snapshot of the event before analysis.\n> [!IMPORTANT]  \n> **IMPORTANT**: Live Preview is only supported on iOS."
+          default: Snapshot
+          selector:
+            select:
+              options:
+              - Snapshot
+              - Live Preview
+              custom_value: false
+              sort: false
+              multiple: false
+        analysis_mode:
+          name: Analysis Mode
+          description: "Choose between a live preview or a snapshot of the event after analysis.\n> [!IMPORTANT]  \n> **IMPORTANT**: Live Preview is only supported on iOS."
+          default: Snapshot
+          selector:
+            select:
+              options:
+              - Snapshot
+              - Live Preview
+              custom_value: false
+              sort: false
+              multiple: false
+        notification_time:
+          name: Notification Time
+          description: Add time to Notification Title and choose between 12-hour or 24-hour time format for the notification title.
+          default: ''
+          selector:
+            select:
+              options:
+              - label: No Time Added
+                value: ''
+              - label: 12 Hour
+                value: at {{ now().strftime("%-I:%M %p") }}
+              - label: 24 Hour
+                value: at {{ now().strftime("%H:%M") }}
+              custom_value: false
+              sort: false
+              multiple: false
+        file_path:
+          name: File Path
+          description: "The file path to store the most current snapshot for the FIRST camera if using multiple camera entities. You can specifiy a custom location as well.\n\nDefaults to `Media Folder - Secured` that references **/media/llmvision/snapshots/<CAMERA_NAME>/last_motion.jpg** \n\n Try the `Public Folder - Unsecured` option that references **/config/www/snapshots/{{ camera_file_path }}/last_motion.jpg** if you are having issues ***Note that this is unsecured and exposes the images to the web.***"
+          default: /media/llmvision/snapshots_blueprint/{{ camera_file_path }}/last_motion.jpg
+          selector:
+            select:
+              options:
+              - label: Media Folder - Secured
+                value: /media/llmvision/snapshots_blueprint/{{ camera_file_path }}/last_motion.jpg
+              - label: Public Folder - Unsecured
+                value: /config/www/snapshots/{{ camera_file_path }}/last_motion.jpg
+              custom_value: true
+              sort: false
+              multiple: false
+        tap_navigate:
+          name: Tap Navigate
+          description: Home Assistant dashboard to navigate to when notification is opened (e.g. /lovelace/cameras).
+          default: /lovelace/0
+          selector:
+            text:
+              multiline: false
+              multiple: false
+        delay_notification:
+          name: Notification Cooldown
+          description: Time in seconds to wait before sending another notification.
+          default: 60
+          selector:
+            number:
+              min: 0.0
+              max: 86400.0
+              unit_of_measurement: seconds
+              mode: box
+              step: 1.0
+        notification_sticky:
+          name: Sticky - Android Only
+          description: 'When enabled, the notification will stay active on the device after tapping it and remain unless swiped.'
+          default: true
+          selector:
+            boolean: {}
+        notification_color:
+          name: Notification Color - Android Only
+          description: 'Set the color of the notification on your Android device, in HEX. (default = Steelblue - #03a9f4)'
+          default: '#03a9f4'
+          selector:
+            select:
+              options:
+              - label: 'Steelblue - #03a9f4'
+                value: '#03a9f4'
+              - label: 'Red - #f44336'
+                value: '#f44336'
+              - label: 'Orange - #ff9800'
+                value: '#ff9800'
+              - label: 'Green - #4caf50'
+                value: '#4caf50'
+              custom_value: true
+              sort: false
+              multiple: false
+        notification_icon:
+          name: Notification Status Bar Icon - Android Only
+          description: Change the icon that displays in the notification.
+          default: mdi:cctv
+          selector:
+            icon:
+              placeholder: mdi:cctv
+        notification_channel:
+          name: Custom Notification Channel - Android Only
+          description: Create a new channel for notifications to allow custom notification sounds, vibration patterns, and override Do Not Disturb mode.
+          default: '{{ camera }} Snapshot'
+          selector:
+            select:
+              options:
+              - label: Camera Name
+                value: '{{ camera }} Snapshot'
+              - label: Alarm
+                value: alarm_stream
+              custom_value: true
+              sort: false
+              multiple: false
+        tts_notification:
+          name: Use Text-to-Speech (TTS) on your device - Android Only
+          description: Enable TTS notification.
+          default: false
+          selector:
+            boolean: {}
+        tts_volume:
+          name: TTS Volume (Android Only)
+          description: "Set TTS volume to device's current alarm volume or Max volume."
+          default: notification_stream
+          selector:
+            select:
+              options:
+              - label: Notification Volume
+                value: notification_stream
+              - label: Alarm Volume/Sound
+                value: alarm_stream
+              - label: Max Alarm Volume/Sound
+                value: alarm_stream_max
+              custom_value: false
+              sort: false
+              multiple: false
+        condition_notify_tts:
+          name: Condition to TTS Notify
+          description: Condition to TTS notify the device.
+          default: []
+          selector:
+            condition: {}
+        notification_sound:
+          name: Notification Sound - iOS Only
+          description: 'You can specify a sound file on your device that will play for the notifications.'
+          default: default
+          selector:
+            select:
+              options:
+              - label: Default
+                value: default
+              - label: None
+                value: none
+              custom_value: true
+              sort: false
+              multiple: false
+        notification_volume:
+          name: Volume Sound - iOS Only
+          description: Specify a sound level %
+          default: 1
+          selector:
+            number:
+              max: 1.0
+              min: 0.0
+              unit_of_measurement: '%'
+              step: 0.1
+              mode: slider
+        notification_critical:
+          name: Critical Notification - iOS Only
+          description: Send as a critical notification to the mobile device. This will ignore silent/vibrate modes.
+          default: false
+          selector:
+            boolean: {}
+
+    telegram_section:
+      name: Telegram Settings
+      icon: mdi:send
+      collapsed: true
+      input:
+        enable_telegram:
+          name: Enable Telegram
+          description: Gửi ảnh và phân tích qua Telegram
+          default: false
+          selector:
+            boolean: {}
+        telegram_config_entry:
+          name: Telegram Bot
+          description: Chọn Telegram bot để gửi thông báo
+          default: ''
+          selector:
+            config_entry:
+              integration: telegram_bot
+        telegram_target:
+          name: Target Chat ID (Optional)
+          description: Chat ID hoặc @username để gửi thông báo. Để trống sẽ dùng chat mặc định của bot
+          default: ''
+          selector:
+            text: {}
+        telegram_thread_id:
+          name: Thread ID (Optional)
+          description: ID của topic trong group (để trống nếu không dùng)
+          default: ''
+          selector:
+            text: {}
+        telegram_initial_caption:
+          name: Initial Caption
+          description: Caption cho ảnh ban đầu
+          default: '🔔 Phát hiện chuyển động!'
+          selector:
+            text: {}
+    
+    experimental_section:
+      name: Experimental Settings
+      description: Experimental features. Use with caution.
+      icon: mdi:apple-keyboard-option
+      collapsed: true
+      input:
+        important:
+          name: Important (Experimental)
+          description: 'Use AI to classify events as Critical, Normal or Low. Notifications are sent only for events classified as Normal or higher.'
+          default: false
+          selector:
+            boolean: {}
+        additional_actions:
+          name: Additional Actions (Experimental)
+          description: Additional actions to run after the AI analysis and notification.
+          default: []
+          selector:
+            action: {}
+    
+    tts_speaker_section:
+      name: TTS Speaker Settings
+      icon: mdi:speaker
+      collapsed: true
+      input:
+        enable_tts_speaker:
+          name: Enable TTS to Speaker
+          description: Phát AI analysis qua loa (Google Home, Alexa, v.v.)
+          default: false
+          selector:
+            boolean: {}
+        tts_engine:
+          name: TTS Engine
+          description: Chọn TTS engine (entity_id sẽ tự hiện trong dropdown)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: tts
+        tts_media_player:
+          name: Media Player
+          description: Chọn loa để phát TTS
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        tts_language_speaker:
+          name: TTS Language
+          description: Ngôn ngữ cho TTS (vi, en, en-US, v.v.)
+          default: vi
+          selector:
+            text: {}
+        tts_speaker_volume:
+          name: Speaker Volume
+          description: Âm lượng loa (0.0 - 1.0)
+          default: 0.5
+          selector:
+            number:
+              min: 0.0
+              max: 1.0
+              step: 0.1
+              mode: slider
+        tts_announcement_prefix:
+          name: Announcement Prefix
+          description: Văn bản thông báo trước khi đọc AI analysis
+          default: 'Cảnh báo an ninh. '
+          selector:
+            text: {}
+
+variables:
+  trigger_sensor: !input trigger_sensor
+  trigger_from_state: !input trigger_from_state
+  trigger_to_state: !input trigger_to_state
+  person_sensor: !input person_occupancy_sensor
+  person_detected_state: !input person_detected_state
+  wait_for_person: !input wait_for_person
+  person_wait_time: !input person_wait_time
+  max_wait_time: !input max_wait_time
+  important: !input important
+  remember: !input remember
+  cooldown: !input cooldown
+  preview_mode: !input preview_mode
+  analysis_mode: !input analysis_mode
+  notify_devices: !input notify_device
+  notification_delivery: !input notification_delivery
+  notification_sticky: !input notification_sticky
+  notification_color: !input notification_color
+  notification_icon: !input notification_icon
+  notification_channel: !input notification_channel
+  notification_sound: !input notification_sound
+  notification_volume: !input notification_volume
+  notification_critical: !input notification_critical
+  tts_volume: !input tts_volume
+  tts_notification: !input tts_notification
+  condition_notify_tts: !input condition_notify_tts
+  additional_actions: !input additional_actions
+  notify: !input notify
+  condition_notify: !input condition_notify
+  delay_notification: !input delay_notification
+  enable_telegram: !input enable_telegram
+  telegram_config_entry: !input telegram_config_entry
+  telegram_target: !input telegram_target
+  telegram_thread_id: !input telegram_thread_id
+  telegram_initial_caption: !input telegram_initial_caption
+  device_name_map: "{% set ns = namespace(device_names=[]) %} {% for device_id in notify_devices %}\n  {% set device_name = device_attr(device_id, \"name\") %}\n  {% set sanitized_name = \"mobile_app_\" + device_name | slugify  %}\n  {% set ns.device_names = ns.device_names + [sanitized_name] %}\n{% endfor %} {{ ns.device_names }}\n"
+  camera_entities_list: !input camera_entities
+  camera_entity: "{{ camera_entities_list[0] if camera_entities_list else '' }}"
+  tag: '{{ camera_entity + int(as_timestamp(now()))|string }}'
+  label: Motion detected
+  camera_message: '{{ camera_entity.replace("camera.", "").replace("_", " ")|capitalize }}'
+  camera: '{{ camera_entities_list[0].replace("camera.", "").replace("_", " ") | title }}'
+  importance_prompt: 'Classify the security event based on this image. Choose from the following options: "passive" for unimportant events, "time-sensitive" for notable but non-critical events such as a person at the front door, and "critical" only for potential burglaries or highly suspicious activity. Respond with one of these options exactly, without additional explanation.'
+  camera_entity_snapshot: '{{ camera_entities_list[0] }}'
+  camera_file_path: '{{ camera_entity_snapshot.replace("camera.", "")}}'
+  file_path: !input file_path
+  snapshot_access_file_path: '{{ file_path | replace(''/config/www'', ''/local'') | replace(''/media'', ''/media/local'') }}'
+  notification_time: !input notification_time
+  enable_tts_speaker: !input enable_tts_speaker
+  tts_engine: !input tts_engine
+  tts_media_player: !input tts_media_player
+  tts_language_speaker: !input tts_language_speaker
+  tts_speaker_volume: !input tts_speaker_volume
+  tts_announcement_prefix: !input tts_announcement_prefix
+
+max_exceeded: silent
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input trigger_sensor
+    id: trigger
+    from: !input trigger_from_state
+    to: !input trigger_to_state
+
+condition:
+  - condition: and
+    conditions: !input run_conditions
+
+action:
+  # === WAIT FOR PERSON ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ wait_for_person and person_sensor | length > 0 }}"
+        sequence:
+          - if:
+              - condition: state
+                entity_id: !input person_occupancy_sensor
+                state: !input person_detected_state
+            then: []
+            else:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ max_wait_time == 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        continue_on_timeout: true
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ max_wait_time > 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        timeout:
+                          seconds: "{{ max_wait_time }}"
+                        continue_on_timeout: true
+
+  # === IMPORTANT CHECK ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ important }}'
+        sequence:
+          - action: llmvision.image_analyzer
+            data:
+              image_entity: '{{[camera_entity]}}'
+              provider: !input provider
+              model: !input model
+              message: '{{importance_prompt}}'
+              include_filename: true
+              target_width: 1280
+              max_tokens: 3
+            response_variable: importance
+  
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ important and importance.response_text|lower == ''passive'' }}'
+        sequence:
+          - stop: Event is not important
+
+  # === TELEGRAM: Gửi ảnh ngay lập tức ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ enable_telegram }}'
+        sequence:
+          - alias: "Chụp snapshot cho Telegram"
+            service: camera.snapshot
+            target:
+              entity_id: '{{ camera_entity }}'
+            data:
+              filename: '{{ file_path }}'
+          
+          - alias: "Gửi ảnh qua Telegram"
+            service: telegram_bot.send_photo
+            data: >
+              {% set data = {
+                'config_entry_id': telegram_config_entry,
+                'file': file_path,
+                'caption': telegram_initial_caption
+              } %}
+              {% if telegram_target != "" %}
+                {% set data = dict(data, target=telegram_target|int) %}
+              {% endif %}
+              {% if telegram_thread_id != "" %}
+                {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+              {% endif %}
+              {{ data }}
+
+  # === NOTIFICATION ===
+  - if:
+      - condition: template
+        value_template: '{{ notify }}'
+    then:
+      - if:
+          - condition: !input condition_notify
+        then:
+          - if:
+              - condition: template
+                value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds > delay_notification }}'
+            then:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ notification_delivery == ''Dynamic'' }}'
+                    sequence:
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: '{{ preview_mode==''Snapshot'' }}'
+                            sequence:
+                              - service: camera.snapshot
+                                entity_id: !input camera_entities
+                                data:
+                                  filename: !input file_path
+                              - alias: Send instant notification snapshot to notify devices
+                                repeat:
+                                  for_each: '{{device_name_map}}'
+                                  sequence:
+                                    - action: notify.{{ repeat.item }}
+                                      data:
+                                        title: '{{ label }} {{ notification_time }}'
+                                        message: '{{camera_message}} has detected activity.'
+                                        data:
+                                          url: !input tap_navigate
+                                          clickAction: !input tap_navigate
+                                          tag: '{{tag}}'
+                                          group: !input notification_channel
+                                          alert_once: true
+                                          ttl: 0
+                                          priority: high
+                                          channel: !input notification_channel
+                                          color: !input notification_color
+                                          notification_icon: !input notification_icon
+                                          sticky: !input notification_sticky
+                                          image: '{{ snapshot_access_file_path }}'
+                                          attachment:
+                                            url: '{{ snapshot_access_file_path }}'
+                                            content_type: JPEG
+                                          push:
+                                            interruption-level: '{{importance.response_text|lower if importance is defined else ''active''}}'
+                                            sound:
+                                              name: !input notification_sound
+                                              volume: !input notification_volume
+                                              critical: '{{ notification_critical }}'
+                          - conditions:
+                              - condition: template
+                                value_template: '{{ preview_mode==''Live Preview'' }}'
+                            sequence:
+                              - alias: Send Live Feed to notify devices
+                                repeat:
+                                  for_each: '{{device_name_map}}'
+                                  sequence:
+                                    - action: notify.{{ repeat.item }}
+                                      data:
+                                        title: '{{ label }} {{ notification_time }}'
+                                        message: '{{camera_message}} has detected activity.'
+                                        data:
+                                          entity_id: '{{camera_entity}}'
+                                          url: !input tap_navigate
+                                          tag: '{{tag}}'
+                                          group: !input notification_channel
+                                          alert_once: true
+                                          push:
+                                            interruption-level: '{{importance.response_text|lower if importance is defined else ''active''}}'
+                                            sound:
+                                              name: !input notification_sound
+                                              volume: !input notification_volume
+                                              critical: '{{ notification_critical }}'
+                                          ttl: 0
+                                          priority: high
+
+  # === AI ANALYSIS ===
+  - alias: Analyze event
+    action: llmvision.stream_analyzer
+    data:
+      image_entity: '{{[camera_entity]}}'
+      duration: !input duration
+      provider: !input provider
+      model: !input model
+      message: !input message
+      use_memory: !input use_memory
+      remember: !input remember
+      expose_images: '{{preview_mode == ''Snapshot'' or remember}}'
+      generate_title: !input remember
+      include_filename: true
+      max_frames: !input max_frames
+      target_width: !input target_width
+      max_tokens: !input max_tokens
+    response_variable: response
+
+  - alias: Update label with title
+    variables:
+      label: '{{response.title}}'
+
+  # === TTS RA LOA ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ enable_tts_speaker and tts_media_player|length > 0 and tts_engine != "" }}'
+        sequence:
+          - service: media_player.volume_set
+            target:
+              entity_id: '{{ tts_media_player }}'
+            data:
+              volume_level: '{{ tts_speaker_volume }}'
+          
+          - service: tts.speak
+            target:
+              entity_id: '{{ tts_engine }}'
+            data:
+              media_player_entity_id: '{{ tts_media_player }}'
+              message: '{{ tts_announcement_prefix }}{{ label }}. {{ response.response_text }}'
+              language: '{{ tts_language_speaker }}'
+
+  # === TELEGRAM: Gửi phân tích AI ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ enable_telegram }}'
+        sequence:
+          - alias: "Gửi phân tích AI qua Telegram"
+            service: telegram_bot.send_message
+            data: >
+              {% set data = {
+                'config_entry_id': telegram_config_entry,
+                'message': '📊 ' ~ label ~ '\n\n' ~ response.response_text
+              } %}
+              {% if telegram_target != "" %}
+                {% set data = dict(data, target=telegram_target|int) %}
+              {% endif %}
+              {% if telegram_thread_id != "" %}
+                {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+              {% endif %}
+              {{ data }}
+
+  # === UPDATE NOTIFICATION ===
+  - if:
+      - condition: template
+        value_template: '{{ notify }}'
+    then:
+      - if:
+          - condition: !input condition_notify
+        then:
+          - if:
+              - condition: template
+                value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds > delay_notification }}'
+            then:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ analysis_mode==''Snapshot'' }}'
+                    sequence:
+                      - alias: (Snapshot) Update notification on notify devices
+                        repeat:
+                          for_each: '{{device_name_map}}'
+                          sequence:
+                            - action: notify.{{ repeat.item }}
+                              data:
+                                title: '{{ label }} {{ notification_time }}'
+                                message: '{{response.response_text}}'
+                                data:
+                                  image: '{{response.key_frame.replace(''/media'',''/media/local'') }}'
+                                  url: !input tap_navigate
+                                  clickAction: !input tap_navigate
+                                  tag: '{{tag}}'
+                                  group: !input notification_channel
+                                  alert_once: true
+                                  ttl: 0
+                                  priority: high
+                                  channel: !input notification_channel
+                                  color: !input notification_color
+                                  notification_icon: !input notification_icon
+                                  sticky: !input notification_sticky
+                                  push:
+                                    interruption-level: '{{''passive'' if notification_delivery==''Dynamic'' else ''active''}}'
+                                    sound:
+                                      name: !input notification_sound
+                                      volume: !input notification_volume
+                                      critical: '{{ notification_critical }}'
+                                  actions:
+                                    - action: URI
+                                      title: See Snapshot
+                                      uri: '{{response.key_frame.replace(''/media'',''/media/local'') }}'
+                  - conditions:
+                      - condition: template
+                        value_template: '{{ analysis_mode==''Live Preview'' }}'
+                    sequence:
+                      - alias: (Live Preview) Update notification on notify devices
+                        repeat:
+                          for_each: '{{device_name_map}}'
+                          sequence:
+                            - action: notify.{{ repeat.item }}
+                              data:
+                                title: '{{ label }} {{ notification_time }}'
+                                message: '{{response.response_text}}'
+                                data:
+                                  entity_id: '{{camera_entity}}'
+                                  url: !input tap_navigate
+                                  tag: '{{tag}}'
+                                  group: !input notification_channel
+                                  alert_once: true
+                                  push:
+                                    interruption-level: '{{''passive'' if notification_delivery==''Dynamic'' else ''active''}}'
+                                    sound:
+                                      name: !input notification_sound
+                                      volume: !input notification_volume
+                                      critical: '{{ notification_critical }}'
+                                  ttl: 0
+                                  priority: high
+                                  actions:
+                                    - action: URI
+                                      title: See Snapshot
+                                      uri: '{{response.key_frame.replace(''/media'',''/media/local'') }}'
+
+  # === TTS NOTIFICATION ===
+  - if:
+      - condition: template
+        value_template: '{{ tts_notification }}'
+    then:
+      - if:
+          - condition: !input condition_notify_tts
+        then:
+          - repeat:
+              for_each: '{{device_name_map}}'
+              sequence:
+                - action: notify.{{ repeat.item }}
+                  data:
+                    message: TTS
+                    data:
+                      tts_text: '{{response.response_text}}'
+                      media_stream: !input tts_volume
+
+  # === ADDITIONAL ACTIONS ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ additional_actions|length > 0 }}'
+        sequence: !input additional_actions
+
+  # === COOLDOWN ===
+  - delay: !input cooldown
