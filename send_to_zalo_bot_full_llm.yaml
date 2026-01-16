@@ -1,12 +1,13 @@
 blueprint:
-  name: Voice - Send to Zalo
-  author: luuquangvu + merge by ChatGPT
+  name: Voice - Send to Zalo (Ultimate)
+  author: luuquangvu + ultimate merge
   source_url: https://github.com/luuquangvu/tutorials/blob/main/send_to_zalo_bot_full_llm.yaml
   description: |-
-    Tool for sending content to Zalo used for Voice Assistant.
-    Supports information, location, and image.
-    Automatically resolves local/ image paths and deletes images after sending.
+    Ultimate Zalo sender for Voice Assistant.
+    Supports information, location, image.
+    Resolves local paths and safely deletes temporary images after sending.
   domain: script
+
   homeassistant:
     min_version: 2024.10.0
 
@@ -19,6 +20,20 @@ blueprint:
           name: Chat ID
           selector:
             text:
+        delete_after_send:
+          name: Delete Image After Sending
+          description: Only deletes snapshot/tmp images
+          selector:
+            boolean: {}
+          default: true
+        delete_delay:
+          name: Delete Delay (seconds)
+          selector:
+            number:
+              min: 0
+              max: 30
+              step: 1
+          default: 5
 
     prompt_settings:
       name: Prompt settings for the LLM
@@ -31,10 +46,11 @@ blueprint:
             text:
               multiline: true
           default: |-
-            This argument is mandatory and must always be included.
-            Provide a short summary (<=10 words). No markdown, emojis or commentary.
-            If content_type is image, write a concise caption.
-            Return only plain text.
+            Mandatory.
+            Short summary (<=10 words).
+            No emojis, markdown, or commentary.
+            If image, write concise caption.
+            Return plain text only.
 
         detail_prompt:
           name: Detail Prompt
@@ -42,9 +58,10 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional detailed information.
-            No links, no markdown/emojis, do not repeat the summary.
-            Return only plain text.
+            Optional detail text.
+            No links, markdown, emojis.
+            Do not repeat summary.
+            Return plain text only.
 
         content_type_prompt:
           name: Content Type Prompt
@@ -54,9 +71,6 @@ blueprint:
           default: |-
             Mandatory.
             Return exactly one: information, location, image.
-            Choose location for places/maps.
-            Choose image when sending a photo with a path.
-            Otherwise choose information.
 
         location_prompt:
           name: Location Prompt
@@ -65,7 +79,7 @@ blueprint:
               multiline: true
           default: |-
             Optional. Use only when content_type is location.
-            Return address name only. No punctuation.
+            Return address name only.
 
         image_path_prompt:
           name: Image Path Prompt
@@ -74,7 +88,7 @@ blueprint:
               multiline: true
           default: |-
             Optional. Use only when content_type is image.
-            Provide existing local/ or /media/ image path.
+            Provide existing local/ or /media/ path.
             Do not guess.
 
         chat_id_override_prompt:
@@ -83,8 +97,9 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional. Use only when user explicitly specifies another chat.
-            Return exact Zalo chat ID only.
+            Optional.
+            Use only when user explicitly specifies another chat.
+            Return exact chat ID only.
 
 mode: queued
 max: 30
@@ -139,12 +154,16 @@ fields:
 sequence:
   - variables:
       default_chat_id: !input chat_id
+      delete_after_send: !input delete_after_send
+      delete_delay: !input delete_delay
+
       summary: "{{ summary | trim }}"
       detail: "{{ detail | default('') | trim }}"
       content_type: "{{ content_type | trim }}"
       location: "{{ location | default('') | trim }}"
       image_path: "{{ image_path | default('') | trim }}"
       override_chat_id: "{{ target_chat_id | default('') | trim }}"
+
       chat_id_value: >-
         {% set c = override_chat_id if override_chat_id else default_chat_id %}
         {{ c | string | trim if c else '' }}
@@ -155,6 +174,12 @@ sequence:
         {% else %}
           {{ image_path }}
         {% endif %}
+
+      is_temp_image: >-
+        {{
+          image_path_resolved.startswith('/media/snapshot')
+          or image_path_resolved.startswith('/media/tmp')
+        }}
 
   - alias: Validate inputs
     if:
@@ -211,9 +236,15 @@ sequence:
                 {{ detail }}{% endif %}
             response_variable: zalo_response
 
-          - action: delete.file
-            data:
-              file: "{{ image_path_resolved }}"
+          - if:
+              - condition: template
+                value_template: "{{ delete_after_send and is_temp_image }}"
+            then:
+              - delay:
+                  seconds: "{{ delete_delay }}"
+              - action: delete.file
+                data:
+                  file: "{{ image_path_resolved }}"
 
   - stop: ""
     response_variable: zalo_response
