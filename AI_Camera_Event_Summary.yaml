@@ -108,14 +108,26 @@ blueprint:
               mode: slider
           default: 3
         
-        num_delay:
-          name: ⌛ Delay after Snapshots
-          description: Thời gian trễ sau mỗi lần Snapshots (tính theo giây)
+        num_delay_before_snapshot:
+          name: ⌛ Delay Before First Snapshot
+          description: Thời gian chờ TRƯỚC KHI chụp ảnh đầu tiên (tính theo giây)
           selector:
             number:
               min: 0.0
               max: 10.0
-              step: 1.0
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: slider
+          default: 1
+        
+        num_delay:
+          name: ⌛ Delay Between Snapshots
+          description: Thời gian trễ giữa các lần chụp (tính theo giây)
+          selector:
+            number:
+              min: 0.0
+              max: 10.0
+              step: 0.5
               unit_of_measurement: seconds
               mode: slider
           default: 1
@@ -370,6 +382,7 @@ variables:
   camera_file_path: '{{ camera_entity.replace("camera.", "")}}'
   
   num_snapshots: !input num_snapshots
+  num_delay_before_snapshot: !input num_delay_before_snapshot
   num_delay: !input num_delay
   overwrite_image: !input overwrite_image
   file_path: !input file_path
@@ -458,6 +471,10 @@ action:
   - variables:
       file_path_dynamic: "{% if overwrite_image %}\n  {{camera_file_path}}\n{% else %}\n  {{camera_file_path}}_{{context.id}}\n{% endif %}\n"
   
+  # Delay trước khi chụp ảnh đầu tiên
+  - delay:
+      seconds: '{{ num_delay_before_snapshot }}'
+  
   - repeat:
       count: '{{ num_snapshots }}'
       sequence:
@@ -466,8 +483,13 @@ action:
             filename: /media/snapshots/{{ file_path_dynamic }}_snapshot{{ repeat.index }}.jpg
           target:
             entity_id: '{{ camera_entity }}'
-        - delay:
-            seconds: '{{ num_delay }}'
+        # Chỉ delay giữa các lần chụp, không delay sau lần chụp cuối
+        - if:
+            - condition: template
+              value_template: '{{ repeat.index < num_snapshots }}'
+          then:
+            - delay:
+                seconds: '{{ num_delay }}'
   
   - variables:
       snapshots_url: "{% set snap_count = num_snapshots | int %} {% set camera = file_path_dynamic %} {% set ns = namespace(images=[]) %} {%- for i in range(1, snap_count + 1) -%}\n  {% set ns.images = ns.images + [{'media_content_id': 'media-source://media_source/local/snapshots/' ~ camera ~ '_snapshot' ~ i ~ '.jpg', 'media_content_type': 'image/jpeg'}] %}\n{%- endfor -%} {{ ns.images }}\n"
