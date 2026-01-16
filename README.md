@@ -29,6 +29,7 @@ Save it
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_image_attrack.yaml
 )
 ## 🔗 Tạo ảnh theo thời tiết
+```
 template
 - sensor:
     - name: "Buổi trong ngày"
@@ -65,6 +66,7 @@ template
           {% elif 18 <= h < 21 %} Evening
           {% else %} Night
           {% endif %}
+ ```
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2FAI_Weather_Image_Generator.yaml
 )
 ## 🔗 Blueprint Phân tích (LLM):** Gửi ảnh chụp cho mô hình ngôn ngữ để phân tích và trả lời.
