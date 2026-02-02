@@ -1,392 +1,608 @@
 blueprint:
-  name: AI Weather Image Generator (Enhanced)
-  author: TriTue2011 - Optimized
-  description: '# Tự động tạo ảnh thời tiết bằng AI với prompt chi tiết
-
-
-    ✨ Tính năng:
-
-    - Tự động tạo ảnh khi thời tiết hoặc pha thời gian thay đổi
-
-    - Hỗ trợ đầy đủ cảm biến: nhiệt độ, độ ẩm, gió, chất lượng không khí
-
-    - Prompt thông minh mô tả chân thực thời tiết Việt Nam
-
-    - Tùy chọn lưu ảnh linh hoạt
-
-    '
+  name: AI Weather Image với Ảnh
+  author: Enhanced by Claude - Fixed Entity Error
+  description: |
+    # Tự động tạo ảnh thời tiết 16:9 với ảnh nền có thể thay đổi
+    
+    ✨ Tính năng nâng cao:
+    - Hỗ trợ ảnh nền tùy chỉnh (có thể thay đổi trong automation)
+    - Prompt được tối ưu dựa trên dữ liệu thời tiết thực tế
+    - Aspect ratio 16:9 chuẩn cinematic
+    - Hỗ trợ đầy đủ sensors thời tiết và chất lượng không khí
+    
+    🔧 FIXED: Lỗi hardcoded entity_id đã được sửa
+    ⏰ TRIGGER: Chỉ kích hoạt khi buổi trong ngày thay đổi
+    📊 Các sensor khác chỉ dùng để lấy dữ liệu, không trigger automation
+    
   domain: automation
   homeassistant:
     min_version: 2024.8.0
-  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/AI_Weather_Image_Generator.yaml
+  
   input:
+    # ===== CÀI ĐẶT THỜI TIẾT =====
     weather_sensors:
-      name: "\U0001F324️ Cảm biến thời tiết"
+      name: "🌤️ Cảm biến thời tiết"
       icon: mdi:weather-partly-cloudy
       collapsed: false
       input:
         time_phase_sensor:
           name: Pha thời gian trong ngày
-          description: Sensor hiển thị buổi trong ngày (Sáng, Chiều, Tối...)
+          description: Sensor hiển thị buổi trong ngày (Sáng/Chiều/Tối)
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
+                - domain: [sensor]
               multiple: false
-              reorder: false
+        
         weather_entity:
           name: Thực thể thời tiết
           description: Weather entity chính (weather.*)
           selector:
             entity:
               filter:
-              - domain:
-                - weather
+                - domain: [weather]
               multiple: false
-              reorder: false
+        
         temperature_sensor:
           name: Cảm biến nhiệt độ (tùy chọn)
-          description: Để trống nếu không có
-          default: ''
+          default: ""
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
-                device_class:
-                - temperature
+                - domain: [sensor]
+                  device_class: [temperature]
               multiple: false
-              reorder: false
+        
         humidity_sensor:
           name: Cảm biến độ ẩm (tùy chọn)
-          description: Để trống nếu không có
-          default: ''
+          default: ""
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
-                device_class:
-                - humidity
+                - domain: [sensor]
+                  device_class: [humidity]
               multiple: false
-              reorder: false
+        
         wind_speed_sensor:
           name: Cảm biến tốc độ gió (tùy chọn)
-          default: ''
+          default: ""
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
+                - domain: [sensor]
               multiple: false
-              reorder: false
-        wind_gust_sensor:
-          name: Cảm biến gió giật (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
-        wind_bearing_sensor:
-          name: Cảm biến hướng gió (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
+        
         pressure_sensor:
           name: Cảm biến áp suất (tùy chọn)
-          default: ''
+          default: ""
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
+                - domain: [sensor]
               multiple: false
-              reorder: false
+    
+    # ===== CHẤT LƯỢNG KHÔNG KHÍ =====
     air_quality_sensors:
-      name: "\U0001F3ED Cảm biến chất lượng không khí"
+      name: "🏭 Cảm biến chất lượng không khí"
       icon: mdi:air-filter
       collapsed: true
       input:
-        pm25_sensor:
-          name: PM2.5 (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
-        pm10_sensor:
-          name: PM10 (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
-        carbon_monoxide_sensor:
-          name: Carbon Monoxide - CO (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
-        sulfur_dioxide_sensor:
-          name: Sulfur Dioxide - SO₂ (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
-        ozone_sensor:
-          name: Ozone - O₃ (tùy chọn)
-          default: ''
-          selector:
-            entity:
-              filter:
-              - domain:
-                - sensor
-              multiple: false
-              reorder: false
         aqi_sensor:
           name: AQI - Chỉ số chất lượng không khí (tùy chọn)
-          default: ''
+          default: ""
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
-                device_class:
-                - aqi
+                - domain: [sensor]
+                  device_class: [aqi]
               multiple: false
-              reorder: false
+        
+        pm25_sensor:
+          name: PM2.5 (tùy chọn)
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: [sensor]
+              multiple: false
+    
+    # ===== ẢNH NỀN TÙY CHỈNH =====
+    background_image:
+      name: "🖼️ Ảnh nền tùy chỉnh"
+      icon: mdi:image
+      collapsed: false
+      input:
+        use_background_image:
+          name: Sử dụng ảnh nền
+          description: Bật để sử dụng ảnh nền tùy chỉnh thay vì tạo hoàn toàn mới
+          default: false
+          selector:
+            boolean:
+        
+        use_preset_background:
+          name: Sử dụng ảnh preset
+          description: Chọn từ danh sách ảnh có sẵn hoặc nhập đường dẫn tùy chỉnh
+          default: true
+          selector:
+            boolean:
+        
+        background_image_path:
+          name: Đường dẫn ảnh nền tùy chỉnh
+          description: |
+            Nhập đường dẫn file ảnh (chỉ dùng khi "Sử dụng ảnh preset" tắt)
+            
+            Chỉ cần nhập: local/folder/tenfile.jpg
+            
+            Ví dụ:
+            - local/weather/examples.png
+            - local/backgrounds/countryside.jpg
+            - local/my_photos/sunset.jpeg
+            
+            💡 Upload ảnh vào Media browser trước khi dùng
+          default: ""
+          selector:
+            text:
+              multiline: false
+    
+    # ===== CÀI ĐẶT AI =====
     ai_settings:
-      name: "\U0001F916 Cài đặt AI"
+      name: "🤖 Cài đặt AI"
       icon: mdi:robot-outline
       collapsed: false
       input:
         ai_task_entity:
           name: AI Task Entity
-          description: Chọn AI entity để tạo ảnh
+          description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended)
           selector:
             entity:
-              filter:
-              - domain:
-                - ai_task
+              domain:
+              - ai_task
               multiple: false
               reorder: false
+          default: []
+        
         image_style:
           name: Phong cách ảnh
-          description: Chọn phong cách ảnh muốn tạo
           default: photorealistic
           selector:
             select:
               options:
-              - label: Ảnh chụp chân thực (Photorealistic)
-                value: photorealistic
-              - label: Phong cách nghệ thuật (Artistic)
-                value: artistic
-              - label: Phong cách anime/vẽ tay
-                value: anime
-              - label: Phong cách sống động (Vibrant)
-                value: vibrant
-              multiple: false
-              sort: false
-              custom_value: false
-        image_resolution:
-          name: Độ phân giải ảnh
-          default: 1024x1024
-          selector:
-            select:
-              options:
-              - label: 1024x1024 (Vuông - Chuẩn)
-                value: 1024x1024
-              - label: 1792x1024 (Ngang - Wide)
-                value: 1792x1024
-              - label: 1024x1792 (Dọc - Portrait)
-                value: 1024x1792
-              multiple: false
-              sort: false
-              custom_value: false
+                - label: Ảnh chụp chân thực (Photorealistic)
+                  value: photorealistic
+                - label: Phong cách nghệ thuật (Artistic)
+                  value: artistic
+                - label: Phong cách sống động (Vibrant)
+                  value: vibrant
+    
+    # ===== LƯU ẢNH =====
     output_settings:
-      name: "\U0001F4BE Cài đặt lưu ảnh"
-      icon: mdi:folder-image
+      name: "💾 Cài đặt lưu ảnh"
+      icon: mdi:content-save
       collapsed: true
       input:
         save_image:
           name: Lưu ảnh vào thư mục
-          description: Bật để tự động lưu ảnh vào thư mục
           default: true
           selector:
-            boolean: {}
+            boolean:
+        
         output_directory:
           name: Thư mục đầu ra
-          description: Đường dẫn thư mục lưu ảnh
-          default: /media/weather
+          default: "/media/weather_images"
           selector:
             text:
-              multiple: false
-              multiline: false
+        
         use_fixed_filename:
           name: Sử dụng tên file cố định
           description: Bật để ghi đè file cũ
           default: true
           selector:
-            boolean: {}
+            boolean:
+        
         fixed_filename:
           name: Tên file cố định
           description: Tên file khi dùng chế độ cố định
-          default: weather_current
+          default: "weather_current"
           selector:
             text:
-              multiple: false
-              multiline: false
+        
         filename_prefix:
           name: Tiền tố tên file
           description: Tiền tố khi tạo file mới
-          default: weather_
+          default: "weather_"
           selector:
             text:
-              multiple: false
-              multiline: false
+        
         file_extension:
-          name: Định dạng file
-          default: png
+          name: Phần mở rộng file
+          default: "png"
           selector:
             select:
               options:
-              - png
-              - jpg
-              - jpeg
-              - webp
-              multiple: false
-              sort: false
-              custom_value: false
-    prompt_settings:
-      name: "\U0001F4DD Tùy chỉnh Prompt"
-      icon: mdi:text-box
-      collapsed: true
-      input:
-        use_custom_prompt:
-          name: Sử dụng prompt tùy chỉnh
-          description: Bật để dùng prompt của bạn
-          default: false
+                - png
+                - jpg
+                - jpeg
+                - webp
+        
+        delete_ai_image:
+          name: Xóa ảnh AI sau khi lưu
+          description: Tự động xóa ảnh do AI tạo ra sau khi copy xong
+          default: true
           selector:
-            boolean: {}
-        custom_prompt:
-          name: Prompt tùy chỉnh
-          description: Sử dụng {weather_info} để chèn thông tin thời tiết
-          default: ''
-          selector:
-            text:
-              multiline: true
-              type: text
-              multiple: false
-variables:
-  time_phase_sensor: !input time_phase_sensor
-  weather_entity: !input weather_entity
-  temperature_sensor: !input temperature_sensor
-  humidity_sensor: !input humidity_sensor
-  wind_speed_sensor: !input wind_speed_sensor
-  wind_gust_sensor: !input wind_gust_sensor
-  wind_bearing_sensor: !input wind_bearing_sensor
-  pressure_sensor: !input pressure_sensor
-  pm25_sensor: !input pm25_sensor
-  pm10_sensor: !input pm10_sensor
-  carbon_monoxide_sensor: !input carbon_monoxide_sensor
-  sulfur_dioxide_sensor: !input sulfur_dioxide_sensor
-  ozone_sensor: !input ozone_sensor
-  aqi_sensor: !input aqi_sensor
-  ai_task_entity: !input ai_task_entity
-  image_style: !input image_style
-  image_resolution: !input image_resolution
-  save_image: !input save_image
-  output_directory: !input output_directory
-  use_fixed_filename: !input use_fixed_filename
-  fixed_filename: !input fixed_filename
-  filename_prefix: !input filename_prefix
-  file_extension: !input file_extension
-  use_custom_prompt: !input use_custom_prompt
-  custom_prompt: !input custom_prompt
-triggers:
-- trigger: state
-  entity_id: !input weather_entity
-  id: weather_change
-- trigger: state
-  entity_id: !input time_phase_sensor
-  id: time_phase_change
-conditions: []
-actions:
-- variables:
-    time_phase: '{{ states(time_phase_sensor) if time_phase_sensor and states(time_phase_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    weather_state: '{{ states(weather_entity) if weather_entity and states(weather_entity) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    temperature: '{{ states(temperature_sensor) if temperature_sensor and states(temperature_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    humidity: '{{ states(humidity_sensor) if humidity_sensor and states(humidity_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    wind_speed: '{{ states(wind_speed_sensor) if wind_speed_sensor and states(wind_speed_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    wind_gust: '{{ states(wind_gust_sensor) if wind_gust_sensor and states(wind_gust_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    wind_bearing: '{{ states(wind_bearing_sensor) if wind_bearing_sensor and states(wind_bearing_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    pressure: '{{ states(pressure_sensor) if pressure_sensor and states(pressure_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    pm25: '{{ states(pm25_sensor) if pm25_sensor and states(pm25_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    pm10: '{{ states(pm10_sensor) if pm10_sensor and states(pm10_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    carbon_monoxide: '{{ states(carbon_monoxide_sensor) if carbon_monoxide_sensor and states(carbon_monoxide_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    sulfur_dioxide: '{{ states(sulfur_dioxide_sensor) if sulfur_dioxide_sensor and states(sulfur_dioxide_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    ozone: '{{ states(ozone_sensor) if ozone_sensor and states(ozone_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    aqi: '{{ states(aqi_sensor) if aqi_sensor and states(aqi_sensor) not in [''unknown'', ''unavailable'', ''none'', ''''] else '''' }}'
-    is_night: '{{ time_phase in [''Đêm'', ''Tối''] }}'
-- variables:
-    weather_info: "{% set parts = [] %}\n{% if time_phase %}\n  {% set parts = parts + ['Thời gian: ' ~ time_phase] %}\n{% endif %}\n{% if weather_state %}\n  {% set parts = parts + ['Thời tiết: ' ~ weather_state] %}\n{% endif %}\n{% if temperature %}\n  {% set parts = parts + ['Nhiệt độ: ' ~ temperature ~ '°C'] %}\n{% endif %}\n{% if humidity %}\n  {% set parts = parts + ['Độ ẩm: ' ~ humidity ~ '%'] %}\n{% endif %}\n{% if wind_speed %}\n  {% set parts = parts + ['Tốc độ gió: ' ~ wind_speed ~ ' km/h'] %}\n{% endif %}\n{% if wind_gust %}\n  {% set parts = parts + ['Gió giật: ' ~ wind_gust ~ ' km/h'] %}\n{% endif %}\n{% if wind_bearing %}\n  {% if wind_bearing is number or wind_bearing | regex_match('^[0-9.]+$') %}\n    {% set bearing = wind_bearing | float %}\n    {% if bearing >= 337.5 or bearing < 22.5 %}\n      {% set direction = 'Bắc' %}\n    {% elif bearing >= 22.5 and bearing < 67.5 %}\n      {% set direction = 'Đông Bắc' %}\n    {% elif bearing >= 67.5 and bearing < 112.5 %}\n      {% set direction = 'Đông' %}\n    {% elif bearing >= 112.5 and bearing < 157.5 %}\n      {% set direction = 'Đông Nam' %}\n    {% elif bearing >= 157.5 and bearing < 202.5 %}\n      {% set direction = 'Nam' %}\n    {% elif bearing >= 202.5 and bearing < 247.5 %}\n      {% set direction = 'Tây Nam' %}\n    {% elif bearing >= 247.5 and bearing < 292.5 %}\n      {% set direction = 'Tây' %}\n    {% else %}\n      {% set direction = 'Tây Bắc' %}\n    {% endif %}\n    {% set parts = parts + ['Hướng gió: ' ~ direction ~ ' (' ~ bearing ~ '°)'] %}\n  {% else %}\n    {% set parts = parts + ['Hướng gió: ' ~ wind_bearing] %}\n  {% endif %}\n{% endif %}\n{% if aqi %}\n  {% set aqi_val = aqi | float %}\n  {% if aqi_val <= 50 %}\n    {% set aqi_text = 'Tốt' %}\n  {% elif aqi_val <= 100 %}\n    {% set aqi_text = 'Trung bình' %}\n  {% elif aqi_val <= 150 %}\n    {% set aqi_text = 'Kém' %}\n  {% elif aqi_val <= 200 %}\n    {% set aqi_text = 'Xấu' %}\n  {% elif aqi_val <= 300 %}\n    {% set aqi_text = 'Rất xấu' %}\n  {% else %}\n    {% set aqi_text = 'Nguy hại' %}\n  {% endif %}\n  {% set parts = parts + ['Chất lượng không khí: ' ~ aqi_text ~ ' (AQI: ' ~ aqi ~ ')'] %}\n{% endif %}\n{% if pm25 %}\n  {% set parts = parts + ['PM2.5: ' ~ pm25 ~ ' µg/m³'] %}\n{% endif %}\n{% if pm10 %}\n  {% set parts = parts + ['PM10: ' ~ pm10 ~ ' µg/m³'] %}\n{% endif %}\n{% if carbon_monoxide %}\n  {% set parts = parts + ['CO: ' ~ carbon_monoxide ~ ' ppm'] %}\n{% endif %}\n{% if sulfur_dioxide %}\n  {% set parts = parts + ['SO₂: ' ~ sulfur_dioxide ~ ' ppb'] %}\n{% endif %}\n{% if ozone %}\n  {% set parts = parts + ['O₃: ' ~ ozone ~ ' ppb'] %}\n{% endif %}\n{{ parts | join(', ') }}"
-- variables:
-    default_prompt: "DỮ LIỆU THỜI TIẾT HIỆN TẠI:\n{weather_info}\n\nYÊU CẦU TẠO ẢNH:\nTạo một bức ảnh phong cảnh làng quê Việt Nam với độ chân thực cao (photorealistic), phản ánh chính xác các điều kiện thời tiết và thời gian trong ngày dựa trên dữ liệu trên.\n\n📐 THÔNG SỐ KỸ THUẬT:\n- PANORAMIC COMPOSITION: Wide angle camera view\n- ASPECT RATIO: 16:9 (NOT square, NOT 1:1)\n- RESOLUTION: 3840 × 2160 pixels\n- FORMAT: Landscape orientation, cinematic framing\n- CAMERA: Wide-angle lens (24-35mm equivalent), eye-level perspective\n\nCHI TIẾT CỤ THỂ:\n\n🌅 ÁNH SÁNG & THỜI GIAN:\n- Dựa vào thời gian trong ngày để tạo ánh sáng phù hợp:\n  + Rạng sáng/Bình minh: Ánh sáng vàng cam nhạt, bầu trời chuyển màu, sương mù nhẹ\n  + Buổi sáng: Ánh sáng trắng vàng tươi sáng, bóng dài, không khí trong lành\n  + Buổi trưa: Ánh sáng chói chang, bóng ngắn, nhiệt độ cao\n  + Buổi chiều: Ánh sáng vàng ấm, bóng dài, không khí dịu hơn\n  + Hoàng hôn: Ánh sáng vàng đỏ, bầu trời gradient đẹp, bóng rất dài\n  + Buổi tối: Bầu trời chuyển màu tím xanh, ánh đèn nhà bắt đầu sáng, hoàng hôn tàn\n  + Đêm: Bầu trời đen/xanh đậm, trăng sao, ánh đèn nhà cửa vàng ấm, đường làng tối\n- Phản chiếu ánh sáng trên nước, lá cây, mặt đất phải chính xác\n- Độ tương phản và màu sắc phù hợp với giờ trong ngày\n\n☁️ THỜI TIẾT & KHÍ QUYỂN:\n- Mô tả chính xác điều kiện thời tiết (nắng, mưa, mây, sương mù...)\n- Nếu có mưa: Thêm vũng nước, bùn, áo mưa để trước nhà, giọt mưa rõ ràng\n- Nếu có gió: Cây cối nghiêng, quần áo phơi tung bay (nếu ban ngày), gợn sóng trên nước\n- Nếu nhiệt độ cao: Không khí nóng bức, hiệu ứng heat haze, bụi đường\n- Nếu nhiệt độ thấp: Khói từ bếp lửa, sương mù, không khí lạnh\n- Độ ẩm cao: Không khí ẩm, giọt sương, cảm giác nặng nề\n\n🌾 CẢNH VẬT & MÔI TRƯỜNG:\n- Ruộng lúa: Xanh mơn mởn (mùa mạ), vàng óng (mùa gặt), hoặc khô ráo (mùa khô)\n- Ao hồ: Phản chiếu bầu trời, có vịt bơi (ban ngày), thuyền nan, cây tre bên bờ\n- Đường làng: Đất đỏ hoặc xi măng, có vết bánh xe, vũng nước nếu mưa\n- Nhà cửa: Kiểu nhà cấp 4, mái ngói đỏ, tường vôi vàng, chuồng gà, vườn rau\n  + Ban đêm: Cửa sổ sáng đèn vàng ấm, một vài ngôi nhà tối, khói bếp từ ống khói\n- Cây cối: Cây dừa, chuối, tre, nứa, cây ăn quả (xoài, nhãn, vải)\n\n👥 CON NGƯỜI & SINH HOẠT:\n{% if is_night %}\n🌙 ĐẶC BIỆT CHO CẢNH ĐÊM:\n- ABSOLUTELY NO PEOPLE visible in the scene\n- NO farmers, children, elderly, or any human figures\n- NO human activities or movements\n- ONLY empty landscapes with:\n  + Warm yellow lights from house windows\n  + Silhouettes of houses and trees against night sky\n  + Peaceful, quiet, deserted village atmosphere\n  + Sleeping animals (chickens in coops, buffalo resting)\n  + Moonlight reflecting on water if present\n  + Stars or moon in the sky\n  + Smoke from chimneys (sign of indoor activity, but no people visible)\n  + Clothes hanging still on clotheslines\n  + Empty paths and roads\n  + Occasional warm glow from windows suggesting life inside, but exterior is empty\n- The scene must convey tranquility, stillness, and the absence of outdoor human activity\n{% else %}\n- Hoạt động phù hợp thời gian: Làm ruộng buổi sáng, nghỉ trưa, chăn trâu chiều\n- Trang phục: Áo ba ba, nón lá, áo mưa khi mưa, áo dày khi lạnh\n- Người nông dân đang làm việc: Cấy lúa, gặt lúa, tát nước, chăn trâu\n- Trẻ em chơi đùa: Tắm ao, thả diều, chơi bi, bắt chuồn chuồn\n- Người già: Ngồi uống trà, nói chuyện, phơi nắng\n- Số lượng: 2-5 người trong cảnh, không quá đông\n{% endif %}\n\n🐄 ĐỘNG VẬT:\n{% if is_night %}\n- Trâu bò đang nằm nghỉ hoặc ngủ\n- Gà vịt trong chuồng (không thấy rõ, chỉ thấy chuồng)\n- Chó nằm ngủ trước hiên nhà\n- Không có động vật hoạt động mạnh\n{% else %}\n- Trâu bò thả ở ruộng hoặc bờ ao\n- Gà vịt chạy nhảy quanh sân\n- Chim bay trên trời hoặc đậu trên cành\n- Chó mèo nằm ngủ hoặc đi lại\n{% endif %}\n\n🏭 CHẤT LƯỢNG KHÔNG KHÍ:\n- Nếu AQI tốt (<50): Không khí trong lành, tầm nhìn xa, màu sắc tươi sáng, sao sáng (đêm)\n- Nếu AQI trung bình (50-100): Hơi mờ nhẹ, màu sắc bình thường\n- Nếu AQI kém (100-150): Sương mù nhẹ, tầm nhìn giảm, màu sắc xám hơn\n- Nếu AQI xấu (>150): Sương mù đậm, khói bụi rõ, có thể thấy nhà máy xa xa, không thấy sao (đêm)\n\n🎨 KỸ THUẬT NHIẾP ẢNH:\n- Phong cách: Photorealistic, như ảnh chụp bằng máy DSLR chuyên nghiệp\n- Góc chụp: Wide-angle panoramic, ngang 16:9, bao quát toàn cảnh\n- Độ phân giải: Cao, chi tiết sắc nét, 3840×2160 pixels\n- Depth of field: Làm mờ nền để tạo chiều sâu\n- Motion blur: Mờ chuyển động khi có gió mạnh hoặc mưa (nếu ban ngày)\n- Composition: Quy tắc tam phân, cân bằng, dẫn mắt người xem, tận dụng không gian ngang\n- Texture: Chi tiết bề mặt rõ ràng (lá cây, đất, nước, gỗ, vải)\n- Lighting: Chính xác về phương hướng, cường độ, màu sắc\n  + Đêm: Chú trọng contrast giữa ánh đèn vàng ấm và bầu trời tối\n- Color grading: Tự nhiên, không quá bão hòa, phù hợp thời gian\n  + Đêm: Tông màu xanh đậm/đen cho bầu trời, vàng ấm cho ánh đèn\n\n🚫 LƯU Ý TRÁNH:\n- STRICTLY NO text, letters, words, signatures, logos, watermarks, or any written characters anywhere in the image\n- ABSOLUTELY NO branding, company names, or identification marks of any kind\n- KHÔNG có yếu tố hiện đại (ô tô, điện thoại, quảng cáo, biển hiệu)\n- KHÔNG có chi tiết phi thực tế hoặc kỳ ảo\n- KHÔNG làm mờ hoặc pixel hóa\n- KHÔNG có lỗi giải phẫu (người, động vật)\n- KHÔNG có tỷ lệ khung hình vuông (1:1) - bắt buộc phải 16:9\n- The image must be completely clean without any overlay text or graphics\n{% if is_night %}\n- CRITICAL: NO PEOPLE AT ALL during night scenes - this is mandatory\n{% endif %}\n\n🎯 MỤC TIÊU CUỐI CÙNG:\nTạo một bức ảnh panoramic 16:9 mà người xem có thể \"cảm nhận\" được thời tiết, thời gian, và không khí của làng quê Việt Nam qua từng chi tiết nhỏ. {% if is_night %}Cảnh đêm phải hoàn toàn vắng người, chỉ có ánh đèn và bóng đêm, tạo cảm giác yên bình và tĩnh lặng.{% else %}Ảnh phải chân thực đến mức như thể được chụp bởi một nhiếp ảnh gia chuyên nghiệp đang đứng tại hiện trường.{% endif %}\n"
-    final_prompt: "{% if use_custom_prompt and custom_prompt %}\n  {{ custom_prompt | replace('{weather_info}', weather_info) }}\n{% else %}\n  {{ default_prompt | replace('{weather_info}', weather_info) }}\n{% endif %}"
-    task_name: Weather - {{ time_phase if time_phase else 'Unknown' }} - {{ weather_state if weather_state else 'Unknown' }}
-- action: ai_task.generate_image
-  data:
-    entity_id: '{{ ai_task_entity }}'
-    task_name: '{{ task_name }}'
-    instructions: '{{ final_prompt }}'
-  response_variable: ai_result
-- if:
-  - condition: template
-    value_template: '{{ ai_result is defined and ai_result.media_source_id is defined
-      }}'
-  then:
+            boolean:
+
+# ===== TRIGGER =====
+trigger:
+  - platform: state
+    entity_id: !input time_phase_sensor
+
+# ===== CONDITIONS =====
+condition: []
+
+# ===== ACTIONS =====
+action:
+  # Thu thập dữ liệu thời tiết
   - variables:
-      source_id: '{{ ai_result.media_source_id }}'
-      image_path: "{% if source_id.startswith('media-source://ai_task/image/') %}\n
-        \ /media/ai_task/image/{{ source_id.split('/')[-1] }}\n{% elif source_id.startswith('media-source://')
-        %}\n  /media/{{ source_id.replace('media-source://', '').replace('//', '/')
-        }}\n{% else %}\n  {{ source_id }}\n{% endif %}"
+      time_phase_sensor: !input time_phase_sensor
+      time_phase: "{{ states(time_phase_sensor) }}"
+      weather_entity: !input weather_entity
+      weather_state: "{{ states(weather_entity) }}"
+      
+      # Nhiệt độ & Độ ẩm
+      temperature_sensor: !input temperature_sensor
+      temperature: >-
+        {% if temperature_sensor %}
+          {{ states(temperature_sensor) | float(0) | round(1) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'temperature') | float(0) | round(1) }}
+        {% endif %}
+      
+      humidity_sensor: !input humidity_sensor
+      humidity: >-
+        {% if humidity_sensor %}
+          {{ states(humidity_sensor) | int(0) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'humidity') | int(0) }}
+        {% endif %}
+      
+      # Gió
+      wind_speed_sensor: !input wind_speed_sensor
+      wind_speed: >-
+        {% if wind_speed_sensor %}
+          {{ states(wind_speed_sensor) | float(0) | round(1) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'wind_speed') | float(0) | round(1) }}
+        {% endif %}
+      
+      # Áp suất
+      pressure_sensor: !input pressure_sensor
+      pressure: >-
+        {% if pressure_sensor %}
+          {{ states(pressure_sensor) | float(0) | round(0) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'pressure') | float(0) | round(0) }}
+        {% endif %}
+      
+      # Chất lượng không khí
+      aqi_sensor: !input aqi_sensor
+      aqi: >-
+        {% if aqi_sensor %}
+          {{ states(aqi_sensor) | int(0) }}
+        {% else %}
+          0
+        {% endif %}
+      
+      pm25_sensor: !input pm25_sensor
+      pm25: >-
+        {% if pm25_sensor %}
+          {{ states(pm25_sensor) | float(0) | round(1) }}
+        {% else %}
+          0
+        {% endif %}
+  
+  # Phân tích và tối ưu dữ liệu trước khi đưa vào prompt
+  - variables:
+      # Phân loại thời gian trong ngày
+      is_morning: "{{ 'sáng' in time_phase.lower() or 'morning' in time_phase.lower() }}"
+      is_afternoon: "{{ 'chiều' in time_phase.lower() or 'afternoon' in time_phase.lower() }}"
+      is_evening: "{{ 'tối' in time_phase.lower() or 'evening' in time_phase.lower() }}"
+      is_night: "{{ 'đêm' in time_phase.lower() or 'night' in time_phase.lower() }}"
+      
+      # Phân loại nhiệt độ
+      temp_desc: >-
+        {% if temperature > 35 %}very hot
+        {% elif temperature > 30 %}hot
+        {% elif temperature > 25 %}warm
+        {% elif temperature > 20 %}mild
+        {% elif temperature > 15 %}cool
+        {% else %}cold
+        {% endif %}
+      
+      # Phân loại độ ẩm
+      humidity_desc: >-
+        {% if humidity > 80 %}very humid, misty atmosphere
+        {% elif humidity < 30 %}dry, clear air
+        {% else %}
+        {% endif %}
+      
+      # Phân loại gió
+      wind_desc: >-
+        {% if wind_speed > 30 %}strong wind, trees swaying dramatically
+        {% elif wind_speed > 15 %}moderate wind, leaves rustling
+        {% elif wind_speed > 5 %}gentle breeze
+        {% else %}
+        {% endif %}
+      
+      # Phân loại chất lượng không khí
+      aqi_visibility: >-
+        {% if aqi > 150 %}heavy haze, poor visibility
+        {% elif aqi > 100 %}noticeable haze, reduced clarity
+        {% elif aqi > 50 %}slight haze in distance
+        {% else %}crystal clear visibility
+        {% endif %}
+      
+      # Chọn thời điểm trong ngày
+      time_lighting: >-
+        {% if is_morning %}
+          Early morning golden hour, warm sunrise light from the east, long soft shadows, fresh atmosphere, dew on grass
+        {% elif is_afternoon %}
+          Late afternoon golden hour, warm sunlight from the west, long horizontal shadows, rich warm tones
+        {% elif is_evening %}
+          Evening twilight, fading sunlight, blue hour approaching, soft gradient sky from orange to deep blue
+        {% elif is_night %}
+          Night scene, dark sky with stars, moonlight illumination, warm house lights glowing, peaceful quiet atmosphere
+        {% else %}
+          Daytime natural lighting
+        {% endif %}
+      
+      # Chọn điều kiện thời tiết
+      weather_effects: >-
+        {% set w = weather_state.lower() %}
+        {% if 'rain' in w or 'mưa' in w %}
+          Rain falling across the scene, wet surfaces reflecting light, puddles on ground, water droplets visible
+        {% elif 'cloud' in w or 'mây' in w %}
+          Cloudy sky with varied cloud formations, diffused soft lighting, atmospheric depth
+        {% elif 'fog' in w or 'sương' in w %}
+          Fog and mist reducing visibility, atmospheric haze, soft ethereal quality
+        {% elif 'storm' in w or 'bão' in w %}
+          Dramatic stormy atmosphere, dark clouds, strong wind effects, intense lighting
+        {% elif 'clear' in w or 'nắng' in w %}
+          Clear sunny conditions, bright natural light, strong defined shadows, vibrant colors
+        {% else %}
+          Natural atmospheric conditions matching current weather
+        {% endif %}
+      
+      # Settings
+      use_background_image: !input use_background_image
+      use_preset_background: !input use_preset_background
+      custom_background_path: !input background_image_path
+      
+      # Quyết định dùng preset hay custom
+      background_image_path: >-
+        {% if use_background_image %}
+          {% if use_preset_background %}
+            media-source://media_source/local/backgrounds/countryside.jpg
+          {% else %}
+            {% if custom_background_path %}
+              {% if custom_background_path.startswith('media-source://') %}
+                {{ custom_background_path }}
+              {% else %}
+                media-source://media_source/{{ custom_background_path }}
+              {% endif %}
+            {% else %}
+              
+            {% endif %}
+          {% endif %}
+        {% else %}
+          
+        {% endif %}
+      
+      # Convert media_content_id sang file path thực tế
+      background_file_path: >-
+        {% if background_image_path %}
+          {% if background_image_path.startswith('media-source://media_source/') %}
+            /media/{{ background_image_path.replace('media-source://media_source/', '') }}
+          {% else %}
+            {{ background_image_path }}
+          {% endif %}
+        {% else %}
+          
+        {% endif %}
+      
+      # Tự động nhận diện MIME type từ extension
+      background_mime_type: >-
+        {% if background_image_path %}
+          {% set path_lower = background_image_path | lower %}
+          {% if '.png' in path_lower %}
+            image/png
+          {% elif '.jpg' in path_lower or '.jpeg' in path_lower %}
+            image/jpeg
+          {% elif '.webp' in path_lower %}
+            image/webp
+          {% elif '.gif' in path_lower %}
+            image/gif
+          {% else %}
+            image/jpeg
+          {% endif %}
+        {% else %}
+          image/jpeg
+        {% endif %}
+      
+      # Lấy tên file từ media path (phần sau dấu / cuối cùng)
+      background_filename: >-
+        {% if background_image_path %}
+          {% set parts = background_image_path.split('/') %}
+          {{ parts[-1] if parts else 'background.jpg' }}
+        {% else %}
+          background.jpg
+        {% endif %}
+      
+      # Lấy folder path cho navigateIds
+      background_folder_path: >-
+        {% if background_image_path %}
+          {% set full_path = background_image_path %}
+          {% if full_path.startswith('media-source://media_source/') %}
+            {% set parts = full_path.replace('media-source://media_source/', '').split('/') %}
+            {% if parts | length > 1 %}
+              media-source://media_source/{{ parts[:-1] | join('/') }}
+            {% else %}
+              media-source://media_source
+            {% endif %}
+          {% else %}
+            media-source://media_source
+          {% endif %}
+        {% else %}
+          media-source://media_source
+        {% endif %}
+      
+      image_style: !input image_style
+  
+  # Tạo prompt tối ưu
+  - variables:
+      optimized_prompt: >-
+        {% if use_background_image and background_image_path %}
+        CRITICAL INSTRUCTION - USE PROVIDED BACKGROUND IMAGE:
+        Use the provided reference image as the base canvas. This is a Vietnamese countryside scene.
+        KEEP the background landscape, buildings, and composition EXACTLY as shown.
+        ONLY ADD weather effects and atmospheric conditions as described below.
+        DO NOT change the scene structure, buildings, or landscape elements.
+        {% else %}
+        Create a photorealistic 16:9 wide-angle view of a Vietnamese countryside village.
+        Green rice fields, traditional houses with red tile roofs, dirt paths, banana trees.
+        {% endif %}
+        
+        ⏰ TIME & LIGHTING (16:9 PANORAMIC):
+        {{ time_lighting }}
+        
+        🌤️ WEATHER CONDITIONS (ACROSS ENTIRE 16:9 FRAME):
+        Current weather: {{ weather_state }}
+        {{ weather_effects }}
+        {% if temp_desc %}Temperature: {{ temp_desc }} ({{ temperature }}°C){% endif %}
+        {% if humidity_desc %}Humidity: {{ humidity_desc }}{% endif %}
+        {% if wind_desc %}Wind: {{ wind_desc }}{% endif %}
+        
+        {% if aqi > 0 %}
+        🏭 AIR QUALITY (VISIBILITY ACROSS PANORAMA):
+        AQI {{ aqi }}: {{ aqi_visibility }}
+        {% if pm25 > 0 %}PM2.5 levels affect atmospheric clarity{% endif %}
+        {% endif %}
+        
+        🎨 TECHNICAL REQUIREMENTS (16:9 CINEMATIC):
+        - ASPECT RATIO: 16:9 landscape format MANDATORY (width >> height)
+        - Professional DSLR quality, natural colors
+        - Sharp focus across full width, appropriate depth of field
+        - Proper exposure balanced across entire panoramic frame
+        - HDR-style dynamic range
+        {% if image_style == 'artistic' %}
+        - Enhanced artistic interpretation with creative color grading
+        {% elif image_style == 'vibrant' %}
+        - Vibrant saturated colors, high contrast
+        {% else %}
+        - Photorealistic natural rendering
+        {% endif %}
+        
+        ⛔ PROHIBITIONS:
+        ❌ Square format (1:1)
+        ❌ Portrait format (9:16)
+        ❌ Text, watermarks, logos
+        ❌ Modern elements (cars, phones, modern buildings)
+        {% if is_night %}❌ People visible (night scene must be empty){% endif %}
+        
+        🎯 VERIFICATION:
+        ✅ 16:9 landscape (WIDER than tall)
+        ✅ Weather accurately depicted
+        ✅ Time-appropriate lighting
+        ✅ Vietnamese countryside authentic
+        
+        Generate image in 16:9 LANDSCAPE format now.
+      
+      task_name: "Weather {{ time_phase }} - {{ weather_state }}"
+  
+  # Gọi AI để tạo ảnh - FIXED: Sử dụng !input ai_task_entity thay vì hardcoded
   - if:
-    - condition: template
-      value_template: '{{ save_image }}'
+      - condition: template
+        value_template: "{{ use_background_image and background_image_path != '' }}"
     then:
-    - variables:
-        timestamp: '{{ now().strftime(''%Y%m%d_%H%M%S'') }}'
-        filename: "{% if use_fixed_filename %}\n  {{ fixed_filename }}.{{ file_extension
-          }}\n{% else %}\n  {{ filename_prefix }}{{ timestamp }}.{{ file_extension
-          }}\n{% endif %}"
-        dest_path: '{{ output_directory }}/{{ filename }}'
-    - action: shell_command.copy_weather_image
-      data:
-        source: '{{ image_path }}'
-        destination: '{{ dest_path }}'
+      # Trường hợp CÓ ảnh nền - Sử dụng generate_image với attachments
+      - action: ai_task.generate_image
+        data:
+          entity_id: !input ai_task_entity
+          task_name: "{{ task_name }}"
+          instructions: "{{ optimized_prompt }}"
+          attachments:
+            media_content_id: "{{ background_image_path }}"
+            media_content_type: "{{ background_mime_type }}"
+            metadata:
+              title: "{{ background_filename }}"
+              thumbnail: null
+              media_class: image
+              children_media_class: null
+              navigateIds:
+                - {}
+                - media_content_type: app
+                  media_content_id: media-source://media_source
+                - media_content_type: ""
+                  media_content_id: "{{ background_folder_path }}"
+        response_variable: ai_result
+    else:
+      # Trường hợp KHÔNG có ảnh nền - Tạo ảnh mới hoàn toàn
+      - action: ai_task.generate_image
+        data:
+          entity_id: !input ai_task_entity
+          task_name: "{{ task_name }}"
+          instructions: "{{ optimized_prompt }}"
+        response_variable: ai_result
+  
+  # Lưu ảnh nếu được chọn
+  - if:
+      - condition: template
+        value_template: "{{ ai_result is defined and ai_result.media_source_id is defined }}"
+    then:
+      - variables:
+          source_id: "{{ ai_result.media_source_id }}"
+          image_path: >-
+            {% if source_id.startswith('media-source://ai_task/image/') %}
+              /media/ai_task/image/{{ source_id.split('/')[-1] }}
+            {% elif source_id.startswith('media-source://') %}
+              /media/{{ source_id.replace('media-source://', '').replace('//', '/') }}
+            {% else %}
+              {{ source_id }}
+            {% endif %}
+      
+      - if:
+          - condition: template
+            value_template: !input save_image
+        then:
+          - variables:
+              timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
+              use_fixed_filename: !input use_fixed_filename
+              fixed_filename: !input fixed_filename
+              output_directory: !input output_directory
+              filename_prefix: !input filename_prefix
+              file_extension: !input file_extension
+              delete_ai_image: !input delete_ai_image
+              filename: >-
+                {% if use_fixed_filename %}
+                  {{ fixed_filename }}.{{ file_extension }}
+                {% else %}
+                  {{ filename_prefix }}{{ timestamp }}.{{ file_extension }}
+                {% endif %}
+              dest_path: "{{ output_directory }}/{{ filename }}"
+          
+          - action: shell_command.copy_weather_image
+            data:
+              source: "{{ image_path }}"
+              destination: "{{ dest_path }}"
+          
+          # Xóa file AI sau khi copy xong
+          - if:
+              - condition: template
+                value_template: "{{ delete_ai_image }}"
+            then:
+              - action: delete.file
+                data:
+                  file: "{{ image_path }}"
+                continue_on_error: true
+
 mode: single
 max_exceeded: silent
