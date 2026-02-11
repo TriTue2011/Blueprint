@@ -1,0 +1,596 @@
+blueprint:
+  name: AI World Landmarks Image Generator
+  author: Enhanced by Claude
+  description: "# Tự động tạo ảnh danh lam thắng cảnh toàn thế giới\n\n✨ Tính năng:\n- Tự động chọn ngẫu nhiên quốc gia hoặc theo danh sách tùy chỉnh\n- **Hỗ trợ ảnh tham chiếu**: Sử dụng ảnh mẫu để định hướng phong cách, màu sắc, ánh sáng\n- Aspect ratio linh hoạt: 16:9, 9:16, 1:1, 4:3, 21:9\n- Tạo ảnh chất lượng cao với prompt được tối ưu\n- Lưu ảnh tự động với tên file có thể tùy chỉnh\n\n⏰ TRIGGER: Kích hoạt theo chu kỳ giờ (mỗi X giờ)\n🌍 COUNTRY: Chọn ngẫu nhiên từ 48+ quốc gia, lọc theo khu vực\n📸 STYLE: Photorealistic, Artistic, Vibrant, Cinematic\n🖼️ REFERENCE: Có thể đính kèm ảnh mẫu để AI học phong cách\n"
+  domain: automation
+  homeassistant:
+    min_version: 2024.8.0
+  input:
+    trigger_settings:
+      name: "⏰ Cài đặt kích hoạt"
+      icon: mdi:clock-outline
+      collapsed: false
+      input:
+        trigger_hours:
+          name: "Kích hoạt mỗi X giờ"
+          description: "Ví dụ: 6 = mỗi 6 giờ, 12 = mỗi 12 giờ, 24 = mỗi ngày"
+          default: 6
+          selector:
+            number:
+              min: 1
+              max: 24
+              step: 1
+              mode: box
+    
+    country_settings:
+      name: "🌍 Cài đặt quốc gia"
+      icon: mdi:earth
+      collapsed: false
+      input:
+        use_random_country:
+          name: Chọn ngẫu nhiên quốc gia
+          description: Tự động chọn ngẫu nhiên từ danh sách
+          default: true
+          selector:
+            boolean: {}
+        
+        specific_country:
+          name: Quốc gia cụ thể
+          description: "Chỉ dùng khi TẮT chọn ngẫu nhiên. Nhập tên quốc gia bằng tiếng Việt"
+          default: "Việt Nam"
+          selector:
+            text:
+              multiline: false
+        
+        country_region:
+          name: Khu vực ưu tiên
+          description: Lọc quốc gia theo khu vực (All = tất cả)
+          default: all
+          selector:
+            select:
+              options:
+                - label: Tất cả (All)
+                  value: all
+                - label: Châu Á (Asia)
+                  value: asia
+                - label: Châu Âu (Europe)
+                  value: europe
+                - label: Châu Mỹ (Americas)
+                  value: americas
+                - label: Châu Phi (Africa)
+                  value: africa
+                - label: Châu Đại Dương (Oceania)
+                  value: oceania
+              custom_value: false
+              sort: false
+              multiple: false
+    
+    reference_image:
+      name: "🖼️ Ảnh tham chiếu (Reference Image)"
+      icon: mdi:image-outline
+      collapsed: true
+      input:
+        use_reference_image:
+          name: Sử dụng ảnh tham chiếu
+          description: "Bật để đính kèm ảnh mẫu. AI sẽ học phong cách chụp, màu sắc, ánh sáng từ ảnh này.\n\n💡 Ảnh tham chiếu giúp:\n- Định hướng phong cách nhiếp ảnh\n- Thống nhất tone màu và ánh sáng\n- Tạo sự nhất quán giữa các ảnh\n"
+          default: false
+          selector:
+            boolean: {}
+        
+        use_preset_reference:
+          name: Sử dụng ảnh preset
+          description: Chọn từ danh sách ảnh có sẵn hoặc nhập đường dẫn tùy chỉnh
+          default: true
+          selector:
+            boolean: {}
+        
+        preset_reference_path:
+          name: Đường dẫn ảnh preset
+          description: "Đường dẫn media-source hoặc local path\n\nVí dụ:\n- media-source://media_source/local/calendar/examples.png\n- local/references/style.jpg\n"
+          default: "media-source://media_source/local/calendar/examples.png"
+          selector:
+            text:
+              multiline: false
+        
+        custom_reference_path:
+          name: Đường dẫn ảnh tùy chỉnh
+          description: "Nhập đường dẫn file ảnh (chỉ dùng khi \"Sử dụng ảnh preset\" tắt)\n\nChỉ cần nhập: local/folder/tenfile.jpg\n\nVí dụ:\n- local/calendar/examples.png\n- local/references/style.jpg\n- local/my_photos/landscape.jpeg\n\n💡 Upload ảnh vào Media browser trước khi dùng\n"
+          default: ""
+          selector:
+            text:
+              multiline: false
+    
+    ai_settings:
+      name: "🤖 Cài đặt AI"
+      icon: mdi:robot-outline
+      collapsed: false
+      input:
+        ai_task_entity:
+          name: AI Task Entity
+          description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended)
+          selector:
+            entity:
+              domain:
+                - ai_task
+              multiple: false
+          default: []
+        
+        image_style:
+          name: Phong cách ảnh
+          default: photorealistic
+          selector:
+            select:
+              options:
+                - label: Ảnh chụp chân thực (Photorealistic)
+                  value: photorealistic
+                - label: Phong cách nghệ thuật (Artistic)
+                  value: artistic
+                - label: Phong cách sống động (Vibrant)
+                  value: vibrant
+                - label: Cinematic điện ảnh
+                  value: cinematic
+              custom_value: false
+              sort: false
+              multiple: false
+        
+        aspect_ratio:
+          name: Tỷ lệ khung hình
+          default: "16:9"
+          selector:
+            select:
+              options:
+                - label: 16:9 Landscape (Ngang)
+                  value: "16:9"
+                - label: 9:16 Portrait (Dọc)
+                  value: "9:16"
+                - label: 1:1 Square (Vuông)
+                  value: "1:1"
+                - label: 4:3 Classic
+                  value: "4:3"
+                - label: 21:9 Ultra-wide
+                  value: "21:9"
+              custom_value: false
+              sort: false
+              multiple: false
+        
+        include_people:
+          name: Cho phép người trong ảnh
+          description: Nếu bật, có thể có người nhỏ trong cảnh. Nếu tắt, chỉ có phong cảnh
+          default: false
+          selector:
+            boolean: {}
+        
+        lighting_preference:
+          name: Ưu tiên ánh sáng
+          default: golden_hour
+          selector:
+            select:
+              options:
+                - label: Golden Hour (Vàng óng)
+                  value: golden_hour
+                - label: Blue Hour (Xanh ma mị)
+                  value: blue_hour
+                - label: Midday (Giữa trưa)
+                  value: midday
+                - label: Sunset (Hoàng hôn)
+                  value: sunset
+                - label: Sunrise (Bình minh)
+                  value: sunrise
+                - label: Night (Ban đêm)
+                  value: night
+                - label: Auto (Tự động)
+                  value: auto
+              custom_value: false
+              sort: false
+              multiple: false
+    
+    output_settings:
+      name: "💾 Cài đặt lưu ảnh"
+      icon: mdi:content-save
+      collapsed: true
+      input:
+        save_image:
+          name: Lưu ảnh vào thư mục
+          default: true
+          selector:
+            boolean: {}
+        
+        output_directory:
+          name: Thư mục đầu ra
+          default: /media/world_landmarks
+          selector:
+            text:
+              multiline: false
+        
+        use_fixed_filename:
+          name: Sử dụng tên file cố định
+          description: Bật để ghi đè file cũ
+          default: true
+          selector:
+            boolean: {}
+        
+        fixed_filename:
+          name: Tên file cố định
+          description: Tên file khi dùng chế độ cố định
+          default: world_landmark_current
+          selector:
+            text:
+              multiline: false
+        
+        filename_prefix:
+          name: Tiền tố tên file
+          description: Tiền tố khi tạo file mới (kèm timestamp)
+          default: landmark_
+          selector:
+            text:
+              multiline: false
+        
+        file_extension:
+          name: Phần mở rộng file
+          default: png
+          selector:
+            select:
+              options:
+                - png
+                - jpg
+                - jpeg
+                - webp
+              custom_value: false
+              sort: false
+              multiple: false
+        
+        delete_ai_image:
+          name: Xóa ảnh AI sau khi lưu
+          description: Tự động xóa ảnh do AI tạo ra sau khi copy xong
+          default: true
+          selector:
+            boolean: {}
+  
+  source_url: https://github.com/yourusername/blueprints/world_landmarks_generator.yaml
+
+trigger:
+  - platform: time_pattern
+    hours: !input trigger_hours
+
+condition: []
+
+action:
+  - variables:
+      # Country settings
+      use_random_country: !input use_random_country
+      specific_country: !input specific_country
+      country_region: !input country_region
+      
+      # Complete country lists by region
+      asia_countries: >
+        ["Việt Nam", "Nhật Bản", "Hàn Quốc", "Trung Quốc", "Thái Lan", 
+         "Singapore", "Malaysia", "Indonesia", "Philippines", "Ấn Độ", 
+         "Nepal", "Bhutan", "Sri Lanka", "Mông Cổ", "Myanmar", "Campuchia", 
+         "Lào", "Bangladesh", "Pakistan", "Uzbekistan", "Kazakhstan"]
+      
+      europe_countries: >
+        ["Pháp", "Ý", "Tây Ban Nha", "Bồ Đào Nha", "Thụy Sĩ", "Áo", 
+         "Đức", "Hà Lan", "Bỉ", "Anh", "Ireland", "Na Uy", "Thụy Điển", 
+         "Phần Lan", "Iceland", "Hy Lạp", "Croatia", "Séc", "Ba Lan", 
+         "Đan Mạch", "Hungary", "Romania"]
+      
+      americas_countries: >
+        ["Hoa Kỳ", "Canada", "Mexico", "Brazil", "Argentina", "Chile", 
+         "Peru", "Colombia", "Ecuador", "Costa Rica", "Cuba"]
+      
+      africa_countries: >
+        ["Ai Cập", "Morocco", "Nam Phi", "Kenya", "Tanzania", "Tunisia", 
+         "Ethiopia", "Madagascar", "Namibia"]
+      
+      oceania_countries: >
+        ["Úc", "New Zealand", "Fiji", "Papua New Guinea"]
+      
+      all_countries: >
+        {{ (asia_countries | from_json) + (europe_countries | from_json) + 
+           (americas_countries | from_json) + (africa_countries | from_json) + 
+           (oceania_countries | from_json) }}
+      
+      # Select country based on settings
+      selected_country_list: >
+        {% if country_region == 'asia' %}
+          {{ asia_countries | from_json }}
+        {% elif country_region == 'europe' %}
+          {{ europe_countries | from_json }}
+        {% elif country_region == 'americas' %}
+          {{ americas_countries | from_json }}
+        {% elif country_region == 'africa' %}
+          {{ africa_countries | from_json }}
+        {% elif country_region == 'oceania' %}
+          {{ oceania_countries | from_json }}
+        {% else %}
+          {{ all_countries }}
+        {% endif %}
+      
+      country: >
+        {% if use_random_country %}
+          {% set arr = selected_country_list %}
+          {{ arr[(now().timestamp() | int) % (arr | length)] }}
+        {% else %}
+          {{ specific_country }}
+        {% endif %}
+      
+      # Reference image settings
+      use_reference_image: !input use_reference_image
+      use_preset_reference: !input use_preset_reference
+      preset_reference_path: !input preset_reference_path
+      custom_reference_path: !input custom_reference_path
+      
+      reference_media_source: >
+        {% if use_reference_image %}
+          {% if use_preset_reference %}
+            {{ preset_reference_path }}
+          {% else %}
+            {% if custom_reference_path %}
+              {% if custom_reference_path.startswith('media-source://') %}
+                {{ custom_reference_path }}
+              {% else %}
+                media-source://media_source/{{ custom_reference_path }}
+              {% endif %}
+            {% else %}
+              
+            {% endif %}
+          {% endif %}
+        {% else %}
+          
+        {% endif %}
+      
+      reference_mime_type: >
+        {% if reference_media_source %}
+          {% set p = reference_media_source | lower %}
+          {% if '.png' in p %}
+            image/png
+          {% elif '.jpg' in p or '.jpeg' in p %}
+            image/jpeg
+          {% elif '.webp' in p %}
+            image/webp
+          {% else %}
+            image/jpeg
+          {% endif %}
+        {% else %}
+          image/jpeg
+        {% endif %}
+      
+      reference_filename: >
+        {% if reference_media_source %}
+          {% set parts = reference_media_source.split('/') %}
+          {{ parts[-1] if parts else 'reference.jpg' }}
+        {% else %}
+          reference.jpg
+        {% endif %}
+      
+      reference_folder_path: >
+        {% if reference_media_source %}
+          {% set full_path = reference_media_source %}
+          {% if full_path.startswith('media-source://media_source/') %}
+            {% set parts = full_path.replace('media-source://media_source/', '').split('/') %}
+            {% if parts | length > 1 %}
+              media-source://media_source/{{ parts[:-1] | join('/') }}
+            {% else %}
+              media-source://media_source
+            {% endif %}
+          {% else %}
+            media-source://media_source
+          {% endif %}
+        {% else %}
+          media-source://media_source
+        {% endif %}
+      
+      # AI settings
+      image_style: !input image_style
+      aspect_ratio: !input aspect_ratio
+      include_people: !input include_people
+      lighting_preference: !input lighting_preference
+      
+      # Aspect ratio descriptions
+      aspect_ratio_desc: >
+        {% if aspect_ratio == '16:9' %}
+          16:9 LANDSCAPE format MANDATORY (width >> height), cinematic widescreen
+        {% elif aspect_ratio == '9:16' %}
+          9:16 PORTRAIT format MANDATORY (height >> width), vertical mobile-friendly
+        {% elif aspect_ratio == '1:1' %}
+          1:1 SQUARE format MANDATORY (equal width and height), Instagram-style
+        {% elif aspect_ratio == '4:3' %}
+          4:3 CLASSIC format (width > height), traditional photography
+        {% elif aspect_ratio == '21:9' %}
+          21:9 ULTRA-WIDE format (extremely wide), panoramic cinema
+        {% else %}
+          16:9 landscape format
+        {% endif %}
+      
+      aspect_ratio_prohibition: >
+        {% if aspect_ratio == '16:9' %}
+          ❌ Portrait format (9:16) ❌ Square format (1:1)
+        {% elif aspect_ratio == '9:16' %}
+          ❌ Landscape format (16:9) ❌ Square format (1:1)
+        {% elif aspect_ratio == '1:1' %}
+          ❌ Landscape format (16:9) ❌ Portrait format (9:16)
+        {% else %}
+          ❌ Wrong aspect ratios
+        {% endif %}
+      
+      # Lighting descriptions
+      lighting_desc: >
+        {% if lighting_preference == 'golden_hour' %}
+          Golden hour lighting: warm, soft sunlight shortly after sunrise or before sunset, long shadows, rich golden tones
+        {% elif lighting_preference == 'blue_hour' %}
+          Blue hour lighting: twilight atmosphere, deep blue sky, magical ethereal quality, soft diffused light
+        {% elif lighting_preference == 'midday' %}
+          Midday lighting: bright overhead sun, strong shadows, high contrast, vibrant colors
+        {% elif lighting_preference == 'sunset' %}
+          Sunset lighting: dramatic warm colors, orange and pink sky, silhouettes, romantic atmosphere
+        {% elif lighting_preference == 'sunrise' %}
+          Sunrise lighting: fresh morning light, soft pastel colors, dew on surfaces, peaceful beginning-of-day mood
+        {% elif lighting_preference == 'night' %}
+          Night scene: dark sky with stars or moon, artificial lights creating warm glows, long exposure effect, serene atmosphere
+        {% else %}
+          Natural lighting appropriate for the location and time of day
+        {% endif %}
+      
+      # Style descriptions
+      style_desc: >
+        {% if image_style == 'photorealistic' %}
+          Photorealistic rendering: natural colors, accurate details, DSLR camera quality, true-to-life representation
+        {% elif image_style == 'artistic' %}
+          Artistic interpretation: enhanced creative elements, painterly quality, dramatic composition, expressive color grading
+        {% elif image_style == 'vibrant' %}
+          Vibrant style: saturated colors, high contrast, punchy visuals, Instagram-worthy aesthetic, eye-catching appeal
+        {% elif image_style == 'cinematic' %}
+          Cinematic quality: film-like color grading, dramatic lighting, professional composition, movie scene aesthetic
+        {% else %}
+          Professional photography quality
+        {% endif %}
+      
+      # People description
+      people_desc: >
+        {% if include_people %}
+          If people are present, they should be small figures that complement the landscape, not dominate it. No selfies, no modern tourists crowding the frame.
+        {% else %}
+          NO people visible in the scene. Pure landscape photography without any human presence.
+        {% endif %}
+      
+      # Build optimized prompt
+      optimized_prompt: >
+        {% if use_reference_image and reference_media_source %}
+        🖼️ CRITICAL INSTRUCTION - USE PROVIDED REFERENCE IMAGE:
+        Use the provided reference image as STYLE GUIDE and COMPOSITION REFERENCE.
+        - Match the photographic style, color palette, and mood
+        - Apply similar lighting techniques and atmospheric quality
+        - Keep the professional quality and attention to detail
+        - DO NOT copy the exact scene, only use as inspiration for style
+        
+        {% endif %}
+        🎯 MISSION:
+        Create a stunning photograph of the most ICONIC LANDMARK or FAMOUS SCENIC VIEW of {{ country }}.
+        This should represent the most recognizable and beautiful location that defines this country.
+        
+        📍 CONTENT REQUIREMENTS:
+        - Select ONE iconic landmark or natural wonder that is world-famous and represents {{ country }}
+        - {{ style_desc }}
+        - Cinematic composition with clear foreground, midground, and background depth
+        - {{ lighting_desc }}
+        - Rich detail and texture throughout the scene
+        - {{ people_desc }}
+        - Authentic representation of the location's character and atmosphere
+        
+        📐 TECHNICAL REQUIREMENTS (MANDATORY):
+        - ASPECT RATIO: {{ aspect_ratio_desc }}
+        - Professional DSLR quality, sharp focus, appropriate depth of field
+        - Proper exposure balanced across entire frame
+        - HDR-style dynamic range for maximum detail
+        - Natural color accuracy (unless artistic style specified)
+        - NO crop marks, NO letterboxing, NO black bars
+        
+        ⛔ STRICT PROHIBITIONS:
+        {{ aspect_ratio_prohibition }}
+        ❌ Text, watermarks, logos, signatures, captions
+        ❌ Modern elements that detract (excessive cars, smartphones, commercial signs)
+        ❌ Selfie perspective or tourist snapshot aesthetic
+        ❌ Busy, cluttered composition
+        ❌ Oversaturated or unrealistic colors (unless vibrant style)
+        ❌ Blurry, noisy, or low-quality rendering
+        
+        ✅ FINAL VERIFICATION CHECKLIST:
+        ✓ Correct aspect ratio: {{ aspect_ratio }}
+        ✓ Iconic landmark of {{ country }} clearly featured
+        ✓ Professional photography quality
+        ✓ Appropriate lighting and atmosphere
+        ✓ NO text or watermarks anywhere
+        ✓ Natural, believable scene
+        
+        Generate the image in {{ aspect_ratio }} format NOW.
+      
+      task_name: "World Landmark - {{ country }}"
+  
+  # Generate image with or without reference
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_reference_image and reference_media_source != '' }}"
+        sequence:
+          - action: ai_task.generate_image
+            data:
+              entity_id: !input ai_task_entity
+              task_name: "{{ task_name }}"
+              instructions: "{{ optimized_prompt }}"
+              attachments:
+                media_content_id: "{{ reference_media_source }}"
+                media_content_type: "{{ reference_mime_type }}"
+                metadata:
+                  title: "{{ reference_filename }}"
+                  thumbnail: null
+                  media_class: image
+                  children_media_class: null
+                  navigateIds:
+                    - {}
+                    - media_content_type: app
+                      media_content_id: media-source://media_source
+                    - media_content_type: ""
+                      media_content_id: "{{ reference_folder_path }}"
+            response_variable: ai_result
+    default:
+      - action: ai_task.generate_image
+        data:
+          entity_id: !input ai_task_entity
+          task_name: "{{ task_name }}"
+          instructions: "{{ optimized_prompt }}"
+        response_variable: ai_result
+  
+  # Process and save the generated image
+  - if:
+      - condition: template
+        value_template: "{{ ai_result is defined and ai_result.media_source_id is defined }}"
+    then:
+      - variables:
+          source_id: "{{ ai_result.media_source_id }}"
+          image_path: >
+            {% if source_id.startswith('media-source://ai_task/image/') %}
+              /media/ai_task/image/{{ source_id.split('/')[-1] }}
+            {% elif source_id.startswith('media-source://') %}
+              /media/{{ source_id.replace('media-source://', '').replace('//', '/') }}
+            {% else %}
+              {{ source_id }}
+            {% endif %}
+      
+      - if:
+          - condition: template
+            value_template: !input save_image
+        then:
+          - variables:
+              timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
+              use_fixed_filename: !input use_fixed_filename
+              fixed_filename: !input fixed_filename
+              output_directory: !input output_directory
+              filename_prefix: !input filename_prefix
+              file_extension: !input file_extension
+              delete_ai_image: !input delete_ai_image
+              
+              filename: >
+                {% if use_fixed_filename %}
+                  {{ fixed_filename }}.{{ file_extension }}
+                {% else %}
+                  {{ filename_prefix }}{{ country | replace(' ', '_') | lower }}_{{ timestamp }}.{{ file_extension }}
+                {% endif %}
+              
+              dest_path: "{{ output_directory }}/{{ filename }}"
+          
+          - action: shell_command.copy_world_landmark_image
+            data:
+              source: "{{ image_path }}"
+              destination: "{{ dest_path }}"
+          
+          - if:
+              - condition: template
+                value_template: "{{ delete_ai_image }}"
+            then:
+              - action: delete.file
+                data:
+                  file: "{{ image_path }}"
+                continue_on_error: true
+
+mode: single
+max_exceeded: silent
