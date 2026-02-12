@@ -1,0 +1,1409 @@
+blueprint:
+  name: Nhắc nhở Lịch Âm + Thời Tiết
+  description: >
+    Tự động nhắc nhở các sự kiện âm lịch kèm theo thông tin thời tiết.
+    Hỗ trợ gửi thông báo qua Mobile App, Telegram, Zalo Bot, Zalo Custom và TTS.
+    
+    - Tích hợp thông báo thời tiết
+    - Bật/tắt riêng cho Lịch âm và Thời tiết
+    - AI biên tập thông tin thời tiết với nhắc nhở và khuyến cáo
+    - Thông báo thời tiết theo lịch trình (không phụ thuộc số ngày)
+    - Khi có sự kiện lịch: kết hợp cả lịch + thời tiết
+    - Khi không có sự kiện: chỉ thông báo thời tiết
+    
+  domain: automation
+
+  input:
+    notification_toggle:
+      name: 🎛️ Bật/Tắt Thông Báo
+      icon: mdi:toggle-switch
+      collapsed: false
+      input:
+        enable_lunar_notification:
+          name: ✅ Bật thông báo Lịch Âm
+          description: Bật/tắt nhắc nhở sự kiện âm lịch
+          default: true
+          selector:
+            boolean:
+
+        enable_weather_notification:
+          name: ✅ Bật thông báo Thời Tiết
+          description: Bật/tắt thông báo thời tiết hàng ngày
+          default: true
+          selector:
+            boolean:
+
+    basic_settings:
+      name: ⚙️ Cài đặt cơ bản - Lịch Âm
+      icon: mdi:cog
+      collapsed: false
+      input:
+        days_before:
+          name: Nhắc trước bao nhiêu ngày
+          description: Danh sách số ngày, ví dụ [15, 7, 5, 3, 1]
+          default: [15, 7, 5, 3, 1]
+          selector:
+            object:
+
+        notification_times:
+          name: Các thời điểm thông báo
+          description: Danh sách thời gian trong ngày, ví dụ ["08:00:00", "20:00:00"]
+          default: ["08:00:00"]
+          selector:
+            object:
+
+        event_filter:
+          name: Loại sự kiện
+          description: Chọn loại sự kiện muốn nhận thông báo
+          default: all
+          selector:
+            select:
+              options:
+                - label: "Tất cả sự kiện âm lịch"
+                  value: "all"
+                - label: "Chỉ ngày giỗ"
+                  value: "gio"
+                - label: "Chỉ Mồng 1 và Rằm"
+                  value: "ngay_le"
+                - label: "Tùy chỉnh - Chọn sensors cụ thể"
+                  value: "custom"
+
+        custom_sensors:
+          name: Chọn sensors cụ thể
+          description: Chỉ dùng khi chọn Tùy chỉnh ở trên
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: sensor
+
+        include_description:
+          name: Hiển thị mô tả chi tiết
+          description: Bật để hiển thị thông tin âm lịch trong thông báo
+          default: true
+          selector:
+            boolean:
+
+        different_message_by_time:
+          name: Thông báo khác nhau theo thời gian
+          description: Bật để hiển thị emoji khác nhau vào sáng trưa tối
+          default: true
+          selector:
+            boolean:
+
+    weather_settings:
+      name: 🌤️ Cài đặt Thời Tiết
+      icon: mdi:weather-partly-cloudy
+      collapsed: false
+      input:
+        weather_entity:
+          name: Thực thể thời tiết
+          description: Weather entity chính (weather.*)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: weather
+
+        temperature_sensor:
+          name: Cảm biến nhiệt độ (tùy chọn)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: temperature
+
+        humidity_sensor:
+          name: Cảm biến độ ẩm (tùy chọn)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: humidity
+
+        wind_speed_sensor:
+          name: Cảm biến tốc độ gió (tùy chọn)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+
+        aqi_sensor:
+          name: AQI - Chỉ số chất lượng không khí (tùy chọn)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: aqi
+
+        pm25_sensor:
+          name: PM2.5 (tùy chọn)
+          default: ''
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+
+    ai_settings:
+      name: 🤖 AI Editing Settings
+      icon: mdi:robot
+      collapsed: false
+      input:
+        enable_ai_message_editing:
+          name: ✅ Bật AI biên tập cho tin nhắn
+          description: AI viết lại tin nhắn (Mobile/Telegram/Zalo) sinh động hơn, giữ emoji
+          default: false
+          selector:
+            boolean:
+
+        enable_ai_tts_editing:
+          name: ✅ Bật AI biên tập cho TTS
+          description: AI viết lại nội dung TTS tự nhiên hơn, loại bỏ emoji
+          default: true
+          selector:
+            boolean:
+
+        enable_ai_weather_editing:
+          name: ✅ Bật AI biên tập Thời Tiết
+          description: AI phân tích thời tiết và đưa ra nhắc nhở, khuyến cáo phù hợp
+          default: true
+          selector:
+            boolean:
+
+        ai_task_entity:
+          name: 🧠 AI Task Entity
+          description: Entity AI task để biên tập
+          default: ai_task.google_ai_task
+          selector:
+            entity:
+              filter:
+                - domain: ai_task
+
+    mobile_app_section:
+      name: 📱 Mobile App Settings
+      icon: mdi:cellphone
+      collapsed: true
+      input:
+        include_mobile_notify:
+          name: ✅ Bật thông báo Mobile App
+          default: false
+          selector:
+            boolean:
+
+        is_ios_android:
+          name: Loại thiết bị
+          default: android_device
+          selector:
+            select:
+              options:
+                - label: Android
+                  value: android_device
+                - label: iOS
+                  value: ios_device
+              sort: false
+              multiple: false
+
+        notify_device:
+          name: 📱 Thiết bị nhận thông báo
+          default: []
+          selector:
+            device:
+              filter:
+                - integration: mobile_app
+              multiple: true
+
+        mobile_notification_icon:
+          name: 🔔 Biểu tượng thông báo (Android)
+          default: mdi:calendar-star
+          selector:
+            icon:
+
+        mobile_notification_color:
+          name: 🎨 Màu thông báo (Android)
+          default: [255, 165, 0]
+          selector:
+            color_rgb:
+
+        mobile_tap_action:
+          name: 📲 Hành động khi nhấn
+          default: /lovelace/calendar
+          selector:
+            text:
+
+    telegram_section:
+      name: ✈️ Telegram Settings
+      icon: mdi:send
+      collapsed: true
+      input:
+        include_telegram_notify:
+          name: ✅ Bật thông báo Telegram
+          default: false
+          selector:
+            boolean:
+
+        telegram_config_entry:
+          name: Telegram Bot
+          default: ''
+          selector:
+            config_entry:
+              integration: telegram_bot
+
+        telegram_target:
+          name: Target Chat ID
+          default: ''
+          selector:
+            text:
+
+        telegram_thread_id:
+          name: Thread ID (Optional)
+          default: ''
+          selector:
+            text:
+
+    zalo_bot_section:
+      name: 💬 Zalo Bot Settings (Pyscript)
+      icon: mdi:chat
+      collapsed: true
+      input:
+        enable_zalo_bot:
+          name: ✅ Bật Zalo Bot
+          description: Sử dụng pyscript để gửi thông báo
+          default: false
+          selector:
+            boolean:
+
+        zalo_bot_chat_id:
+          name: Zalo Bot Chat ID
+          default: ''
+          selector:
+            text:
+
+    zalo_custom_section:
+      name: 💬 Zalo Custom Integration Settings
+      icon: mdi:chat-processing
+      collapsed: true
+      input:
+        enable_zalo_custom:
+          name: ✅ Bật Zalo Custom
+          default: false
+          selector:
+            boolean:
+
+        zalo_custom_account:
+          name: 📱 Tài khoản Zalo
+          description: Số điện thoại gửi tin nhắn
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_thread_id_1:
+          name: 💬 Thread ID 1
+          description: ID cuộc hội thoại thứ 1
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_thread_id_2:
+          name: 💬 Thread ID 2
+          description: ID cuộc hội thoại thứ 2 (optional)
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_thread_id_3:
+          name: 💬 Thread ID 3
+          description: ID cuộc hội thoại thứ 3 (optional)
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_user_id_1:
+          name: 👤 User ID 1
+          description: ID người dùng thứ 1
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_user_id_2:
+          name: 👤 User ID 2
+          description: ID người dùng thứ 2 (optional)
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_user_id_3:
+          name: 👤 User ID 3
+          description: ID người dùng thứ 3 (optional)
+          default: ''
+          selector:
+            text:
+
+        zalo_custom_receiver_type:
+          name: 👥 Loại người nhận
+          default: '0'
+          selector:
+            select:
+              options:
+                - label: User (Cá nhân)
+                  value: '0'
+                - label: Group (Nhóm)
+                  value: '1'
+
+        zalo_custom_ttl:
+          name: ⏱️ Message TTL (ms)
+          description: Thời gian tự thu hồi (0 = không thu hồi)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400000
+              step: 1000
+              mode: slider
+
+    tts_section:
+      name: 🔊 TTS Speaker Settings
+      icon: mdi:speaker
+      collapsed: true
+      input:
+        include_tts_announcement:
+          name: ✅ Bật thông báo TTS
+          default: false
+          selector:
+            boolean:
+
+        tts_volume:
+          name: 🔊 Âm lượng
+          default: 0.5
+          selector:
+            number:
+              min: 0.1
+              max: 1.0
+              step: 0.1
+              mode: slider
+
+        tts_engine:
+          name: 🗣️ TTS Engine
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: tts
+              multiple: false
+
+        media_player:
+          name: 🎶 Media Player
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+              multiple: true
+
+mode: parallel
+max_exceeded: silent
+
+variables:
+  enable_lunar_notification: !input enable_lunar_notification
+  enable_weather_notification: !input enable_weather_notification
+  
+  days_before: !input days_before
+  event_filter: !input event_filter
+  custom_sensors: !input custom_sensors
+  include_description: !input include_description
+  different_message_by_time: !input different_message_by_time
+
+  weather_entity: !input weather_entity
+  temperature_sensor: !input temperature_sensor
+  humidity_sensor: !input humidity_sensor
+  wind_speed_sensor: !input wind_speed_sensor
+  aqi_sensor: !input aqi_sensor
+  pm25_sensor: !input pm25_sensor
+
+  enable_ai_message_editing: !input enable_ai_message_editing
+  enable_ai_tts_editing: !input enable_ai_tts_editing
+  enable_ai_weather_editing: !input enable_ai_weather_editing
+  ai_task_entity: !input ai_task_entity
+
+  include_mobile_notify: !input include_mobile_notify
+  is_ios_android: !input is_ios_android
+  notify_device: !input notify_device
+  mobile_notification_color: !input mobile_notification_color
+  mobile_notification_color_hex: '#{{ "%02x%02x%02x" | format(mobile_notification_color[0], mobile_notification_color[1], mobile_notification_color[2]) }}'
+  
+  include_telegram_notify: !input include_telegram_notify
+  telegram_config_entry: !input telegram_config_entry
+  telegram_target: !input telegram_target
+  telegram_thread_id: !input telegram_thread_id
+
+  enable_zalo_bot: !input enable_zalo_bot
+  zalo_bot_chat_id: !input zalo_bot_chat_id
+
+  enable_zalo_custom: !input enable_zalo_custom
+  zalo_custom_account: !input zalo_custom_account
+  zalo_custom_receiver_type: !input zalo_custom_receiver_type
+  zalo_custom_ttl: !input zalo_custom_ttl
+
+  include_tts_announcement: !input include_tts_announcement
+  tts_volume: !input tts_volume
+  tts_engine: !input tts_engine
+  media_player: !input media_player
+
+trigger:
+  - platform: time
+    at: !input notification_times
+
+condition:
+  - condition: template
+    value_template: >
+      {{ enable_lunar_notification or enable_weather_notification }}
+
+action:
+  # Kiểm tra có sự kiện lịch âm hay không
+  - variables:
+      has_lunar_event: >
+        {% set ns = namespace(found=false) %}
+        {% if enable_lunar_notification %}
+          {% set filter = event_filter %}
+          {% set days = days_before %}
+          
+          {% if filter == 'custom' %}
+            {% for entity_id in custom_sensors %}
+              {% if states(entity_id) not in ['unknown', 'unavailable', 'none'] %}
+                {% if state_attr(entity_id, 'days_until') != none %}
+                  {% if (state_attr(entity_id, 'days_until') | int) in days %}
+                    {% set ns.found = true %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% for s in states.sensor %}
+              {% if state_attr(s.entity_id, 'loaisukien') == 'lunar' %}
+                {% if s.state not in ['unknown', 'unavailable', 'none'] %}
+                  {% if state_attr(s.entity_id, 'days_until') != none %}
+                    {% if (state_attr(s.entity_id, 'days_until') | int) in days %}
+                      {% if filter == 'all' %}
+                        {% set ns.found = true %}
+                      {% elif filter == 'gio' and 'gio_' in s.entity_id %}
+                        {% set ns.found = true %}
+                      {% elif filter == 'ngay_le' and 'gio_' not in s.entity_id %}
+                        {% set ns.found = true %}
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endif %}
+        {{ ns.found }}
+
+  # Lấy danh sách sensor nếu có sự kiện lịch
+  - variables:
+      sensor_entity_ids: >
+        {% set ns = namespace(ids=[]) %}
+        {% if enable_lunar_notification and has_lunar_event %}
+          {% set filter = event_filter %}
+          {% set days = days_before %}
+          
+          {% if filter == 'custom' %}
+            {% for entity_id in custom_sensors %}
+              {% if states(entity_id) not in ['unknown', 'unavailable', 'none'] %}
+                {% if state_attr(entity_id, 'days_until') != none %}
+                  {% if (state_attr(entity_id, 'days_until') | int) in days %}
+                    {% set ns.ids = ns.ids + [entity_id] %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% for s in states.sensor %}
+              {% if state_attr(s.entity_id, 'loaisukien') == 'lunar' %}
+                {% if s.state not in ['unknown', 'unavailable', 'none'] %}
+                  {% if state_attr(s.entity_id, 'days_until') != none %}
+                    {% if (state_attr(s.entity_id, 'days_until') | int) in days %}
+                      {% if filter == 'all' %}
+                        {% set ns.ids = ns.ids + [s.entity_id] %}
+                      {% elif filter == 'gio' and 'gio_' in s.entity_id %}
+                        {% set ns.ids = ns.ids + [s.entity_id] %}
+                      {% elif filter == 'ngay_le' and 'gio_' not in s.entity_id %}
+                        {% set ns.ids = ns.ids + [s.entity_id] %}
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endif %}
+        {{ ns.ids }}
+
+  # Chuẩn bị thông tin thời tiết
+  - variables:
+      weather_state: >
+        {% if enable_weather_notification and weather_entity %}
+          {{ states(weather_entity) }}
+        {% else %}
+          
+        {% endif %}
+      temperature: >
+        {% if enable_weather_notification %}
+          {% if temperature_sensor %}
+            {{ states(temperature_sensor) | float(0) | round(1) }}
+          {% elif weather_entity %}
+            {{ state_attr(weather_entity, 'temperature') | float(0) | round(1) }}
+          {% else %}
+            0
+          {% endif %}
+        {% else %}
+          0
+        {% endif %}
+      humidity: >
+        {% if enable_weather_notification %}
+          {% if humidity_sensor %}
+            {{ states(humidity_sensor) | int(0) }}
+          {% elif weather_entity %}
+            {{ state_attr(weather_entity, 'humidity') | int(0) }}
+          {% else %}
+            0
+          {% endif %}
+        {% else %}
+          0
+        {% endif %}
+      wind_speed: >
+        {% if enable_weather_notification %}
+          {% if wind_speed_sensor %}
+            {{ states(wind_speed_sensor) | float(0) | round(1) }}
+          {% elif weather_entity %}
+            {{ state_attr(weather_entity, 'wind_speed') | float(0) | round(1) }}
+          {% else %}
+            0
+          {% endif %}
+        {% else %}
+          0
+        {% endif %}
+      aqi: >
+        {% if enable_weather_notification and aqi_sensor %}
+          {{ states(aqi_sensor) | int(0) }}
+        {% else %}
+          0
+        {% endif %}
+      pm25: >
+        {% if enable_weather_notification and pm25_sensor %}
+          {{ states(pm25_sensor) | float(0) | round(1) }}
+        {% else %}
+          0
+        {% endif %}
+
+  # Xử lý khi có sự kiện lịch
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ has_lunar_event and (sensor_entity_ids | length > 0) }}"
+        sequence:
+          - repeat:
+              for_each: "{{ sensor_entity_ids }}"
+              sequence:
+                # Chuẩn bị dữ liệu gốc của lịch
+                - variables:
+                    sensor_state: "{{ states[repeat.item] }}"
+                    event_name: "{{ state_attr(repeat.item, 'friendly_name') }}"
+                    days_until: "{{ state_attr(repeat.item, 'days_until') | int }}"
+                    nearest_date: "{{ state_attr(repeat.item, 'nearest_date') | default('N/A') }}"
+                    ngay_am: "{{ state_attr(repeat.item, 'ngayam') | default('') }}"
+                    thang_am: "{{ state_attr(repeat.item, 'thangam') | default('') }}"
+                    mota: "{{ state_attr(repeat.item, 'mota') | default('') }}"
+                    hour: "{{ now().hour }}"
+                    time_prefix: >
+                      {% if different_message_by_time %}
+                        {% if hour | int < 12 %}🌅
+                        {% elif hour | int < 18 %}☀️
+                        {% else %}🌙
+                        {% endif %}
+                      {% endif %}
+                    original_title: >
+                      {% set days = days_until | int %}
+                      {% if days == 1 %}
+                        {{ time_prefix }}⚠️ NGÀY MAI: {{ event_name }}
+                      {% elif days == 2 %}
+                        {{ time_prefix }}📅 Còn 2 ngày: {{ event_name }}
+                      {% elif days == 3 %}
+                        {{ time_prefix }}📌 Còn 3 ngày: {{ event_name }}
+                      {% elif days == 5 %}
+                        {{ time_prefix }}🔔 Còn 5 ngày: {{ event_name }}
+                      {% elif days == 7 %}
+                        {{ time_prefix }}🗓️ Còn 7 ngày: {{ event_name }}
+                      {% elif days == 15 %}
+                        {{ time_prefix }}📆 Còn 15 ngày: {{ event_name }}
+                      {% else %}
+                        {{ time_prefix }}📆 Còn {{ days }} ngày: {{ event_name }}
+                      {% endif %}
+                    original_message: >
+                      {% if different_message_by_time %}
+                        {% if hour | int < 12 %}Nhắc nhở buổi sáng
+                        {% elif hour | int < 18 %}Nhắc nhở buổi trưa
+                        {% else %}Nhắc nhở buổi tối
+                        {% endif %}
+
+                      {% endif %}
+                      📅 Ngày dương lịch: {{ nearest_date }}
+                      {% if include_description and ngay_am %}
+                      🌙 Ngày âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}
+                      {% endif %}
+                      {% if include_description and mota %}
+
+                      {{ mota }}
+                      {% endif %}
+                    tag: "lunar_{{ repeat.item | replace('.','_') }}_{{ days_until | int }}"
+
+                # AI Message Editing (Lịch + Thời tiết)
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ enable_ai_message_editing }}"
+                      sequence:
+                        - action: ai_task.generate_data
+                          data:
+                            task_name: "msg_edit_{{ repeat.item | replace('.','_') }}"
+                            instructions: >
+                              Biên tập thông báo kết hợp Lịch Âm và Thời Tiết.
+                              
+                              📅 THÔNG TIN LỊCH:
+                              Tiêu đề: {{ original_title }}
+                              Nội dung: {{ original_message }}
+                              Tên sự kiện: {{ event_name }}
+                              Còn {{ days_until }} ngày
+                              Ngày dương lịch: {{ nearest_date }}
+                              {% if ngay_am %}Ngày âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
+                              {% if mota %}Mô tả: {{ mota }}{% endif %}
+                              
+                              🌤️ THÔNG TIN THỜI TIẾT:
+                              {% if enable_weather_notification %}
+                              Tình trạng: {{ weather_state }}
+                              Nhiệt độ: {{ temperature }}°C
+                              Độ ẩm: {{ humidity }}%
+                              Gió: {{ wind_speed }} km/h
+                              {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                              {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                              {% else %}
+                              (Không có thông tin thời tiết)
+                              {% endif %}
+                              
+                              YÊU CẦU BIÊN TẬP:
+                              ✅ KẾT HỢP cả lịch và thời tiết một cách tự nhiên
+                              ✅ GIỮ và tối ưu emoji (⚠️📅📌🔔🗓️📆🌅☀️🌙🏮🎋🕯️💐🙏✨🌤️⛅☁️🌧️💨🌡️)
+                              ✅ Viết sinh động, có cảm xúc
+                              ✅ Phần lịch: giữ đủ thông tin (số ngày, ngày dương, ngày âm)
+                              {% if enable_weather_notification %}
+                              ✅ Phần thời tiết: đưa ra nhắc nhở, khuyến cáo phù hợp
+                                 - Nhiệt độ cao: nhắc mang nước, ô che nắng
+                                 - Mưa: nhắc mang áo mưa, ô
+                                 - Gió mạnh: cẩn thận khi ra ngoài
+                                 - AQI cao: đeo khẩu trang, hạn chế ra ngoài
+                              ✅ Kết nối tự nhiên giữa lịch và thời tiết
+                              {% endif %}
+                              ✅ Độ dài 4-7 dòng (có thời tiết)
+                              
+                              VÍ DỤ TỐT:
+                              Title: ⚠️ NHẮC NHỚ QUAN TRỌNG + DỰ BÁO THỜI TIẾT
+                              Message:
+                              🕯️ Ngày mai (15/02/2026) là ngày giỗ ông nội
+                              🌙 Âm lịch: 17/01
+                              
+                              🌤️ Thời tiết: Trời nắng 28°C, độ ẩm 65%
+                              💡 Khuyến cáo: Mang theo nước uống và ô che nắng khi đi chợ sắm lễ vật
+                              
+                              🙏 Xin nhớ chuẩn bị hương hoa đầy đủ
+                            structure:
+                              title:
+                                description: Tiêu đề (1 dòng, có emoji)
+                                required: true
+                                selector:
+                                  text: null
+                              message:
+                                description: Nội dung (4-7 dòng, có emoji, kết hợp lịch + thời tiết)
+                                required: true
+                                selector:
+                                  text: null
+                            entity_id: "{{ ai_task_entity }}"
+                          response_variable: msg_edit_result
+                        
+                        - wait_template: |
+                            {{ msg_edit_result is defined 
+                               and msg_edit_result.data is defined
+                               and msg_edit_result.data.title is defined 
+                               and msg_edit_result.data.message is defined }}
+                          timeout: "00:01:00"
+                          continue_on_timeout: true
+                        
+                        - variables:
+                            final_title: >
+                              {% if wait.completed %}
+                                {{ msg_edit_result.data.title | trim }}
+                              {% else %}
+                                {{ original_title }}
+                              {% endif %}
+                            final_message: >
+                              {% if wait.completed %}
+                                {{ msg_edit_result.data.message | trim }}
+                              {% else %}
+                                {{ original_message }}
+                              {% endif %}
+                  
+                  default:
+                    - variables:
+                        final_title: "{{ original_title }}"
+                        final_message: "{{ original_message }}"
+
+                # Gửi thông báo (Mobile, Telegram, Zalo...)
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ include_mobile_notify and (notify_device | length > 0) }}"
+                      sequence:
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ is_ios_android == 'android_device' }}"
+                              sequence:
+                                - repeat:
+                                    for_each: "{{ notify_device }}"
+                                    sequence:
+                                      - service: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+                                        data:
+                                          title: "{{ final_title }}"
+                                          message: "{{ final_message }}"
+                                          data:
+                                            priority: high
+                                            notification_icon: !input mobile_notification_icon
+                                            color: "{{ mobile_notification_color_hex }}"
+                                            url: !input mobile_tap_action
+                                            clickAction: !input mobile_tap_action
+                                            tag: "{{ tag }}"
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ is_ios_android == 'ios_device' }}"
+                              sequence:
+                                - repeat:
+                                    for_each: "{{ notify_device }}"
+                                    sequence:
+                                      - service: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+                                        data:
+                                          title: "{{ final_title }}"
+                                          message: "{{ final_message }}"
+                                          data:
+                                            tag: "{{ tag }}"
+
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ include_telegram_notify }}"
+                      sequence:
+                        - service: telegram_bot.send_message
+                          data: >
+                            {% set data = {'config_entry_id': telegram_config_entry, 'message': final_title ~ '\n\n' ~ final_message} %}
+                            {% if telegram_target != "" %}
+                              {% set data = dict(data, target=telegram_target|int) %}
+                            {% endif %}
+                            {% if telegram_thread_id != "" %}
+                              {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+                            {% endif %}
+                            {{ data }}
+
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ enable_zalo_bot }}"
+                      sequence:
+                        - service: pyscript.send_zalo_message
+                          data:
+                            chat_id: "{{ zalo_bot_chat_id }}"
+                            message: "{{ final_title }}\n\n{{ final_message }}"
+
+                - variables:
+                    zalo_custom_thread_id_1: !input zalo_custom_thread_id_1
+                    zalo_custom_thread_id_2: !input zalo_custom_thread_id_2
+                    zalo_custom_thread_id_3: !input zalo_custom_thread_id_3
+                    zalo_custom_user_id_1: !input zalo_custom_user_id_1
+                    zalo_custom_user_id_2: !input zalo_custom_user_id_2
+                    zalo_custom_user_id_3: !input zalo_custom_user_id_3
+                
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ enable_zalo_custom }}"
+                      sequence:
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ zalo_custom_thread_id_1 | length > 0 }}"
+                              sequence:
+                                - service: zalo_bot.send_message
+                                  data:
+                                    account_selection: !input zalo_custom_account
+                                    thread_id: !input zalo_custom_thread_id_1
+                                    type: !input zalo_custom_receiver_type
+                                    message: "{{ final_title }}\n\n{{ final_message }}"
+                                    ttl: !input zalo_custom_ttl
+                        
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ zalo_custom_thread_id_2 | length > 0 }}"
+                              sequence:
+                                - service: zalo_bot.send_message
+                                  data:
+                                    account_selection: !input zalo_custom_account
+                                    thread_id: !input zalo_custom_thread_id_2
+                                    type: !input zalo_custom_receiver_type
+                                    message: "{{ final_title }}\n\n{{ final_message }}"
+                                    ttl: !input zalo_custom_ttl
+                        
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ zalo_custom_thread_id_3 | length > 0 }}"
+                              sequence:
+                                - service: zalo_bot.send_message
+                                  data:
+                                    account_selection: !input zalo_custom_account
+                                    thread_id: !input zalo_custom_thread_id_3
+                                    type: !input zalo_custom_receiver_type
+                                    message: "{{ final_title }}\n\n{{ final_message }}"
+                                    ttl: !input zalo_custom_ttl
+                        
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ zalo_custom_user_id_1 | length > 0 }}"
+                              sequence:
+                                - service: zalo_bot.send_message
+                                  data:
+                                    account_selection: !input zalo_custom_account
+                                    user_id: !input zalo_custom_user_id_1
+                                    type: !input zalo_custom_receiver_type
+                                    message: "{{ final_title }}\n\n{{ final_message }}"
+                                    ttl: !input zalo_custom_ttl
+                        
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ zalo_custom_user_id_2 | length > 0 }}"
+                              sequence:
+                                - service: zalo_bot.send_message
+                                  data:
+                                    account_selection: !input zalo_custom_account
+                                    user_id: !input zalo_custom_user_id_2
+                                    type: !input zalo_custom_receiver_type
+                                    message: "{{ final_title }}\n\n{{ final_message }}"
+                                    ttl: !input zalo_custom_ttl
+                        
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ zalo_custom_user_id_3 | length > 0 }}"
+                              sequence:
+                                - service: zalo_bot.send_message
+                                  data:
+                                    account_selection: !input zalo_custom_account
+                                    user_id: !input zalo_custom_user_id_3
+                                    type: !input zalo_custom_receiver_type
+                                    message: "{{ final_title }}\n\n{{ final_message }}"
+                                    ttl: !input zalo_custom_ttl
+
+                # TTS với AI editing
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ include_tts_announcement and (media_player | length > 0) }}"
+                      sequence:
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ enable_ai_tts_editing }}"
+                              sequence:
+                                - action: ai_task.generate_data
+                                  data:
+                                    task_name: "tts_edit_{{ repeat.item | replace('.','_') }}"
+                                    instructions: >
+                                      Biên tập thông báo TTS kết hợp Lịch Âm và Thời Tiết.
+                                      
+                                      THÔNG TIN LỊCH:
+                                      Sự kiện: {{ event_name }}
+                                      Còn {{ days_until }} ngày
+                                      Ngày dương lịch: {{ nearest_date }}
+                                      {% if ngay_am %}Ngày âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
+                                      {% if mota %}Mô tả: {{ mota }}{% endif %}
+                                      
+                                      THÔNG TIN THỜI TIẾT:
+                                      {% if enable_weather_notification %}
+                                      Tình trạng: {{ weather_state }}
+                                      Nhiệt độ: {{ temperature }}°C
+                                      Độ ẩm: {{ humidity }}%
+                                      Gió: {{ wind_speed }} km/h
+                                      {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                      {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                      {% endif %}
+                                      
+                                      YÊU CẦU:
+                                      ❌ LOẠI BỎ emoji
+                                      ✅ Viết tự nhiên dễ nghe
+                                      ✅ Chuyển số thành chữ
+                                      ✅ Kết hợp lịch + thời tiết + khuyến cáo
+                                      ✅ 3-4 câu, ngắn gọn
+                                      ✅ KHÔNG xuống dòng
+                                      
+                                      VÍ DỤ:
+                                      "Nhắc nhở quan trọng, ngày mai là ngày giỗ ông nội vào ngày mười lăm tháng hai, theo âm lịch là ngày mười bảy tháng giêng. Dự báo thời tiết nắng hai mươi tám độ C, độ ẩm sáu mươi lăm phần trăm. Xin nhớ mang theo nước uống và ô che nắng khi đi chợ sắm lễ vật."
+                                    structure:
+                                      tts_text:
+                                        description: Nội dung TTS
+                                        required: true
+                                        selector:
+                                          text: null
+                                    entity_id: "{{ ai_task_entity }}"
+                                  response_variable: tts_edit_result
+                                
+                                - wait_template: |
+                                    {{ tts_edit_result is defined 
+                                       and tts_edit_result.data is defined
+                                       and tts_edit_result.data.tts_text is defined }}
+                                  timeout: "00:01:00"
+                                  continue_on_timeout: true
+                                
+                                - if:
+                                    - condition: template
+                                      value_template: "{{ wait.completed }}"
+                                  then:
+                                    - repeat:
+                                        for_each: "{{ media_player }}"
+                                        sequence:
+                                          - service: media_player.volume_set
+                                            data:
+                                              volume_level: "{{ tts_volume }}"
+                                            target:
+                                              entity_id: "{{ repeat.item }}"
+                                          - service: tts.speak
+                                            data:
+                                              entity_id: "{{ tts_engine }}"
+                                              media_player_entity_id: "{{ repeat.item }}"
+                                              message: "{{ tts_edit_result.data.tts_text | trim }}"
+                                  else:
+                                    - repeat:
+                                        for_each: "{{ media_player }}"
+                                        sequence:
+                                          - service: media_player.volume_set
+                                            data:
+                                              volume_level: "{{ tts_volume }}"
+                                            target:
+                                              entity_id: "{{ repeat.item }}"
+                                          - service: tts.speak
+                                            data:
+                                              entity_id: "{{ tts_engine }}"
+                                              media_player_entity_id: "{{ repeat.item }}"
+                                              message: "{{ event_name }}. {{ original_message }}"
+                          
+                          default:
+                            - repeat:
+                                for_each: "{{ media_player }}"
+                                sequence:
+                                  - service: media_player.volume_set
+                                    data:
+                                      volume_level: "{{ tts_volume }}"
+                                    target:
+                                      entity_id: "{{ repeat.item }}"
+                                  - service: tts.speak
+                                    data:
+                                      entity_id: "{{ tts_engine }}"
+                                      media_player_entity_id: "{{ repeat.item }}"
+                                      message: "{{ event_name }}. {{ original_message }}"
+
+  # Xử lý khi KHÔNG có sự kiện lịch nhưng có thời tiết
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ not has_lunar_event and enable_weather_notification }}"
+        sequence:
+          - variables:
+              hour: "{{ now().hour }}"
+              time_prefix: >
+                {% if different_message_by_time %}
+                  {% if hour | int < 12 %}🌅
+                  {% elif hour | int < 18 %}☀️
+                  {% else %}🌙
+                  {% endif %}
+                {% endif %}
+              weather_title_base: >
+                {% if hour | int < 12 %}
+                  {{ time_prefix }} DỰ BÁO THỜI TIẾT BUỔI SÁNG
+                {% elif hour | int < 18 %}
+                  {{ time_prefix }} DỰ BÁO THỜI TIẾT BUỔI CHIỀU
+                {% else %}
+                  {{ time_prefix }} DỰ BÁO THỜI TIẾT BUỔI TỐI
+                {% endif %}
+              weather_message_base: >
+                🌤️ Tình trạng: {{ weather_state }}
+                🌡️ Nhiệt độ: {{ temperature }}°C
+                💧 Độ ẩm: {{ humidity }}%
+                💨 Gió: {{ wind_speed }} km/h
+                {% if aqi > 0 %}
+                🏭 AQI: {{ aqi }}
+                {% endif %}
+                {% if pm25 > 0 %}
+                ⚠️ PM2.5: {{ pm25 }}
+                {% endif %}
+
+          # AI Weather Editing
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_ai_weather_editing }}"
+                sequence:
+                  - action: ai_task.generate_data
+                    data:
+                      task_name: "weather_only_edit"
+                      instructions: >
+                        Biên tập thông báo THỜI TIẾT với nhắc nhở và khuyến cáo.
+                        
+                        🌤️ THÔNG TIN THỜI TIẾT:
+                        Tình trạng: {{ weather_state }}
+                        Nhiệt độ: {{ temperature }}°C
+                        Độ ẩm: {{ humidity }}%
+                        Gió: {{ wind_speed }} km/h
+                        {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                        {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                        
+                        ⏰ THỜI GIAN:
+                        {% if hour | int < 12 %}Buổi sáng
+                        {% elif hour | int < 18 %}Buổi chiều
+                        {% else %}Buổi tối
+                        {% endif %}
+                        
+                        YÊU CẦU BIÊN TẬP:
+                        ✅ GIỮ emoji thời tiết (🌤️⛅☁️🌧️⛈️🌡️💧💨🏭⚠️🌅☀️🌙)
+                        ✅ Viết sinh động, dễ đọc
+                        ✅ ĐƯA RA nhắc nhở, khuyến cáo cụ thể:
+                           - Nhiệt độ cao (>30°C): nhắc mang nước, ô che nắng, tránh ra ngoài giữa trưa
+                           - Nhiệt độ thấp (<20°C): nhắc mặc ấm, mang áo khoác
+                           - Mưa/sắp mưa: nhắc mang áo mưa, ô
+                           - Gió mạnh (>20 km/h): cẩn thận khi ra ngoài
+                           - Độ ẩm cao (>80%): cảm giác oi bức
+                           - AQI cao (>100): đeo khẩu trang, hạn chế ra ngoài
+                           - PM2.5 cao: đặc biệt nguy hiểm, tránh hoạt động ngoài trời
+                        ✅ Phù hợp với buổi trong ngày
+                        ✅ Độ dài 4-6 dòng
+                        
+                        VÍ DỤ TỐT:
+                        Title: 🌅 DỰ BÁO THỜI TIẾT BUỔI SÁNG
+                        Message:
+                        ☀️ Hôm nay trời nắng nóng 32°C, độ ẩm 70%
+                        💨 Gió nhẹ 8 km/h
+                        
+                        💡 Khuyến cáo:
+                        - Mang theo nước uống đầy đủ
+                        - Dùng ô hoặc mũ che nắng khi ra ngoài
+                        - Hạn chế hoạt động ngoài trời từ 11h-15h
+                        
+                        🙏 Chúc bạn một ngày tốt lành!
+                      structure:
+                        title:
+                          description: Tiêu đề (1 dòng, có emoji)
+                          required: true
+                          selector:
+                            text: null
+                        message:
+                          description: Nội dung (4-6 dòng, có emoji, có khuyến cáo)
+                          required: true
+                          selector:
+                            text: null
+                      entity_id: "{{ ai_task_entity }}"
+                    response_variable: weather_edit_result
+                  
+                  - wait_template: |
+                      {{ weather_edit_result is defined 
+                         and weather_edit_result.data is defined
+                         and weather_edit_result.data.title is defined 
+                         and weather_edit_result.data.message is defined }}
+                    timeout: "00:01:00"
+                    continue_on_timeout: true
+                  
+                  - variables:
+                      weather_final_title: >
+                        {% if wait.completed %}
+                          {{ weather_edit_result.data.title | trim }}
+                        {% else %}
+                          {{ weather_title_base }}
+                        {% endif %}
+                      weather_final_message: >
+                        {% if wait.completed %}
+                          {{ weather_edit_result.data.message | trim }}
+                        {% else %}
+                          {{ weather_message_base }}
+                        {% endif %}
+            
+            default:
+              - variables:
+                  weather_final_title: "{{ weather_title_base }}"
+                  weather_final_message: "{{ weather_message_base }}"
+
+          # Gửi thông báo thời tiết
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ include_mobile_notify and (notify_device | length > 0) }}"
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ is_ios_android == 'android_device' }}"
+                        sequence:
+                          - repeat:
+                              for_each: "{{ notify_device }}"
+                              sequence:
+                                - service: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+                                  data:
+                                    title: "{{ weather_final_title }}"
+                                    message: "{{ weather_final_message }}"
+                                    data:
+                                      priority: high
+                                      notification_icon: !input mobile_notification_icon
+                                      color: "{{ mobile_notification_color_hex }}"
+                                      url: !input mobile_tap_action
+                                      clickAction: !input mobile_tap_action
+                                      tag: "weather_only"
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ is_ios_android == 'ios_device' }}"
+                        sequence:
+                          - repeat:
+                              for_each: "{{ notify_device }}"
+                              sequence:
+                                - service: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+                                  data:
+                                    title: "{{ weather_final_title }}"
+                                    message: "{{ weather_final_message }}"
+                                    data:
+                                      tag: "weather_only"
+
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ include_telegram_notify }}"
+                sequence:
+                  - service: telegram_bot.send_message
+                    data: >
+                      {% set data = {'config_entry_id': telegram_config_entry, 'message': weather_final_title ~ '\n\n' ~ weather_final_message} %}
+                      {% if telegram_target != "" %}
+                        {% set data = dict(data, target=telegram_target|int) %}
+                      {% endif %}
+                      {% if telegram_thread_id != "" %}
+                        {% set data = dict(data, message_thread_id=telegram_thread_id|int) %}
+                      {% endif %}
+                      {{ data }}
+
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_zalo_bot }}"
+                sequence:
+                  - service: pyscript.send_zalo_message
+                    data:
+                      chat_id: "{{ zalo_bot_chat_id }}"
+                      message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+
+          - variables:
+              zalo_custom_thread_id_1: !input zalo_custom_thread_id_1
+              zalo_custom_thread_id_2: !input zalo_custom_thread_id_2
+              zalo_custom_thread_id_3: !input zalo_custom_thread_id_3
+              zalo_custom_user_id_1: !input zalo_custom_user_id_1
+              zalo_custom_user_id_2: !input zalo_custom_user_id_2
+              zalo_custom_user_id_3: !input zalo_custom_user_id_3
+          
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_zalo_custom }}"
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ zalo_custom_thread_id_1 | length > 0 }}"
+                        sequence:
+                          - service: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              thread_id: !input zalo_custom_thread_id_1
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+                              ttl: !input zalo_custom_ttl
+                  
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ zalo_custom_thread_id_2 | length > 0 }}"
+                        sequence:
+                          - service: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              thread_id: !input zalo_custom_thread_id_2
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+                              ttl: !input zalo_custom_ttl
+                  
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ zalo_custom_thread_id_3 | length > 0 }}"
+                        sequence:
+                          - service: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              thread_id: !input zalo_custom_thread_id_3
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+                              ttl: !input zalo_custom_ttl
+                  
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ zalo_custom_user_id_1 | length > 0 }}"
+                        sequence:
+                          - service: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              user_id: !input zalo_custom_user_id_1
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+                              ttl: !input zalo_custom_ttl
+                  
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ zalo_custom_user_id_2 | length > 0 }}"
+                        sequence:
+                          - service: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              user_id: !input zalo_custom_user_id_2
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+                              ttl: !input zalo_custom_ttl
+                  
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ zalo_custom_user_id_3 | length > 0 }}"
+                        sequence:
+                          - service: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              user_id: !input zalo_custom_user_id_3
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
+                              ttl: !input zalo_custom_ttl
+
+          # TTS cho thời tiết
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ include_tts_announcement and (media_player | length > 0) }}"
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ enable_ai_tts_editing }}"
+                        sequence:
+                          - action: ai_task.generate_data
+                            data:
+                              task_name: "tts_weather_only"
+                              instructions: >
+                                Biên tập thông báo TTS chỉ về THỜI TIẾT.
+                                
+                                THÔNG TIN:
+                                Tình trạng: {{ weather_state }}
+                                Nhiệt độ: {{ temperature }}°C
+                                Độ ẩm: {{ humidity }}%
+                                Gió: {{ wind_speed }} km/h
+                                {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                
+                                Buổi: {% if hour | int < 12 %}Sáng{% elif hour | int < 18 %}Chiều{% else %}Tối{% endif %}
+                                
+                                YÊU CẦU:
+                                ❌ LOẠI BỎ emoji
+                                ✅ Viết tự nhiên dễ nghe
+                                ✅ Chuyển số thành chữ
+                                ✅ Bắt đầu: "Dự báo thời tiết buổi [sáng/chiều/tối]..."
+                                ✅ Đưa ra khuyến cáo phù hợp
+                                ✅ 2-3 câu, ngắn gọn
+                                ✅ KHÔNG xuống dòng
+                                
+                                VÍ DỤ:
+                                "Dự báo thời tiết buổi sáng hôm nay, trời nắng nóng ba mươi hai độ C, độ ẩm bảy mươi phần trăm, gió nhẹ. Xin nhớ mang theo nước uống và ô che nắng khi ra ngoài. Chúc bạn một ngày tốt lành."
+                              structure:
+                                tts_text:
+                                  description: Nội dung TTS
+                                  required: true
+                                  selector:
+                                    text: null
+                              entity_id: "{{ ai_task_entity }}"
+                            response_variable: tts_weather_result
+                          
+                          - wait_template: |
+                              {{ tts_weather_result is defined 
+                                 and tts_weather_result.data is defined
+                                 and tts_weather_result.data.tts_text is defined }}
+                            timeout: "00:01:00"
+                            continue_on_timeout: true
+                          
+                          - if:
+                              - condition: template
+                                value_template: "{{ wait.completed }}"
+                            then:
+                              - repeat:
+                                  for_each: "{{ media_player }}"
+                                  sequence:
+                                    - service: media_player.volume_set
+                                      data:
+                                        volume_level: "{{ tts_volume }}"
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
+                                    - service: tts.speak
+                                      data:
+                                        entity_id: "{{ tts_engine }}"
+                                        media_player_entity_id: "{{ repeat.item }}"
+                                        message: "{{ tts_weather_result.data.tts_text | trim }}"
+                            else:
+                              - repeat:
+                                  for_each: "{{ media_player }}"
+                                  sequence:
+                                    - service: media_player.volume_set
+                                      data:
+                                        volume_level: "{{ tts_volume }}"
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
+                                    - service: tts.speak
+                                      data:
+                                        entity_id: "{{ tts_engine }}"
+                                        media_player_entity_id: "{{ repeat.item }}"
+                                        message: "{{ weather_message_base }}"
+                    
+                    default:
+                      - repeat:
+                          for_each: "{{ media_player }}"
+                          sequence:
+                            - service: media_player.volume_set
+                              data:
+                                volume_level: "{{ tts_volume }}"
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                            - service: tts.speak
+                              data:
+                                entity_id: "{{ tts_engine }}"
+                                media_player_entity_id: "{{ repeat.item }}"
+                                message: "{{ weather_message_base }}"

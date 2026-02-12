@@ -1,0 +1,301 @@
+blueprint:
+  name: AI Quote Generator - Tự động lấy danh ngôn
+  description: >
+    Tự động lấy câu danh ngôn, châm ngôn, ca dao, tục ngữ ngẫu nhiên từ AI và cập nhật vào input_text.
+    
+    ✨ Tính năng:
+    - Lấy quote theo khoảng thời gian tùy chỉnh
+    - Đa dạng nguồn: danh ngôn quốc tế, ca dao, tục ngữ Việt Nam
+    - Tự động cập nhật vào input_text helper
+    - AI chọn ngẫu nhiên, tránh lặp lại
+    
+  domain: automation
+  homeassistant:
+    min_version: 2024.8.0
+
+  input:
+    basic_settings:
+      name: ⚙️ Cài đặt cơ bản
+      icon: mdi:cog
+      collapsed: false
+      input:
+        update_interval:
+          name: ⏱️ Khoảng thời gian cập nhật
+          description: Chọn tần suất lấy quote mới
+          default: every_hour
+          selector:
+            select:
+              options:
+                - label: "Mỗi 15 phút"
+                  value: "15min"
+                - label: "Mỗi 20 phút"
+                  value: "20min"
+                - label: "Mỗi 30 phút"
+                  value: "30min"
+                - label: "Mỗi 1 giờ"
+                  value: "every_hour"
+                - label: "Mỗi 2 giờ"
+                  value: "2hours"
+                - label: "Mỗi 3 giờ"
+                  value: "3hours"
+                - label: "Mỗi 6 giờ"
+                  value: "6hours"
+                - label: "Mỗi 12 giờ"
+                  value: "12hours"
+                - label: "Mỗi ngày (0:00 AM)"
+                  value: "daily"
+
+        target_input_text:
+          name: 📝 Input Text Helper
+          description: Chọn input_text để lưu quote
+          selector:
+            entity:
+              filter:
+                - domain: input_text
+
+    quote_settings:
+      name: 💬 Cài đặt Quote
+      icon: mdi:format-quote-close
+      collapsed: true
+      input:
+        quote_types:
+          name: 📚 Loại quote muốn lấy
+          description: Chọn các nguồn quote
+          default:
+            - famous_quotes
+            - vietnamese_proverbs
+            - vietnamese_folk_poems
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: "Danh ngôn nổi tiếng thế giới"
+                  value: "famous_quotes"
+                - label: "Tục ngữ Việt Nam"
+                  value: "vietnamese_proverbs"
+                - label: "Ca dao Việt Nam"
+                  value: "vietnamese_folk_poems"
+                - label: "Châm ngôn sống"
+                  value: "life_wisdom"
+              sort: false
+
+        include_emoji:
+          name: 😊 Thêm emoji vào quote
+          description: Bật để AI thêm emoji phù hợp vào quote
+          default: false
+          selector:
+            boolean:
+
+        allow_multiline:
+          name: 📄 Cho phép xuống dòng
+          description: Bật nếu muốn quote có thể xuống dòng (với quote dài)
+          default: false
+          selector:
+            boolean:
+
+    ai_settings:
+      name: 🤖 Cài đặt AI
+      icon: mdi:robot
+      collapsed: true
+      input:
+        ai_task_entity:
+          name: 🧠 AI Task Entity
+          description: Chọn AI entity để tạo quote
+          default: ai_task.google_ai_task
+          selector:
+            entity:
+              filter:
+                - domain: ai_task
+
+        custom_instructions:
+          name: 📝 Hướng dẫn tùy chỉnh (tùy chọn)
+          description: Thêm yêu cầu riêng cho AI (ví dụ "chỉ lấy quote về thiên nhiên")
+          default: ''
+          selector:
+            text:
+              multiline: true
+              type: text
+
+    notification_settings:
+      name: 🔔 Thông báo (tùy chọn)
+      icon: mdi:bell
+      collapsed: true
+      input:
+        enable_notification:
+          name: ✅ Bật thông báo khi có quote mới
+          default: false
+          selector:
+            boolean:
+
+        notification_service:
+          name: 📱 Notification Service
+          description: Chọn service thông báo (ví dụ notify.mobile_app_...)
+          default: ''
+          selector:
+            text:
+
+mode: single
+max_exceeded: silent
+
+variables:
+  update_interval: !input update_interval
+  target_input_text: !input target_input_text
+  quote_types: !input quote_types
+  include_emoji: !input include_emoji
+  allow_multiline: !input allow_multiline
+  ai_task_entity: !input ai_task_entity
+  custom_instructions: !input custom_instructions
+  enable_notification: !input enable_notification
+  notification_service: !input notification_service
+
+trigger:
+  - platform: time_pattern
+    minutes: "/15"
+    id: trigger_15min
+  - platform: time_pattern
+    minutes: "/20"
+    id: trigger_20min
+  - platform: time_pattern
+    minutes: "/30"
+    id: trigger_30min
+  - platform: time_pattern
+    hours: "/1"
+    id: trigger_1hour
+  - platform: time_pattern
+    hours: "/2"
+    id: trigger_2hours
+  - platform: time_pattern
+    hours: "/3"
+    id: trigger_3hours
+  - platform: time_pattern
+    hours: "/6"
+    id: trigger_6hours
+  - platform: time_pattern
+    hours: "/12"
+    id: trigger_12hours
+  - platform: time
+    at: "00:00:00"
+    id: trigger_daily
+
+condition:
+  - condition: template
+    value_template: >
+      {% set interval = update_interval %}
+      {% set trigger_id = trigger.id %}
+      {% if interval == '15min' and trigger_id == 'trigger_15min' %}
+        true
+      {% elif interval == '20min' and trigger_id == 'trigger_20min' %}
+        true
+      {% elif interval == '30min' and trigger_id == 'trigger_30min' %}
+        true
+      {% elif interval == 'every_hour' and trigger_id == 'trigger_1hour' %}
+        true
+      {% elif interval == '2hours' and trigger_id == 'trigger_2hours' %}
+        true
+      {% elif interval == '3hours' and trigger_id == 'trigger_3hours' %}
+        true
+      {% elif interval == '6hours' and trigger_id == 'trigger_6hours' %}
+        true
+      {% elif interval == '12hours' and trigger_id == 'trigger_12hours' %}
+        true
+      {% elif interval == 'daily' and trigger_id == 'trigger_daily' %}
+        true
+      {% else %}
+        false
+      {% endif %}
+
+action:
+  - variables:
+      quote_sources: >
+        {% set sources = [] %}
+        {% if 'famous_quotes' in quote_types %}
+          {% set sources = sources + ['danh ngôn nổi tiếng từ các nhân vật lịch sử, triết gia, nhà văn, nhà khoa học trên thế giới'] %}
+        {% endif %}
+        {% if 'vietnamese_proverbs' in quote_types %}
+          {% set sources = sources + ['tục ngữ Việt Nam'] %}
+        {% endif %}
+        {% if 'vietnamese_folk_poems' in quote_types %}
+          {% set sources = sources + ['ca dao Việt Nam'] %}
+        {% endif %}
+        {% if 'life_wisdom' in quote_types %}
+          {% set sources = sources + ['châm ngôn về cuộc sống, suy ngẫm, triết lý sống'] %}
+        {% endif %}
+        {{ sources | join(', ') }}
+      
+      ai_instructions: >
+        Hãy chọn ngẫu nhiên 1 câu từ các nguồn sau: {{ quote_sources }}.
+        
+        YÊU CẦU:
+        - Ưu tiên đa dạng quốc gia, tác giả, nguồn gốc
+        - Tránh lặp lại các nhân vật quá phổ biến (nếu vừa chọn Einstein lần trước thì lần này chọn người khác)
+        - Nếu có tác giả xác định: ghi rõ tên tác giả
+        - Nếu không có tác giả: ghi thể loại (Danh ngôn, Tục ngữ, Ca dao, Châm ngôn)
+        - Viết tiếng Việt có dấu đầy đủ
+        {% if not include_emoji %}
+        - KHÔNG dùng emoji
+        {% else %}
+        - Có thể thêm 1-2 emoji phù hợp
+        {% endif %}
+        {% if not allow_multiline %}
+        - KHÔNG xuống dòng, viết trên 1 dòng
+        {% else %}
+        - Có thể xuống dòng nếu quote dài
+        {% endif %}
+        {% if custom_instructions %}
+        
+        YÊU CẦU BỔ SUNG:
+        {{ custom_instructions }}
+        {% endif %}
+        
+        Hãy chọn quote hay, ý nghĩa, truyền cảm hứng hoặc sâu sắc.
+
+  - action: ai_task.generate_data
+    data:
+      task_name: daily_quote_generator
+      instructions: "{{ ai_instructions }}"
+      structure:
+        quote:
+          description: Câu nói nổi tiếng
+          required: true
+          selector:
+            text: null
+        author:
+          description: Tác giả hoặc thể loại
+          required: true
+          selector:
+            text: null
+      entity_id: "{{ ai_task_entity }}"
+    response_variable: quote_result
+
+  - wait_template: |
+      {{ quote_result is defined and quote_result.data is defined
+         and quote_result.data.quote is defined and quote_result.data.author is defined }}
+    timeout: "00:01:00"
+    continue_on_timeout: true
+
+  - if:
+      - condition: template
+        value_template: "{{ wait.completed }}"
+    then:
+      - variables:
+          final_quote: "{{ quote_result.data.quote | trim }}"
+          final_author: "{{ quote_result.data.author | trim }}"
+          full_text: "{{ final_quote }} - ({{ final_author }})"
+
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ target_input_text }}"
+        data:
+          value: "{{ full_text }}"
+
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ enable_notification and notification_service != '' }}"
+            sequence:
+              - action: "{{ notification_service }}"
+                data:
+                  title: "💬 Quote mới"
+                  message: "{{ full_text }}"
+    else:
+      - stop: "AI Task không trả kết quả kịp thời"
