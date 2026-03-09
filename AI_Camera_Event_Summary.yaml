@@ -654,7 +654,12 @@ action:
       action: zalo_bot.send_image
       data:
         account_selection: !input zalo_custom_account
-        thread_id: !input zalo_custom_thread_id
+        thread_id: >
+          {% if zalo_custom_thread_id is string %}
+            {{ zalo_custom_thread_id }}
+          {% else %}
+            {{ zalo_custom_thread_id[0] }}
+          {% endif %
         type: !input zalo_custom_receiver_type
         image_path: /media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
         message: '{{ zalo_custom_initial_caption }}'
@@ -824,7 +829,12 @@ action:
               action: zalo_bot.send_message
               data:
                 account_selection: !input zalo_custom_account
-                thread_id: !input zalo_custom_thread_id
+                thread_id: >
+                  {% if zalo_custom_thread_id is string %}
+                    {{ zalo_custom_thread_id }}
+                  {% else %}
+                    {{ zalo_custom_thread_id[0] }}
+                  {% endif %
                 type: !input zalo_custom_receiver_type
                 message: "📊 Phân tích AI:\n\n{{ ai_messages }}"
                 ttl: !input zalo_custom_ttl
@@ -883,7 +893,12 @@ action:
           - action: zalo_bot.send_message
             data:
               account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_thread_id
+              thread_id: >
+                  {% if zalo_custom_thread_id is string %}
+                    {{ zalo_custom_thread_id }}
+                  {% else %}
+                    {{ zalo_custom_thread_id[0] }}
+                  {% endif %
               type: !input zalo_custom_receiver_type
               message: '{{ error_message }}'
               ttl: !input zalo_custom_ttl
