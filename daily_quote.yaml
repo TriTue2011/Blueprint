@@ -1,17 +1,31 @@
 blueprint:
-  name: AI Quote Generator - Tự động lấy danh ngôn
+  name: AI Quote Generator - Tự động lấy danh ngôn (v1.1.0 Fixed)
   description: >
     Tự động lấy câu danh ngôn, châm ngôn, ca dao, tục ngữ ngẫu nhiên từ AI và cập nhật vào input_text.
-    
+
     ✨ Tính năng:
     - Lấy quote theo khoảng thời gian tùy chỉnh
     - Đa dạng nguồn: danh ngôn quốc tế, ca dao, tục ngữ Việt Nam
     - Tự động cập nhật vào input_text helper
     - AI chọn ngẫu nhiên, tránh lặp lại
-    
+
+    ⚠️ Lưu ý về time_pattern:
+    - Trigger kích hoạt theo mốc cố định trong giờ/ngày, không phải đếm từ lần cuối.
+      Ví dụ "/15min" = kích hoạt vào phút 0, 15, 30, 45 của mỗi giờ.
+
+    🔧 v1.1.0 Fixes:
+    - Sửa min_version 2024.8.0 → 2025.7.0 (ai_task.generate_data có từ HA 2025.7)
+    - Bỏ hardcoded default ai_task.google_ai_task
+    - Thêm continue_on_error cho ai_task và input_text.set_value
+    - Truncate full_text xuống 255 ký tự (giới hạn input_text)
+    - Thay stop: bằng xử lý graceful khi AI timeout
+    - Thêm continue_on_error cho notification action
+    - Dùng namespace() đúng chuẩn Jinja2 HA cho quote_sources
+
   domain: automation
   homeassistant:
-    min_version: 2024.8.0
+    # FIX: ai_task.generate_data chỉ có từ HA 2025.7, không phải 2024.8
+    min_version: 2025.7.0
 
   input:
     basic_settings:
@@ -21,33 +35,38 @@ blueprint:
       input:
         update_interval:
           name: ⏱️ Khoảng thời gian cập nhật
-          description: Chọn tần suất lấy quote mới
+          description: >
+            Chọn tần suất lấy quote mới.
+            Lưu ý: trigger kích hoạt theo mốc cố định trong giờ/ngày.
+            Ví dụ "Mỗi 15 phút" = kích hoạt vào phút 0, 15, 30, 45.
           default: every_hour
           selector:
             select:
               options:
-                - label: "Mỗi 15 phút"
+                - label: "Mỗi 15 phút (vào phút 0, 15, 30, 45)"
                   value: "15min"
-                - label: "Mỗi 20 phút"
+                - label: "Mỗi 20 phút (vào phút 0, 20, 40)"
                   value: "20min"
-                - label: "Mỗi 30 phút"
+                - label: "Mỗi 30 phút (vào phút 0, 30)"
                   value: "30min"
-                - label: "Mỗi 1 giờ"
+                - label: "Mỗi 1 giờ (vào đầu giờ)"
                   value: "every_hour"
-                - label: "Mỗi 2 giờ"
+                - label: "Mỗi 2 giờ (0h, 2h, 4h...)"
                   value: "2hours"
-                - label: "Mỗi 3 giờ"
+                - label: "Mỗi 3 giờ (0h, 3h, 6h...)"
                   value: "3hours"
-                - label: "Mỗi 6 giờ"
+                - label: "Mỗi 6 giờ (0h, 6h, 12h, 18h)"
                   value: "6hours"
-                - label: "Mỗi 12 giờ"
+                - label: "Mỗi 12 giờ (0h, 12h)"
                   value: "12hours"
-                - label: "Mỗi ngày (0:00 AM)"
+                - label: "Mỗi ngày lúc 0:00 AM"
                   value: "daily"
 
         target_input_text:
           name: 📝 Input Text Helper
-          description: Chọn input_text để lưu quote
+          description: >
+            Chọn input_text để lưu quote.
+            ⚠️ Giới hạn 255 ký tự — quote dài hơn sẽ tự động cắt bớt.
           selector:
             entity:
               filter:
@@ -60,7 +79,7 @@ blueprint:
       input:
         quote_types:
           name: 📚 Loại quote muốn lấy
-          description: Chọn các nguồn quote
+          description: Chọn các nguồn quote (chọn nhiều)
           default:
             - famous_quotes
             - vietnamese_proverbs
@@ -88,7 +107,9 @@ blueprint:
 
         allow_multiline:
           name: 📄 Cho phép xuống dòng
-          description: Bật nếu muốn quote có thể xuống dòng (với quote dài)
+          description: >
+            Bật nếu muốn quote có thể xuống dòng.
+            ⚠️ Một số input_text widget không hiển thị đúng khi có newline.
           default: false
           selector:
             boolean:
@@ -101,7 +122,8 @@ blueprint:
         ai_task_entity:
           name: 🧠 AI Task Entity
           description: Chọn AI entity để tạo quote
-          default: ai_task.google_ai_task
+          # FIX: bỏ hardcoded default ai_task.google_ai_task → [] để người dùng tự chọn
+          default: []
           selector:
             entity:
               filter:
@@ -110,7 +132,7 @@ blueprint:
         custom_instructions:
           name: 📝 Hướng dẫn tùy chỉnh (tùy chọn)
           description: Thêm yêu cầu riêng cho AI (ví dụ "chỉ lấy quote về thiên nhiên")
-          default: ''
+          default: ""
           selector:
             text:
               multiline: true
@@ -129,14 +151,22 @@ blueprint:
 
         notification_service:
           name: 📱 Notification Service
-          description: Chọn service thông báo (ví dụ notify.mobile_app_...)
-          default: ''
+          description: >
+            Chọn service thông báo.
+            Ví dụ: notify.mobile_app_ten_dien_thoai
+          default: ""
           selector:
             text:
 
+# ============================================================
+# MODE
+# ============================================================
 mode: single
 max_exceeded: silent
 
+# ============================================================
+# VARIABLES
+# ============================================================
 variables:
   update_interval: !input update_interval
   target_input_text: !input target_input_text
@@ -148,6 +178,10 @@ variables:
   enable_notification: !input enable_notification
   notification_service: !input notification_service
 
+# ============================================================
+# TRIGGER — tất cả intervals đều luôn fire
+# Condition bên dưới lọc đúng trigger theo setting của user
+# ============================================================
 trigger:
   - platform: time_pattern
     minutes: "/15"
@@ -177,57 +211,54 @@ trigger:
     at: "00:00:00"
     id: trigger_daily
 
+# ============================================================
+# CONDITION — chỉ cho chạy đúng trigger khớp với setting
+# ============================================================
 condition:
   - condition: template
     value_template: >
       {% set interval = update_interval %}
-      {% set trigger_id = trigger.id %}
-      {% if interval == '15min' and trigger_id == 'trigger_15min' %}
-        true
-      {% elif interval == '20min' and trigger_id == 'trigger_20min' %}
-        true
-      {% elif interval == '30min' and trigger_id == 'trigger_30min' %}
-        true
-      {% elif interval == 'every_hour' and trigger_id == 'trigger_1hour' %}
-        true
-      {% elif interval == '2hours' and trigger_id == 'trigger_2hours' %}
-        true
-      {% elif interval == '3hours' and trigger_id == 'trigger_3hours' %}
-        true
-      {% elif interval == '6hours' and trigger_id == 'trigger_6hours' %}
-        true
-      {% elif interval == '12hours' and trigger_id == 'trigger_12hours' %}
-        true
-      {% elif interval == 'daily' and trigger_id == 'trigger_daily' %}
-        true
-      {% else %}
-        false
-      {% endif %}
+      {% set tid = trigger.id %}
+      {{ (interval == '15min'      and tid == 'trigger_15min')
+      or (interval == '20min'      and tid == 'trigger_20min')
+      or (interval == '30min'      and tid == 'trigger_30min')
+      or (interval == 'every_hour' and tid == 'trigger_1hour')
+      or (interval == '2hours'     and tid == 'trigger_2hours')
+      or (interval == '3hours'     and tid == 'trigger_3hours')
+      or (interval == '6hours'     and tid == 'trigger_6hours')
+      or (interval == '12hours'    and tid == 'trigger_12hours')
+      or (interval == 'daily'      and tid == 'trigger_daily') }}
 
+# ============================================================
+# ACTION
+# ============================================================
 action:
+
+  # === BUILD DANH SÁCH NGUỒN QUOTE ===
   - variables:
+      # FIX: dùng namespace() đúng chuẩn Jinja2 HA
       quote_sources: >
-        {% set sources = [] %}
+        {% set ns = namespace(sources=[]) %}
         {% if 'famous_quotes' in quote_types %}
-          {% set sources = sources + ['danh ngôn nổi tiếng từ các nhân vật lịch sử, triết gia, nhà văn, nhà khoa học trên thế giới'] %}
+          {% set ns.sources = ns.sources + ['danh ngôn nổi tiếng từ các nhân vật lịch sử, triết gia, nhà văn, nhà khoa học trên thế giới'] %}
         {% endif %}
         {% if 'vietnamese_proverbs' in quote_types %}
-          {% set sources = sources + ['tục ngữ Việt Nam'] %}
+          {% set ns.sources = ns.sources + ['tục ngữ Việt Nam'] %}
         {% endif %}
         {% if 'vietnamese_folk_poems' in quote_types %}
-          {% set sources = sources + ['ca dao Việt Nam'] %}
+          {% set ns.sources = ns.sources + ['ca dao Việt Nam'] %}
         {% endif %}
         {% if 'life_wisdom' in quote_types %}
-          {% set sources = sources + ['châm ngôn về cuộc sống, suy ngẫm, triết lý sống'] %}
+          {% set ns.sources = ns.sources + ['châm ngôn về cuộc sống, suy ngẫm, triết lý sống'] %}
         {% endif %}
-        {{ sources | join(', ') }}
-      
+        {{ ns.sources | join(', ') if ns.sources | length > 0 else 'danh ngôn nổi tiếng' }}
+
       ai_instructions: >
         Hãy chọn ngẫu nhiên 1 câu từ các nguồn sau: {{ quote_sources }}.
-        
+
         YÊU CẦU:
         - Ưu tiên đa dạng quốc gia, tác giả, nguồn gốc
-        - Tránh lặp lại các nhân vật quá phổ biến (nếu vừa chọn Einstein lần trước thì lần này chọn người khác)
+        - Tránh lặp lại các nhân vật quá phổ biến
         - Nếu có tác giả xác định: ghi rõ tên tác giả
         - Nếu không có tác giả: ghi thể loại (Danh ngôn, Tục ngữ, Ca dao, Châm ngôn)
         - Viết tiếng Việt có dấu đầy đủ
@@ -241,38 +272,46 @@ action:
         {% else %}
         - Có thể xuống dòng nếu quote dài
         {% endif %}
-        {% if custom_instructions %}
-        
+        - Độ dài quote + tác giả KHÔNG quá 200 ký tự (vì input_text giới hạn 255)
+        {% if custom_instructions and custom_instructions != '' %}
+
         YÊU CẦU BỔ SUNG:
         {{ custom_instructions }}
         {% endif %}
-        
+
         Hãy chọn quote hay, ý nghĩa, truyền cảm hứng hoặc sâu sắc.
 
-  - action: ai_task.generate_data
+  # === GỌI AI ===
+  # FIX: thêm continue_on_error để automation không dừng nếu AI lỗi
+  - continue_on_error: true
+    action: ai_task.generate_data
     data:
       task_name: daily_quote_generator
       instructions: "{{ ai_instructions }}"
+      entity_id: "{{ ai_task_entity }}"
       structure:
         quote:
-          description: Câu nói nổi tiếng
+          description: Câu nói nổi tiếng (không quá 180 ký tự)
           required: true
           selector:
             text: null
         author:
-          description: Tác giả hoặc thể loại
+          description: Tác giả hoặc thể loại (không quá 50 ký tự)
           required: true
           selector:
             text: null
-      entity_id: "{{ ai_task_entity }}"
     response_variable: quote_result
 
-  - wait_template: |
-      {{ quote_result is defined and quote_result.data is defined
-         and quote_result.data.quote is defined and quote_result.data.author is defined }}
+  # === ĐỢI KẾT QUẢ AI ===
+  - wait_template: >
+      {{ quote_result is defined
+         and quote_result.data is defined
+         and quote_result.data.quote is defined
+         and quote_result.data.author is defined }}
     timeout: "00:01:00"
     continue_on_timeout: true
 
+  # === XỬ LÝ KẾT QUẢ ===
   - if:
       - condition: template
         value_template: "{{ wait.completed }}"
@@ -280,22 +319,38 @@ action:
       - variables:
           final_quote: "{{ quote_result.data.quote | trim }}"
           final_author: "{{ quote_result.data.author | trim }}"
-          full_text: "{{ final_quote }} - ({{ final_author }})"
+          full_text_raw: "{{ final_quote }} - ({{ final_author }})"
+          # FIX: truncate xuống 255 ký tự — giới hạn cứng của input_text
+          full_text: "{{ full_text_raw[:252] ~ '...' if full_text_raw | length > 255 else full_text_raw }}"
 
-      - action: input_text.set_value
+      # FIX: thêm continue_on_error phòng trường hợp entity không tồn tại
+      - continue_on_error: true
+        action: input_text.set_value
         target:
           entity_id: "{{ target_input_text }}"
         data:
           value: "{{ full_text }}"
 
+      # === GỬI THÔNG BÁO (nếu bật) ===
       - choose:
           - conditions:
               - condition: template
                 value_template: "{{ enable_notification and notification_service != '' }}"
             sequence:
-              - action: "{{ notification_service }}"
+              # FIX: thêm continue_on_error phòng service không tồn tại
+              - continue_on_error: true
+                action: "{{ notification_service }}"
                 data:
                   title: "💬 Quote mới"
                   message: "{{ full_text }}"
+
     else:
-      - stop: "AI Task không trả kết quả kịp thời"
+      # FIX: thay stop: bằng log warning graceful — không dừng automation đột ngột
+      # Giữ nguyên giá trị input_text cũ, không làm gì thêm
+      - action: system_log.write
+        data:
+          level: warning
+          message: >
+            [AI Quote Generator] AI Task không trả kết quả trong 60 giây.
+            Giữ nguyên quote hiện tại. Entity: {{ ai_task_entity }}
+        continue_on_error: true
