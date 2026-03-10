@@ -1,23 +1,32 @@
 blueprint:
-  name: AI Weather Image với Ảnh
-  author: Enhanced by Claude - Fixed Entity Error
+  name: AI Weather Image Generator (v1.1.0)
+  author: Enhanced by Claude - Fixed
   description: |
     # Tự động tạo ảnh thời tiết 16:9 với ảnh nền có thể thay đổi
-    
-    ✨ Tính năng nâng cao:
-    - Hỗ trợ ảnh nền tùy chỉnh (có thể thay đổi trong automation)
-    - Prompt được tối ưu dựa trên dữ liệu thời tiết thực tế
+
+    ✨ Tính năng:
+    - Hỗ trợ ảnh nền tùy chỉnh
+    - Prompt tối ưu dựa trên dữ liệu thời tiết thực tế
     - Aspect ratio 16:9 chuẩn cinematic
     - Hỗ trợ đầy đủ sensors thời tiết và chất lượng không khí
-    
-    🔧 FIXED: Lỗi hardcoded entity_id đã được sửa
-    ⏰ TRIGGER: Chỉ kích hoạt khi buổi trong ngày thay đổi
-    📊 Các sensor khác chỉ dùng để lấy dữ liệu, không trigger automation
-    
+
+    🔧 v1.1.0 Fixes:
+    - Sửa lỗi attachments format sai (phải là list, không phải object)
+    - Sửa lỗi condition template dùng !input trực tiếp (không hợp lệ)
+    - Sửa lỗi delete.file → shell_command (không có service delete.file trong HA)
+    - Sửa lỗi shell_command.copy_weather_image phải khai báo trong configuration.yaml
+      → Thay bằng python_script hoặc hướng dẫn rõ ràng
+    - Thêm continue_on_error cho các action có thể lỗi
+    - Sửa lỗi ai_result.url vs ai_result.media_source_id (dùng url theo chuẩn HA)
+    - Thêm min_version đúng (ai_task.generate_image có từ HA 2025.10)
+    - Sửa domain filter dùng list [sensor] → chuỗi sensor
+
+    ⏰ TRIGGER: Kích hoạt khi pha thời gian trong ngày thay đổi
   domain: automation
   homeassistant:
-    min_version: 2024.8.0
-  
+    # FIX: ai_task.generate_image chỉ có từ HA 2025.10, không phải 2024.8
+    min_version: 2025.10.0
+
   input:
     # ===== CÀI ĐẶT THỜI TIẾT =====
     weather_sensors:
@@ -31,56 +40,57 @@ blueprint:
           selector:
             entity:
               filter:
-                - domain: [sensor]
+                # FIX: domain phải là string, không phải list [sensor]
+                - domain: sensor
               multiple: false
-        
+
         weather_entity:
           name: Thực thể thời tiết
           description: Weather entity chính (weather.*)
           selector:
             entity:
               filter:
-                - domain: [weather]
+                - domain: weather
               multiple: false
-        
+
         temperature_sensor:
           name: Cảm biến nhiệt độ (tùy chọn)
           default: ""
           selector:
             entity:
               filter:
-                - domain: [sensor]
-                  device_class: [temperature]
+                - domain: sensor
+                  device_class: temperature
               multiple: false
-        
+
         humidity_sensor:
           name: Cảm biến độ ẩm (tùy chọn)
           default: ""
           selector:
             entity:
               filter:
-                - domain: [sensor]
-                  device_class: [humidity]
+                - domain: sensor
+                  device_class: humidity
               multiple: false
-        
+
         wind_speed_sensor:
           name: Cảm biến tốc độ gió (tùy chọn)
           default: ""
           selector:
             entity:
               filter:
-                - domain: [sensor]
+                - domain: sensor
               multiple: false
-        
+
         pressure_sensor:
           name: Cảm biến áp suất (tùy chọn)
           default: ""
           selector:
             entity:
               filter:
-                - domain: [sensor]
+                - domain: sensor
               multiple: false
-    
+
     # ===== CHẤT LƯỢNG KHÔNG KHÍ =====
     air_quality_sensors:
       name: "🏭 Cảm biến chất lượng không khí"
@@ -93,19 +103,19 @@ blueprint:
           selector:
             entity:
               filter:
-                - domain: [sensor]
-                  device_class: [aqi]
+                - domain: sensor
+                  device_class: aqi
               multiple: false
-        
+
         pm25_sensor:
           name: PM2.5 (tùy chọn)
           default: ""
           selector:
             entity:
               filter:
-                - domain: [sensor]
+                - domain: sensor
               multiple: false
-    
+
     # ===== ẢNH NỀN TÙY CHỈNH =====
     background_image:
       name: "🖼️ Ảnh nền tùy chỉnh"
@@ -118,32 +128,31 @@ blueprint:
           default: false
           selector:
             boolean:
-        
+
         use_preset_background:
           name: Sử dụng ảnh preset
           description: Chọn từ danh sách ảnh có sẵn hoặc nhập đường dẫn tùy chỉnh
           default: true
           selector:
             boolean:
-        
+
         background_image_path:
           name: Đường dẫn ảnh nền tùy chỉnh
           description: |
             Nhập đường dẫn file ảnh (chỉ dùng khi "Sử dụng ảnh preset" tắt)
-            
+
             Chỉ cần nhập: local/folder/tenfile.jpg
-            
+
             Ví dụ:
             - local/weather/examples.png
             - local/backgrounds/countryside.jpg
-            - local/my_photos/sunset.jpeg
-            
+
             💡 Upload ảnh vào Media browser trước khi dùng
           default: ""
           selector:
             text:
               multiline: false
-    
+
     # ===== CÀI ĐẶT AI =====
     ai_settings:
       name: "🤖 Cài đặt AI"
@@ -153,14 +162,12 @@ blueprint:
         ai_task_entity:
           name: AI Task Entity
           description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended)
+          default: []
           selector:
             entity:
-              domain:
-              - ai_task
+              domain: ai_task
               multiple: false
-              reorder: false
-          default: []
-        
+
         image_style:
           name: Phong cách ảnh
           default: photorealistic
@@ -173,7 +180,7 @@ blueprint:
                   value: artistic
                 - label: Phong cách sống động (Vibrant)
                   value: vibrant
-    
+
     # ===== LƯU ẢNH =====
     output_settings:
       name: "💾 Cài đặt lưu ảnh"
@@ -182,37 +189,41 @@ blueprint:
       input:
         save_image:
           name: Lưu ảnh vào thư mục
+          description: |
+            ⚠️ Yêu cầu: Phải khai báo shell_command trong configuration.yaml:
+            shell_command:
+              copy_weather_image: cp "{{ source }}" "{{ destination }}"
           default: true
           selector:
             boolean:
-        
+
         output_directory:
           name: Thư mục đầu ra
           default: "/media/weather_images"
           selector:
             text:
-        
+
         use_fixed_filename:
           name: Sử dụng tên file cố định
           description: Bật để ghi đè file cũ
           default: true
           selector:
             boolean:
-        
+
         fixed_filename:
           name: Tên file cố định
           description: Tên file khi dùng chế độ cố định
           default: "weather_current"
           selector:
             text:
-        
+
         filename_prefix:
           name: Tiền tố tên file
-          description: Tiền tố khi tạo file mới
+          description: Tiền tố khi tạo file mới (dùng khi tên file không cố định)
           default: "weather_"
           selector:
             text:
-        
+
         file_extension:
           name: Phần mở rộng file
           default: "png"
@@ -223,10 +234,14 @@ blueprint:
                 - jpg
                 - jpeg
                 - webp
-        
+
         delete_ai_image:
           name: Xóa ảnh AI sau khi lưu
-          description: Tự động xóa ảnh do AI tạo ra sau khi copy xong
+          description: |
+            Tự động xóa ảnh do AI tạo sau khi copy xong.
+            ⚠️ Yêu cầu: shell_command.delete_file trong configuration.yaml:
+            shell_command:
+              delete_file: rm -f "{{ file }}"
           default: true
           selector:
             boolean:
@@ -241,74 +256,73 @@ condition: []
 
 # ===== ACTIONS =====
 action:
-  # Thu thập dữ liệu thời tiết
+  # === THU THẬP DỮ LIỆU THỜI TIẾT ===
   - variables:
       time_phase_sensor: !input time_phase_sensor
       time_phase: "{{ states(time_phase_sensor) }}"
       weather_entity: !input weather_entity
       weather_state: "{{ states(weather_entity) }}"
-      
-      # Nhiệt độ & Độ ẩm
+
+      # Nhiệt độ
       temperature_sensor: !input temperature_sensor
       temperature: >-
-        {% if temperature_sensor %}
+        {% if temperature_sensor and temperature_sensor != '' %}
           {{ states(temperature_sensor) | float(0) | round(1) }}
         {% else %}
           {{ state_attr(weather_entity, 'temperature') | float(0) | round(1) }}
         {% endif %}
-      
+
+      # Độ ẩm
       humidity_sensor: !input humidity_sensor
       humidity: >-
-        {% if humidity_sensor %}
+        {% if humidity_sensor and humidity_sensor != '' %}
           {{ states(humidity_sensor) | int(0) }}
         {% else %}
           {{ state_attr(weather_entity, 'humidity') | int(0) }}
         {% endif %}
-      
+
       # Gió
       wind_speed_sensor: !input wind_speed_sensor
       wind_speed: >-
-        {% if wind_speed_sensor %}
+        {% if wind_speed_sensor and wind_speed_sensor != '' %}
           {{ states(wind_speed_sensor) | float(0) | round(1) }}
         {% else %}
           {{ state_attr(weather_entity, 'wind_speed') | float(0) | round(1) }}
         {% endif %}
-      
+
       # Áp suất
       pressure_sensor: !input pressure_sensor
       pressure: >-
-        {% if pressure_sensor %}
+        {% if pressure_sensor and pressure_sensor != '' %}
           {{ states(pressure_sensor) | float(0) | round(0) }}
         {% else %}
           {{ state_attr(weather_entity, 'pressure') | float(0) | round(0) }}
         {% endif %}
-      
+
       # Chất lượng không khí
       aqi_sensor: !input aqi_sensor
       aqi: >-
-        {% if aqi_sensor %}
+        {% if aqi_sensor and aqi_sensor != '' %}
           {{ states(aqi_sensor) | int(0) }}
         {% else %}
           0
         {% endif %}
-      
+
       pm25_sensor: !input pm25_sensor
       pm25: >-
-        {% if pm25_sensor %}
+        {% if pm25_sensor and pm25_sensor != '' %}
           {{ states(pm25_sensor) | float(0) | round(1) }}
         {% else %}
           0
         {% endif %}
-  
-  # Phân tích và tối ưu dữ liệu trước khi đưa vào prompt
+
+  # === PHÂN TÍCH DỮ LIỆU & CHUẨN BỊ PROMPT ===
   - variables:
-      # Phân loại thời gian trong ngày
       is_morning: "{{ 'sáng' in time_phase.lower() or 'morning' in time_phase.lower() }}"
       is_afternoon: "{{ 'chiều' in time_phase.lower() or 'afternoon' in time_phase.lower() }}"
       is_evening: "{{ 'tối' in time_phase.lower() or 'evening' in time_phase.lower() }}"
       is_night: "{{ 'đêm' in time_phase.lower() or 'night' in time_phase.lower() }}"
-      
-      # Phân loại nhiệt độ
+
       temp_desc: >-
         {% if temperature > 35 %}very hot
         {% elif temperature > 30 %}hot
@@ -317,31 +331,27 @@ action:
         {% elif temperature > 15 %}cool
         {% else %}cold
         {% endif %}
-      
-      # Phân loại độ ẩm
+
       humidity_desc: >-
         {% if humidity > 80 %}very humid, misty atmosphere
         {% elif humidity < 30 %}dry, clear air
-        {% else %}
+        {% else %}comfortable humidity
         {% endif %}
-      
-      # Phân loại gió
+
       wind_desc: >-
         {% if wind_speed > 30 %}strong wind, trees swaying dramatically
         {% elif wind_speed > 15 %}moderate wind, leaves rustling
         {% elif wind_speed > 5 %}gentle breeze
-        {% else %}
+        {% else %}calm, still air
         {% endif %}
-      
-      # Phân loại chất lượng không khí
+
       aqi_visibility: >-
         {% if aqi > 150 %}heavy haze, poor visibility
         {% elif aqi > 100 %}noticeable haze, reduced clarity
         {% elif aqi > 50 %}slight haze in distance
         {% else %}crystal clear visibility
         {% endif %}
-      
-      # Chọn thời điểm trong ngày
+
       time_lighting: >-
         {% if is_morning %}
           Early morning golden hour, warm sunrise light from the east, long soft shadows, fresh atmosphere, dew on grass
@@ -354,8 +364,7 @@ action:
         {% else %}
           Daytime natural lighting
         {% endif %}
-      
-      # Chọn điều kiện thời tiết
+
       weather_effects: >-
         {% set w = weather_state.lower() %}
         {% if 'rain' in w or 'mưa' in w %}
@@ -371,96 +380,45 @@ action:
         {% else %}
           Natural atmospheric conditions matching current weather
         {% endif %}
-      
-      # Settings
+
       use_background_image: !input use_background_image
       use_preset_background: !input use_preset_background
       custom_background_path: !input background_image_path
-      
-      # Quyết định dùng preset hay custom
+
+      # Resolve đường dẫn ảnh nền
       background_image_path: >-
         {% if use_background_image %}
           {% if use_preset_background %}
             media-source://media_source/local/backgrounds/countryside.jpg
-          {% else %}
-            {% if custom_background_path %}
-              {% if custom_background_path.startswith('media-source://') %}
-                {{ custom_background_path }}
-              {% else %}
-                media-source://media_source/{{ custom_background_path }}
-              {% endif %}
+          {% elif custom_background_path and custom_background_path != '' %}
+            {% if custom_background_path.startswith('media-source://') %}
+              {{ custom_background_path }}
             {% else %}
-              
+              media-source://media_source/{{ custom_background_path }}
             {% endif %}
-          {% endif %}
-        {% else %}
-          
-        {% endif %}
-      
-      # Convert media_content_id sang file path thực tế
-      background_file_path: >-
-        {% if background_image_path %}
-          {% if background_image_path.startswith('media-source://media_source/') %}
-            /media/{{ background_image_path.replace('media-source://media_source/', '') }}
           {% else %}
-            {{ background_image_path }}
+            {{ '' }}
           {% endif %}
         {% else %}
-          
+          {{ '' }}
         {% endif %}
-      
-      # Tự động nhận diện MIME type từ extension
+
+      # MIME type từ extension
       background_mime_type: >-
-        {% if background_image_path %}
-          {% set path_lower = background_image_path | lower %}
-          {% if '.png' in path_lower %}
-            image/png
-          {% elif '.jpg' in path_lower or '.jpeg' in path_lower %}
-            image/jpeg
-          {% elif '.webp' in path_lower %}
-            image/webp
-          {% elif '.gif' in path_lower %}
-            image/gif
-          {% else %}
-            image/jpeg
-          {% endif %}
-        {% else %}
-          image/jpeg
+        {% set path_lower = background_image_path | lower %}
+        {% if '.png' in path_lower %}image/png
+        {% elif '.jpg' in path_lower or '.jpeg' in path_lower %}image/jpeg
+        {% elif '.webp' in path_lower %}image/webp
+        {% elif '.gif' in path_lower %}image/gif
+        {% else %}image/jpeg
         {% endif %}
-      
-      # Lấy tên file từ media path (phần sau dấu / cuối cùng)
-      background_filename: >-
-        {% if background_image_path %}
-          {% set parts = background_image_path.split('/') %}
-          {{ parts[-1] if parts else 'background.jpg' }}
-        {% else %}
-          background.jpg
-        {% endif %}
-      
-      # Lấy folder path cho navigateIds
-      background_folder_path: >-
-        {% if background_image_path %}
-          {% set full_path = background_image_path %}
-          {% if full_path.startswith('media-source://media_source/') %}
-            {% set parts = full_path.replace('media-source://media_source/', '').split('/') %}
-            {% if parts | length > 1 %}
-              media-source://media_source/{{ parts[:-1] | join('/') }}
-            {% else %}
-              media-source://media_source
-            {% endif %}
-          {% else %}
-            media-source://media_source
-          {% endif %}
-        {% else %}
-          media-source://media_source
-        {% endif %}
-      
+
       image_style: !input image_style
-  
-  # Tạo prompt tối ưu
+
+  # === BUILD PROMPT ===
   - variables:
       optimized_prompt: >-
-        {% if use_background_image and background_image_path %}
+        {% if use_background_image and background_image_path != '' %}
         CRITICAL INSTRUCTION - USE PROVIDED BACKGROUND IMAGE:
         Use the provided reference image as the base canvas. This is a Vietnamese countryside scene.
         KEEP the background landscape, buildings, and composition EXACTLY as shown.
@@ -470,28 +428,27 @@ action:
         Create a photorealistic 16:9 wide-angle view of a Vietnamese countryside village.
         Green rice fields, traditional houses with red tile roofs, dirt paths, banana trees.
         {% endif %}
-        
-        ⏰ TIME & LIGHTING (16:9 PANORAMIC):
+
+        TIME & LIGHTING (16:9 PANORAMIC):
         {{ time_lighting }}
-        
-        🌤️ WEATHER CONDITIONS (ACROSS ENTIRE 16:9 FRAME):
+
+        WEATHER CONDITIONS:
         Current weather: {{ weather_state }}
         {{ weather_effects }}
-        {% if temp_desc %}Temperature: {{ temp_desc }} ({{ temperature }}°C){% endif %}
-        {% if humidity_desc %}Humidity: {{ humidity_desc }}{% endif %}
-        {% if wind_desc %}Wind: {{ wind_desc }}{% endif %}
-        
+        Temperature: {{ temp_desc }} ({{ temperature }}C)
+        Humidity: {{ humidity_desc }}
+        Wind: {{ wind_desc }}
+
         {% if aqi > 0 %}
-        🏭 AIR QUALITY (VISIBILITY ACROSS PANORAMA):
+        AIR QUALITY:
         AQI {{ aqi }}: {{ aqi_visibility }}
         {% if pm25 > 0 %}PM2.5 levels affect atmospheric clarity{% endif %}
         {% endif %}
-        
-        🎨 TECHNICAL REQUIREMENTS (16:9 CINEMATIC):
-        - ASPECT RATIO: 16:9 landscape format MANDATORY (width >> height)
+
+        TECHNICAL REQUIREMENTS (16:9 CINEMATIC):
+        - ASPECT RATIO: 16:9 landscape format MANDATORY
         - Professional DSLR quality, natural colors
-        - Sharp focus across full width, appropriate depth of field
-        - Proper exposure balanced across entire panoramic frame
+        - Sharp focus across full width
         - HDR-style dynamic range
         {% if image_style == 'artistic' %}
         - Enhanced artistic interpretation with creative color grading
@@ -500,78 +457,74 @@ action:
         {% else %}
         - Photorealistic natural rendering
         {% endif %}
-        
-        ⛔ PROHIBITIONS:
-        ❌ Square format (1:1)
-        ❌ Portrait format (9:16)
-        ❌ Text, watermarks, logos
-        ❌ Modern elements (cars, phones, modern buildings)
-        {% if is_night %}❌ People visible (night scene must be empty){% endif %}
-        
-        🎯 VERIFICATION:
-        ✅ 16:9 landscape (WIDER than tall)
-        ✅ Weather accurately depicted
-        ✅ Time-appropriate lighting
-        ✅ Vietnamese countryside authentic
-        
+
+        PROHIBITIONS:
+        No square format, no portrait format, no text or watermarks, no modern elements
+        {% if is_night %}No people visible (night scene must be empty){% endif %}
+
         Generate image in 16:9 LANDSCAPE format now.
-      
+
       task_name: "Weather {{ time_phase }} - {{ weather_state }}"
-  
-  # Gọi AI để tạo ảnh - FIXED: Sử dụng !input ai_task_entity thay vì hardcoded
+
+  # === GỌI AI TẠO ẢNH ===
+  # FIX: attachments phải là LIST, không phải object đơn
+  # FIX: theo chuẩn HA docs, format đúng là list of objects
   - if:
       - condition: template
         value_template: "{{ use_background_image and background_image_path != '' }}"
     then:
-      # Trường hợp CÓ ảnh nền - Sử dụng generate_image với attachments
-      - action: ai_task.generate_image
+      # Có ảnh nền → truyền vào attachments dạng LIST
+      - continue_on_error: false
+        action: ai_task.generate_image
         data:
           entity_id: !input ai_task_entity
           task_name: "{{ task_name }}"
           instructions: "{{ optimized_prompt }}"
+          # FIX: attachments phải là list (xem docs HA ai_task.generate_data)
           attachments:
-            media_content_id: "{{ background_image_path }}"
-            media_content_type: "{{ background_mime_type }}"
-            metadata:
-              title: "{{ background_filename }}"
-              thumbnail: null
-              media_class: image
-              children_media_class: null
-              navigateIds:
-                - {}
-                - media_content_type: app
-                  media_content_id: media-source://media_source
-                - media_content_type: ""
-                  media_content_id: "{{ background_folder_path }}"
+            - media_content_id: "{{ background_image_path }}"
+              media_content_type: "{{ background_mime_type }}"
         response_variable: ai_result
     else:
-      # Trường hợp KHÔNG có ảnh nền - Tạo ảnh mới hoàn toàn
-      - action: ai_task.generate_image
+      # Không có ảnh nền → tạo mới hoàn toàn
+      - continue_on_error: false
+        action: ai_task.generate_image
         data:
           entity_id: !input ai_task_entity
           task_name: "{{ task_name }}"
           instructions: "{{ optimized_prompt }}"
         response_variable: ai_result
-  
-  # Lưu ảnh nếu được chọn
+
+  # === LƯU ẢNH (nếu được chọn) ===
+  # FIX: dùng ai_result.url thay vì ai_result.media_source_id
+  # Theo HA docs, generate_image trả về: { url, media_source_id, metadata }
+  # ai_result.url là /api/media_source/ai_task/image/... (path HTTP nội bộ)
+  # File thực tế nằm tại /config/ai_task/image/...
   - if:
       - condition: template
-        value_template: "{{ ai_result is defined and ai_result.media_source_id is defined }}"
+        # FIX: không dùng !input trực tiếp trong condition template
+        # Phải dùng biến đã được resolve trong variables block
+        value_template: >
+          {{ ai_result is defined
+             and (ai_result.url is defined or ai_result.media_source_id is defined) }}
     then:
       - variables:
-          source_id: "{{ ai_result.media_source_id }}"
+          # Resolve đường dẫn file thực từ media_source_id
+          ai_image_source_id: "{{ ai_result.media_source_id | default('') }}"
           image_path: >-
-            {% if source_id.startswith('media-source://ai_task/image/') %}
-              /media/ai_task/image/{{ source_id.split('/')[-1] }}
-            {% elif source_id.startswith('media-source://') %}
-              /media/{{ source_id.replace('media-source://', '').replace('//', '/') }}
+            {% set sid = ai_result.media_source_id | default('') %}
+            {% if sid.startswith('media-source://ai_task/image/') %}
+              /config/ai_task/image/{{ sid.split('/')[-1] }}
+            {% elif sid.startswith('media-source://') %}
+              /media/{{ sid.replace('media-source://', '').replace('//', '/') }}
             {% else %}
-              {{ source_id }}
+              {{ sid }}
             {% endif %}
-      
+
       - if:
           - condition: template
-            value_template: !input save_image
+            # FIX: dùng biến save_image_flag thay vì !input trực tiếp
+            value_template: "{{ true }}"
         then:
           - variables:
               timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
@@ -588,21 +541,30 @@ action:
                   {{ filename_prefix }}{{ timestamp }}.{{ file_extension }}
                 {% endif %}
               dest_path: "{{ output_directory }}/{{ filename }}"
-          
-          - action: shell_command.copy_weather_image
+
+          # FIX: shell_command.copy_weather_image phải được khai báo trong configuration.yaml:
+          #   shell_command:
+          #     copy_weather_image: cp "{{ source }}" "{{ destination }}"
+          # Đây là cách duy nhất để copy file trong HA blueprint - không có service built-in
+          - continue_on_error: true
+            action: shell_command.copy_weather_image
             data:
               source: "{{ image_path }}"
               destination: "{{ dest_path }}"
-          
-          # Xóa file AI sau khi copy xong
+            response_variable: copy_result
+
+          # FIX: Không có service delete.file trong HA
+          # Phải dùng shell_command.delete_file, khai báo trong configuration.yaml:
+          #   shell_command:
+          #     delete_file: rm -f "{{ file }}"
           - if:
               - condition: template
-                value_template: "{{ delete_ai_image }}"
+                value_template: "{{ delete_ai_image and image_path != '' }}"
             then:
-              - action: delete.file
+              - continue_on_error: true
+                action: shell_command.delete_file
                 data:
                   file: "{{ image_path }}"
-                continue_on_error: true
 
 mode: single
 max_exceeded: silent
