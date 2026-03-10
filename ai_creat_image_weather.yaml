@@ -1,6 +1,6 @@
 blueprint:
-  name: AI Weather Image Generator (v1.1.0)
-  author: Enhanced by Claude - Fixed
+  name: AI creat Image weather
+  author: TriTue2011
   description: |
     # Tự động tạo ảnh thời tiết 16:9 với ảnh nền có thể thay đổi
 
@@ -568,3 +568,4 @@ action:
 
 mode: single
 max_exceeded: silent
+
