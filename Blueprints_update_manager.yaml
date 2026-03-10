@@ -1,5 +1,5 @@
 blueprint:
-  name: Blueprints Update Manager with Zalo
+  name: Tự động update blueprints
   description: Quản lý việc kiểm tra và cập nhật blueprints tự động với thông báo qua Zalo
   domain: automation
   input:
@@ -322,4 +322,5 @@ action:
 # single: khong chay song song
 # silent: neu dang chay thi bo qua trigger moi (khong bao loi)
 mode: single
+
 max_exceeded: silent
