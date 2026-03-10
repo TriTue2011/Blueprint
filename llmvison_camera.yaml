@@ -1,9 +1,12 @@
 blueprint:
-  name: AI Door Entry Event Summary with Zalo (v1.2.2)
+  name: LLM Vision Camera
   author: Custom
   homeassistant:
     min_version: 2024.10.0
-  description: AI-powered summaries for door entry events with person detection and Zalo notification support. Analyzes camera when door opens and person is detected in the area.
+  description: >
+    AI-powered summaries for door entry events with person detection and Zalo
+    notification support. Analyzes camera when door opens and person is detected
+    in the area.
   domain: automation
   source_url: https://github.com/custom/door-entry-ai-summary
 
@@ -14,19 +17,21 @@ blueprint:
         entity:
           filter:
             - domain: binary_sensor
+
     door_from_state:
       name: Door From State
       default: "off"
       selector:
         select:
-          options: ["off","on"]
+          options: ["off", "on"]
           custom_value: true
+
     door_to_state:
       name: Door To State
       default: "on"
       selector:
         select:
-          options: ["on","off"]
+          options: ["on", "off"]
           custom_value: true
 
     person_occupancy_sensor:
@@ -35,18 +40,21 @@ blueprint:
         entity:
           filter:
             - domain: binary_sensor
+
     person_detected_state:
       name: Person Detected State
       default: "on"
       selector:
         select:
-          options: ["on","off"]
+          options: ["on", "off"]
           custom_value: true
+
     wait_for_person:
       name: Wait for Person Detection
       default: true
       selector:
         boolean: {}
+
     person_wait_time:
       name: Person Detection Wait Time
       default:
@@ -55,6 +63,7 @@ blueprint:
         seconds: 0
       selector:
         duration: {}
+
     max_wait_time:
       name: Maximum Wait Time (Optional)
       description: 0 = unlimited
@@ -92,6 +101,7 @@ blueprint:
               multiple: true
               filter:
                 - domain: camera
+
         duration:
           name: Duration
           default: 5
@@ -100,6 +110,7 @@ blueprint:
               min: 1
               max: 60
               step: 1
+
         max_frames:
           name: Max Frames
           default: 3
@@ -119,26 +130,36 @@ blueprint:
           default: true
           selector:
             boolean: {}
+
         use_memory:
           name: Use Memory
           default: false
           selector:
             boolean: {}
+
         message:
           name: Prompt
-          default: "Analyze the door entry event. Identify who entered (person description, clothing, items carried), their actions, and any notable details. If multiple people are present, describe each person. Focus on security-relevant information. Present the information naturally without mentioning images."
+          default: >
+            Analyze the door entry event. Identify who entered (person
+            description, clothing, items carried), their actions, and any
+            notable details. If multiple people are present, describe each
+            person. Focus on security-relevant information. Present the
+            information naturally without mentioning images.
           selector:
             text:
               multiline: true
+
         provider:
           name: Provider
           selector:
             config_entry:
               integration: llmvision
+
         model:
           name: Model
           selector:
             text: {}
+
         target_width:
           name: Target Width
           default: 1280
@@ -147,6 +168,7 @@ blueprint:
               min: 512
               max: 3840
               step: 1
+
         max_tokens:
           name: Maximum Tokens
           default: 5000
@@ -165,17 +187,20 @@ blueprint:
           default: true
           selector:
             boolean: {}
+
         take_snapshot:
           name: Take Snapshot
           description: Chụp ảnh từ camera khi cửa mở để dùng cho notify/Zalo
           default: true
           selector:
             boolean: {}
+
         condition_notify:
           name: Condition to Notify
           default: []
           selector:
             condition: {}
+
         notify_device:
           name: Notify Device
           default: []
@@ -184,6 +209,7 @@ blueprint:
               multiple: true
               filter:
                 - integration: mobile_app
+
         notification_delivery:
           name: Notification Delivery
           default: Dynamic
@@ -192,6 +218,7 @@ blueprint:
               options:
                 - Dynamic
                 - Consolidated
+
         preview_mode:
           name: Preview Mode
           default: Snapshot
@@ -200,6 +227,7 @@ blueprint:
               options:
                 - Snapshot
                 - Live Preview
+
         analysis_mode:
           name: Analysis Mode
           default: Snapshot
@@ -208,18 +236,20 @@ blueprint:
               options:
                 - Snapshot
                 - Live Preview
+
         notification_time:
           name: Notification Time
-          default: ''
+          default: ""
           selector:
             select:
               options:
                 - label: No Time Added
-                  value: ''
+                  value: ""
                 - label: 12 Hour
                   value: "at {{ now().strftime('%-I:%M %p') }}"
                 - label: 24 Hour
                   value: "at {{ now().strftime('%H:%M') }}"
+
         file_path:
           name: File Path
           default: /media/llmvision/snapshots/{{ camera_file_path }}/last_entry.jpg
@@ -231,11 +261,13 @@ blueprint:
                 - label: Public Folder - Unsecured
                   value: /config/www/snapshots/{{ camera_file_path }}/last_entry.jpg
               custom_value: true
+
         tap_navigate:
           name: Tap Navigate
           default: /lovelace/0
           selector:
             text: {}
+
         delay_notification:
           name: Notification Cooldown
           default: 60
@@ -245,11 +277,13 @@ blueprint:
               max: 86400
               step: 1
               mode: box
+
         notification_sticky:
           name: Sticky - Android Only
           default: true
           selector:
             boolean: {}
+
         notification_color:
           name: Notification Color - Android Only
           default: "#03a9f4"
@@ -265,16 +299,19 @@ blueprint:
                 - label: Green - #4caf50
                   value: "#4caf50"
               custom_value: true
+
         notification_icon:
           name: Notification Icon - Android Only
           default: mdi:door-open
           selector:
             icon: {}
+
         notification_channel:
           name: Notification Channel - Android Only
           default: "Door Entry"
           selector:
             text: {}
+
         notification_sound:
           name: Notification Sound - iOS Only
           default: default
@@ -286,6 +323,7 @@ blueprint:
                 - label: None
                   value: none
               custom_value: true
+
         notification_volume:
           name: Volume Sound - iOS Only
           default: 1
@@ -294,6 +332,7 @@ blueprint:
               min: 0
               max: 1
               step: 0.1
+
         notification_critical:
           name: Critical Notification - iOS Only
           default: false
@@ -310,26 +349,33 @@ blueprint:
           default: false
           selector:
             boolean: {}
+
         zalo_group_id:
           name: Zalo Group ID
-          default: ''
+          description: >
+            ID nhóm hoặc người dùng Zalo. Nhập dạng text để tránh mất độ
+            chính xác với số lớn (VD: 3295299208151385728).
+          default: ""
           selector:
             text: {}
+
         zalo_phone:
           name: Zalo Acc
-          default: '+84000000000'
+          default: "+84000000000"
           selector:
             text: {}
+
         zalo_types:
           name: Zalo Type
-          default: '0'
+          default: "0"
           selector:
             select:
               options:
                 - label: User
-                  value: '0'
+                  value: "0"
                 - label: Group
-                  value: '1'
+                  value: "1"
+
         zalo_ttl:
           name: TTL
           default: 0
@@ -337,8 +383,9 @@ blueprint:
             number:
               min: 0
               max: 86400000
+              # FIX: đổi step từ 1 thành 1000 (đơn vị ms, step 1 vô nghĩa)
               step: 1000
-              unit_of_measurement: seconds
+              unit_of_measurement: ms
 
     experimental_section:
       name: Additional Settings
@@ -351,6 +398,9 @@ blueprint:
           selector:
             action: {}
 
+# ============================================================
+# VARIABLES
+# ============================================================
 variables:
   door_contact: !input door_contact_sensor
   door_from_state: !input door_from_state
@@ -387,10 +437,17 @@ variables:
   camera_entities_list: !input camera_entities
   camera_entity: "{{ camera_entities_list[0] if camera_entities_list else '' }}"
   camera_entity_snapshot: "{{ camera_entities_list[0] if camera_entities_list else '' }}"
-  camera_file_path: "{{ camera_entity_snapshot.replace('camera.','') }}"
+  camera_file_path: "{{ camera_entity_snapshot.replace('camera.', '') }}"
   file_path: !input file_path
-  snapshot_access_file_path: "{{ file_path | replace('/config/www','/local') | replace('/media','/media/local') }}"
-  snapshot_access_file_path_social: "{{ file_path | replace('/media/local','/media') }}"
+
+  # FIX: sửa replace đúng prefix để path hợp lệ khi truy cập qua HA
+  snapshot_access_file_path: >
+    {{ file_path | replace('/config/www', '/local') | replace('/media', '/media/local') }}
+  # FIX: sửa từ replace('/media/local','/media') → replace('/media/llmvision','/media')
+  # vì file_path gốc có dạng /media/llmvision/... không phải /media/local/...
+  snapshot_access_file_path_social: >
+    {{ file_path | replace('/media/llmvision', '/media') }}
+
   tag: "{{ camera_entity + int(as_timestamp(now())) | string }}"
   label: "Door Entry Detected"
   notification_time: !input notification_time
@@ -407,6 +464,9 @@ variables:
 max_exceeded: silent
 mode: single
 
+# ============================================================
+# TRIGGER
+# ============================================================
 trigger:
   - platform: state
     entity_id: !input door_contact_sensor
@@ -414,12 +474,19 @@ trigger:
     from: !input door_from_state
     to: !input door_to_state
 
+# ============================================================
+# CONDITION
+# ============================================================
 condition:
   - condition: and
     conditions: !input run_conditions
 
+# ============================================================
+# ACTION
+# ============================================================
 action:
-  # 1. Chờ người (nếu bật)
+
+  # === 1. WAIT FOR PERSON (nếu bật) ===
   - choose:
       - conditions:
           - condition: template
@@ -453,7 +520,7 @@ action:
                           seconds: "{{ max_wait_time }}"
                         continue_on_timeout: true
 
-  # 2. Notify ban đầu (nếu bật)
+  # === 2. NOTIFY BAN ĐẦU (ảnh placeholder "analyzing...") ===
   - if:
       - condition: template
         value_template: "{{ notify }}"
@@ -463,33 +530,41 @@ action:
         then:
           - if:
               - condition: template
-                value_template: "{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds > delay_notification }}"
+                # FIX: dùng .total_seconds() thay vì .seconds
+                # .seconds chỉ trả về phần giây (0-59), không phải tổng giây
+                value_template: >
+                  {{ not this.attributes.last_triggered or
+                     (now() - this.attributes.last_triggered).total_seconds() > delay_notification }}
             then:
               - choose:
                   - conditions:
                       - condition: template
                         value_template: "{{ notification_delivery == 'Dynamic' }}"
                     sequence:
-                      # 2a. chụp snapshot nếu được bật và chế độ là snapshot
+                      # 2a. Chụp snapshot nếu được bật
                       - if:
                           - condition: template
                             value_template: "{{ take_snapshot and preview_mode == 'Snapshot' }}"
                         then:
-                          - service: camera.snapshot
+                          - continue_on_error: true
+                            service: camera.snapshot
                             target:
                               entity_id: !input camera_entities
                             data:
                               filename: !input file_path
-                      # 2b. gửi notify
+
+                      # 2b. Gửi notify ban đầu
                       - repeat:
                           for_each: "{{ device_name_map }}"
                           sequence:
                             - choose:
                                 - conditions:
                                     - condition: template
-                                      value_template: "{{ take_snapshot and preview_mode == 'Snapshot' }}"
+                                      value_template: >
+                                        {{ take_snapshot and preview_mode == 'Snapshot' }}
                                   sequence:
-                                    - action: "notify.{{ repeat.item }}"
+                                    - continue_on_error: true
+                                      action: "notify.{{ repeat.item }}"
                                       data:
                                         title: "{{ label }} {{ notification_time }}"
                                         message: "Door opened, analyzing entry..."
@@ -515,11 +590,13 @@ action:
                                               name: !input notification_sound
                                               volume: !input notification_volume
                                               critical: "{{ notification_critical }}"
+
                                 - conditions:
                                     - condition: template
                                       value_template: "{{ preview_mode == 'Live Preview' }}"
                                   sequence:
-                                    - action: "notify.{{ repeat.item }}"
+                                    - continue_on_error: true
+                                      action: "notify.{{ repeat.item }}"
                                       data:
                                         title: "{{ label }} {{ notification_time }}"
                                         message: "Door opened, analyzing entry..."
@@ -537,9 +614,11 @@ action:
                                               name: !input notification_sound
                                               volume: !input notification_volume
                                               critical: "{{ notification_critical }}"
+
                                 - conditions: []
                                   sequence:
-                                    - action: "notify.{{ repeat.item }}"
+                                    - continue_on_error: true
+                                      action: "notify.{{ repeat.item }}"
                                       data:
                                         title: "{{ label }} {{ notification_time }}"
                                         message: "Door opened, analyzing entry..."
@@ -549,8 +628,9 @@ action:
                                           group: !input notification_channel
                                           alert_once: true
 
-  # 3. Gọi AI phân tích
-  - alias: Analyze door entry event
+  # === 3. GỌI AI PHÂN TÍCH ===
+  - alias: "Analyze door entry event"
+    continue_on_error: true
     action: llmvision.stream_analyzer
     data:
       image_entity: "{{ [camera_entity] }}"
@@ -568,21 +648,33 @@ action:
       max_tokens: !input max_tokens
     response_variable: response
 
-  # 4. Cập nhật label
+  # === 4. CẬP NHẬT LABEL TỪ AI ===
   - variables:
-      label: "{{ response.title }}"
+      # FIX: thêm default phòng trường hợp AI lỗi / timeout → response.title undefined
+      label: "{{ response.title | default('Door Entry Detected') }}"
+      ai_response_text: "{{ response.response_text | default('') }}"
+      # FIX: chuẩn hoá key_frame path an toàn
+      ai_key_frame: >
+        {% if response.key_frame is defined and response.key_frame != '' %}
+          {{ response.key_frame }}
+        {% else %}
+          {{ snapshot_access_file_path_social }}
+        {% endif %}
 
-  # 5. Cập nhật notify bằng summary
+  # === 5. CẬP NHẬT NOTIFY VỚI KẾT QUẢ AI ===
   - if:
       - condition: template
-        value_template: "{{ notify }}"
+        value_template: "{{ notify and ai_response_text != '' }}"
     then:
       - if:
           - condition: !input condition_notify
         then:
           - if:
               - condition: template
-                value_template: "{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds > delay_notification }}"
+                # FIX: dùng .total_seconds() thay vì .seconds
+                value_template: >
+                  {{ not this.attributes.last_triggered or
+                     (now() - this.attributes.last_triggered).total_seconds() > delay_notification }}
             then:
               - choose:
                   - conditions:
@@ -592,12 +684,17 @@ action:
                       - repeat:
                           for_each: "{{ device_name_map }}"
                           sequence:
-                            - action: "notify.{{ repeat.item }}"
+                            - continue_on_error: true
+                              action: "notify.{{ repeat.item }}"
                               data:
                                 title: "{{ label }} {{ notification_time }}"
-                                message: "{{ response.response_text }}"
+                                message: "{{ ai_response_text }}"
                                 data:
-                                  image: "{{ response.key_frame.replace('/media','/media/local') }}"
+                                  # FIX: thêm replace đúng để path hợp lệ
+                                  image: >
+                                    {{ ai_key_frame | replace('/media', '/media/local')
+                                       if ai_key_frame.startswith('/media/')
+                                       else ai_key_frame }}
                                   url: !input tap_navigate
                                   clickAction: !input tap_navigate
                                   tag: "{{ tag }}"
@@ -610,7 +707,8 @@ action:
                                   notification_icon: !input notification_icon
                                   sticky: !input notification_sticky
                                   push:
-                                    interruption-level: "{{ 'passive' if notification_delivery == 'Dynamic' else 'active' }}"
+                                    interruption-level: >
+                                      {{ 'passive' if notification_delivery == 'Dynamic' else 'active' }}
                                     sound:
                                       name: !input notification_sound
                                       volume: !input notification_volume
@@ -618,7 +716,11 @@ action:
                                   actions:
                                     - action: URI
                                       title: See Snapshot
-                                      uri: "{{ response.key_frame.replace('/media','/media/local') }}"
+                                      uri: >
+                                        {{ ai_key_frame | replace('/media', '/media/local')
+                                           if ai_key_frame.startswith('/media/')
+                                           else ai_key_frame }}
+
                   - conditions:
                       - condition: template
                         value_template: "{{ analysis_mode == 'Live Preview' }}"
@@ -626,10 +728,11 @@ action:
                       - repeat:
                           for_each: "{{ device_name_map }}"
                           sequence:
-                            - action: "notify.{{ repeat.item }}"
+                            - continue_on_error: true
+                              action: "notify.{{ repeat.item }}"
                               data:
                                 title: "{{ label }} {{ notification_time }}"
-                                message: "{{ response.response_text }}"
+                                message: "{{ ai_response_text }}"
                                 data:
                                   entity_id: "{{ camera_entity }}"
                                   url: !input tap_navigate
@@ -647,53 +750,68 @@ action:
                                   actions:
                                     - action: URI
                                       title: See Snapshot
-                                      uri: "{{ response.key_frame.replace('/media','/media/local') }}"
+                                      uri: >
+                                        {{ ai_key_frame | replace('/media', '/media/local')
+                                           if ai_key_frame.startswith('/media/')
+                                           else ai_key_frame }}
 
-  # 6. Gửi Zalo (có 3 trường hợp tách rõ)
+  # === 6. GỬI ZALO ===
   - if:
       - condition: template
-        value_template: "{{ include_zalo_notify }}"
+        # FIX: thêm guard kiểm tra zalo_group_id và zalo_phone không rỗng
+        value_template: >
+          {{ include_zalo_notify
+             and zalo_group_id | trim | length > 0
+             and zalo_phone | trim | length > 0 }}
     then:
       - choose:
-          # 6.1. Có key_frame từ AI
+          # 6.1. Có key_frame từ AI → ưu tiên dùng
           - conditions:
               - condition: template
-                value_template: "{{ response.key_frame is defined and response.key_frame != '' }}"
+                value_template: >
+                  {{ response.key_frame is defined and response.key_frame | trim != '' }}
             sequence:
-              - action: zalo_bot.send_image
+              - continue_on_error: true
+                action: zalo_bot.send_image
                 data:
                   type: !input zalo_types
                   ttl: !input zalo_ttl
-                  image_path: "{{ response.key_frame.replace('/media/local','/media') }}"
-                  message: "{{ response.response_text }}"
-                  thread_id: !input zalo_group_id
+                  # FIX: key_frame từ llmvision đã là /media/... không cần replace /media/local
+                  image_path: "{{ response.key_frame | replace('/media/local', '/media') }}"
+                  message: "{{ ai_response_text }}"
+                  thread_id: "{{ zalo_group_id | trim }}"
                   account_selection: !input zalo_phone
+
           # 6.2. Không có key_frame nhưng có snapshot
           - conditions:
               - condition: template
                 value_template: "{{ take_snapshot }}"
             sequence:
-              - action: zalo_bot.send_image
+              - continue_on_error: true
+                action: zalo_bot.send_image
                 data:
                   type: !input zalo_types
                   ttl: !input zalo_ttl
                   image_path: "{{ snapshot_access_file_path_social }}"
-                  message: "{{ response.response_text }}"
-                  thread_id: !input zalo_group_id
+                  message: "{{ ai_response_text }}"
+                  thread_id: "{{ zalo_group_id | trim }}"
                   account_selection: !input zalo_phone
+
+        # 6.3. Không có ảnh → chỉ gửi text
         default:
-          - action: zalo_bot.send_image
+          - continue_on_error: true
+            action: zalo_bot.send_image
             data:
               type: !input zalo_types
               ttl: !input zalo_ttl
               image_path: ""
-              message: "{{ response.response_text }}"
-              thread_id: !input zalo_group_id
+              message: "{{ ai_response_text }}"
+              thread_id: "{{ zalo_group_id | trim }}"
               account_selection: !input zalo_phone
 
-  # 7. Additional actions
+  # === 7. ADDITIONAL ACTIONS ===
   - choose: []
     default: !input additional_actions
 
-  # 8. Cooldown
+  # === 8. COOLDOWN ===
   - delay: !input cooldown
