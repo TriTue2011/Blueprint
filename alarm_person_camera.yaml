@@ -1,6 +1,6 @@
 blueprint:
-  name: AI Camera Event Summary (v2.1.0 + Zalo)
-  author: valentinfrlch + Custom + AI Task Integration + Zalo
+  name: Alarm person camera by ai
+  author: TriTue2011
   homeassistant:
     min_version: 2025.7.0
   description: >
@@ -1046,3 +1046,4 @@ action:
   - delay:
       seconds: "{{ num_delay_actions }}"
   - delay: !input cooldown
+
