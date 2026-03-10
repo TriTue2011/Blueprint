@@ -1,6 +1,6 @@
 blueprint:
-  name: LLM Vision Camera
-  author: Custom
+  name: LLM Vision camera
+  author: TriTue2011
   homeassistant:
     min_version: 2024.10.0
   description: >
@@ -815,3 +815,4 @@ action:
 
   # === 8. COOLDOWN ===
   - delay: !input cooldown
+
