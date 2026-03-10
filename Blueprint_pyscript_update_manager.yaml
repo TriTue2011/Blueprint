@@ -2,7 +2,7 @@
 # Import: Settings > Automations > Blueprints > Import Blueprint
 # Yeu cau: Home Assistant >= 2024.10.0
 blueprint:
-  name: Pyscript Update Manager
+  name: Tự động update Pýcript
   description: >
     Sync file / folder tu GitHub ve /config/pyscript.
     Config chinh doc tu /config/scripts/pyscript_sync.conf.
@@ -351,4 +351,5 @@ action:
 # single: khong chay song song
 # silent: neu dang chay thi bo qua trigger moi (khong bao loi)
 mode: single
+
 max_exceeded: silent
