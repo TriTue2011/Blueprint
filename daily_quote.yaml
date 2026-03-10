@@ -1,5 +1,5 @@
 blueprint:
-  name: AI Quote Generator - Tự động lấy danh ngôn (v1.1.0 Fixed)
+  name: Tự động lấy danh ngôn
   description: >
     Tự động lấy câu danh ngôn, châm ngôn, ca dao, tục ngữ ngẫu nhiên từ AI và cập nhật vào input_text.
 
@@ -354,3 +354,4 @@ action:
             [AI Quote Generator] AI Task không trả kết quả trong 60 giây.
             Giữ nguyên quote hiện tại. Entity: {{ ai_task_entity }}
         continue_on_error: true
+
