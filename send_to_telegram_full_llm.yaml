@@ -1,20 +1,54 @@
 blueprint:
   name: Voice - Send to Telegram
-  author: luuquangvu + merged
+  author: luuquangvu
   source_url: https://github.com/luuquangvu/tutorials/blob/main/send_to_telegram_full_llm.yaml
   description: |-
-    Tool for sending content to Telegram used for Voice Assistant.
-    Supports information, location, and image.
-    Resolves local/ image paths and optionally deletes images after sending.
-  domain: script
+    # Tool for sending content to Telegram used for Voice Assistant
 
+    ## Blueprint Setup
+
+    ### Required
+
+    - Create a Telegram bot if it does not already exist using Telegram BotFather.
+    - The Pyscript integration needs to be installed through HACS and properly configured.
+    - The `scripts/telegram_bot_handle_tool.py` script needs to be copied into the `config/pyscript` folder.
+    - The `scripts/requirements.txt` file needs to be copied into the `config/pyscript` folder.
+    - The mentioned file(s) is/are included in the repository.
+    - You need to enable two Pyscript options through the UI or via YAML to allow importing all Python packages and to make hass available as a global variable.
+    - A Telegram bot token needs to be configured in `config/configuration.yaml` and `config/secrets.yaml`.
+
+    ```
+    # File configuration.yaml
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+      telegram_bot_token: !secret telegram_bot_token
+    ```
+
+    ```
+    # File secrets.yaml
+    telegram_bot_token: XXXXXX      # Retrieve the token from the Telegram BotFather.
+    ```
+
+    ### Optional
+
+    - Using this custom script as an additional tool, instead of the Telegram bot integration, along with the Telegram Bot Webhook blueprint, enables smooth two-way communication between the Telegram bot and Home Assistant.
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    - Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for sending user requested content to Telegram.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+  domain: script
   homeassistant:
     min_version: 2024.10.0
-
   input:
     telegram_settings:
       name: Settings for Telegram
       icon: mdi:send-circle
+      description: Use these settings to configure Telegram for sending the message or image.
       input:
         chat_id:
           name: Chat ID
@@ -31,98 +65,79 @@ blueprint:
           default:
         delete_after_send:
           name: Delete Image After Sending
-          description: Automatically delete the image file after it has been sent.
+          description: Automatically delete the image file after it has been sent to Telegram.
           selector:
             boolean: {}
           default: true
-
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
+      description: Use these options to fine-tune the prompts that guide your LLM when preparing summaries, details, locations, or image paths.
       collapsed: true
       input:
         summary_prompt:
           name: Summary Prompt
+          description: Prompt shown to the LLM to request the message summary or image caption.
           selector:
             text:
               multiline: true
           default: |-
-            This argument is mandatory and must always be included.
-            Provide a short summary (<=10 words).
-            No markdown, emojis, or commentary.
-            If content_type is image, write a concise caption.
-            Return only plain text.
-
+            Mandatory. ≤10 words overview (person/object/location). If image, write caption. Plain text only. For multiple items, use separate tool calls.
         detail_prompt:
           name: Detail Prompt
+          description: Prompt shown to the LLM to request optional supporting details for the message or image.
           selector:
             text:
               multiline: true
           default: |-
-            Optional detailed information.
-            No links, no markdown/emojis.
-            Do not repeat the summary.
-            Return only plain text.
-
+            Optional. Full details. No links/markdown/emojis. Avoid repeating summary. Return plain text only.
         content_type_prompt:
           name: Content Type Prompt
+          description: Prompt shown to the LLM to decide if the tool should send information, a location, or an image.
           selector:
             text:
               multiline: true
           default: |-
-            Mandatory.
-            Return exactly one: information, location, image.
-            Choose location for any place/map intent.
-            Choose image when sending a photo with a path.
-            Otherwise choose information.
-
+            Mandatory. exactly one: information, location, image. location=place/address/map. image=visual media (+ image_path).
+            When submitting multiple items, use separate tool calls for each.
         location_prompt:
           name: Location Prompt
+          description: Prompt shown to the LLM to request the location value when sending a place.
           selector:
             text:
               multiline: true
           default: |-
-            Optional. Use only when content_type is location.
-            Return address name only.
-            No punctuation.
-
+            Optional for location. Address only. No commas/punctuation. Regular spaces.
         image_path_prompt:
           name: Image Path Prompt
+          description: Prompt shown to the LLM to request the media path when sending an image.
           selector:
             text:
               multiline: true
           default: |-
-            Optional. Use only when content_type is image.
-            Provide an existing local/ or /media/ image path.
-            Do not guess.
-
+            Optional for image. Existing path (local/ or /media/). Do not guess if unknown.
         chat_id_override_prompt:
           name: Chat ID Override Prompt
+          description: Prompt shown to the LLM to request an alternate chat when needed.
           selector:
             text:
               multiline: true
           default: |-
-            Optional.
-            Use only when user explicitly specifies another chat.
-            Return exact Telegram chat ID only.
-
+            Optional. User-specified Telegram ID. Digits only (can be negative). No commentary.
         message_thread_id_override_prompt:
           name: Message Thread ID Override Prompt
+          description: Prompt shown to the LLM to request a different topic when needed.
           selector:
             text:
               multiline: true
           default: |-
-            Optional.
-            Use only when user specifies another topic.
-            Return numeric thread ID only.
-
+            Optional. User-specified numeric thread/topic ID. Digits only.
 mode: queued
 max: 30
 max_exceeded: silent
-
+description: Sends text messages, locations, or images via Telegram. Use for notifications, automated alerts, and sharing location or visual media.
 variables:
-  version: 20251116
-
+  version: 20260207
 fields:
   summary:
     name: Summary
@@ -130,13 +145,11 @@ fields:
     selector:
       text:
     required: true
-
   detail:
     name: Detail
     description: !input detail_prompt
     selector:
       text:
-
   content_type:
     name: Content Type
     description: !input content_type_prompt
@@ -147,50 +160,41 @@ fields:
           - location
           - image
     required: true
-
   location:
     name: Location
     description: !input location_prompt
     selector:
       text:
-
   image_path:
     name: Image Path
     description: !input image_path_prompt
     selector:
       text:
-
   target_chat_id:
     name: Override Chat ID
     description: !input chat_id_override_prompt
     selector:
       text:
-
   target_message_thread_id:
     name: Override Thread ID
     description: !input message_thread_id_override_prompt
     selector:
       text:
-
 sequence:
   - variables:
       default_chat_id: !input chat_id
       default_thread_id: !input thread_id
       delete_after_send: !input delete_after_send
-
-      summary: "{{ summary | trim }}"
+      summary: "{{ summary | default('') | trim }}"
       detail: "{{ detail | default('') | trim }}"
-      content_type: "{{ content_type | trim }}"
+      content_type: "{{ content_type | default('') | trim }}"
       location: "{{ location | default('') | trim }}"
       image_path: "{{ image_path | default('') | trim }}"
-
       override_chat_id: "{{ target_chat_id | default('') | trim }}"
       override_message_thread_id: "{{ target_message_thread_id | default('') | trim }}"
-
       chat_id_value: >-
-        {% set c = override_chat_id if override_chat_id else default_chat_id %}
-        {{ c | string | trim if c else '' }}
-
+        {% set candidate = override_chat_id if override_chat_id else default_chat_id %}
+        {{ '' if candidate is none else (candidate | string | trim) }}
       message_thread_id_value: >-
         {% if override_message_thread_id %}
           {{ override_message_thread_id }}
@@ -199,22 +203,14 @@ sequence:
         {% else %}
           {{ '' }}
         {% endif %}
-
-      image_path_resolved: >-
-        {% if image_path.startswith('local/') %}
-          {{ '/media/' ~ image_path[6:] }}
-        {% else %}
-          {{ image_path }}
-        {% endif %}
-
-  - alias: Validate inputs
+  - alias: Check if variables were set correctly
     if:
       - condition: template
         value_template: >-
           {{
-            not summary
-            or content_type not in ['information','location','image']
-            or not chat_id_value
+            (not summary)
+            or (content_type not in ['information', 'location', 'image'])
+            or (not chat_id_value)
             or (content_type == 'location' and not location)
             or (content_type == 'image' and not image_path)
             or (
@@ -223,10 +219,18 @@ sequence:
             )
           }}
     then:
-      - stop: Invalid input for sending Telegram message.
-
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: >-
+              Unable to send the message to Telegram because one or more inputs are missing or invalid (summary, content_type, chat_id, location, image_path, or message_thread_id).
+      - alias: Stop the script
+        stop: Unable to send the message to Telegram due to invalid inputs.
+        response_variable: response
   - choose:
-      - conditions: "{{ content_type == 'information' }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ content_type == 'information' }}"
         sequence:
           - action: pyscript.send_telegram_message
             data:
@@ -238,11 +242,13 @@ sequence:
 
                 {{ detail | e }}{% endif %}
 
-                {% set q = summary.split() | join('+') %}
-                <a href="https://www.google.com/search?q={{ q }}">Google Search</a>
+                {% set query = summary.split() | join('+') -%}
+                {% set url = 'https://www.google.com/search?q=' ~ query -%}
+                <a href="{{ url }}">Google Search</a>
             response_variable: telegram_response
-
-      - conditions: "{{ content_type == 'location' }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ content_type == 'location' }}"
         sequence:
           - action: pyscript.send_telegram_message
             data:
@@ -254,31 +260,31 @@ sequence:
 
                 {{ detail | e }}{% endif %}
 
-                {% set p = (summary ~ ' ' ~ location).split() | join('+') %}
-                <a href="https://www.google.com/maps/search/?api=1&query={{ p }}">Google Maps</a>
+                {% set place = (summary ~ ' ' ~ location).split() | join('+') -%}
+                {% set url = 'https://www.google.com/maps/search/?api=1&query=' ~ place -%}
+                <a href="{{ url }}">Google Maps</a>
             response_variable: telegram_response
-
-      - conditions: "{{ content_type == 'image' }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ content_type == 'image' }}"
         sequence:
           - action: pyscript.send_telegram_photo
             data:
               chat_id: "{{ chat_id_value }}"
               message_thread_id: "{{ message_thread_id_value }}"
               parse_mode: HTML
-              file_path: "{{ image_path_resolved }}"
+              file_path: "{{ image_path }}"
               caption: |-
                 <b>{{ summary | e }}</b>{% if detail %}
 
                 {{ detail | e }}{% endif %}
             response_variable: telegram_response
-
           - if:
               - condition: template
                 value_template: "{{ delete_after_send }}"
             then:
               - action: delete.file
                 data:
-                  file: "{{ image_path_resolved }}"
-
+                  file: "{{ image_path }}"
   - stop: ""
     response_variable: telegram_response
