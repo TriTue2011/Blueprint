@@ -1,5 +1,5 @@
 blueprint:
-  name: Alarm person camera by ai
+  name: Cảnh báo người qua camera bằng ai
   author: TriTue2011
   homeassistant:
     min_version: 2025.7.0
@@ -1046,4 +1046,5 @@ action:
   - delay:
       seconds: "{{ num_delay_actions }}"
   - delay: !input cooldown
+
 
