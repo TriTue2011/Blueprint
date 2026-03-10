@@ -1,0 +1,325 @@
+blueprint:
+  name: Blueprints Update Manager with Zalo
+  description: Quản lý việc kiểm tra và cập nhật blueprints tự động với thông báo qua Zalo
+  domain: automation
+  input:
+    update_mode:
+      name: Chế độ cập nhật
+      description: Chọn loại cập nhật muốn thực hiện
+      selector:
+        select:
+          options:
+            - label: "Kiểm tra cập nhật (Check)"
+              value: "check"
+            - label: "Cập nhật tất cả (Update All)"
+              value: "update_all"
+            - label: "Cập nhật chính blueprint này (Update Self)"
+              value: "update_self"
+            - label: "Cập nhật blueprint cụ thể (Update Specific)"
+              value: "update_specific"
+            - label: "Cập nhật nhiều blueprints (Update Multiple)"
+              value: "update_multiple"
+      default: "check"
+
+    schedule_enabled:
+      name: Bật lịch tự động
+      description: Tự động chạy theo lịch (chỉ cho chế độ Check)
+      selector:
+        boolean:
+      default: false
+
+    schedule_hour:
+      name: Giờ kiểm tra
+      description: Giờ trong ngày để kiểm tra cập nhật (0-23)
+      selector:
+        number:
+          min: 0
+          max: 23
+          mode: slider
+      default: 3
+
+    specific_blueprint_path:
+      name: Đường dẫn blueprint cụ thể
+      description: Đường dẫn đến file blueprint (dùng cho Update Specific)
+      selector:
+        text:
+      default: "./automation/example/example.yaml"
+
+    multiple_blueprints:
+      name: Danh sách blueprints
+      description: Các đường dẫn blueprint, mỗi dòng một file (dùng cho Update Multiple)
+      selector:
+        text:
+          multiline: true
+      default: |
+        ./automation/example/test-1.yaml
+        ./script/example/test-2.yaml
+
+    reload_after_update:
+      name: Reload sau khi cập nhật
+      description: Tự động reload automations và scripts sau khi cập nhật
+      selector:
+        boolean:
+      default: true
+
+    notification_section:
+      name: Notification Settings
+      icon: mdi:bell
+      collapsed: true
+      input:
+        notify_enabled:
+          name: Bật thông báo
+          description: Gửi thông báo khi có cập nhật
+          selector:
+            boolean:
+          default: false
+
+        notify_device:
+          name: Thiết bị nhận thông báo
+          description: Chọn thiết bị di động để nhận thông báo
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+                - integration: mobile_app
+
+        notification_channel:
+          name: Notification Channel - Android Only
+          default: "Blueprint Updates"
+          selector:
+            text: {}
+
+        notification_color:
+          name: Notification Color - Android Only
+          default: "#03a9f4"
+          selector:
+            select:
+              options:
+                - label: Steelblue - #03a9f4
+                  value: "#03a9f4"
+                - label: Green - #4caf50
+                  value: "#4caf50"
+                - label: Orange - #ff9800
+                  value: "#ff9800"
+              custom_value: true
+
+        notification_icon:
+          name: Notification Icon - Android Only
+          default: mdi:update
+          selector:
+            icon: {}
+
+    zalo_settings:
+      name: Zalo Notification Settings
+      icon: mdi:message-image-outline
+      collapsed: true
+      input:
+        include_zalo_notify:
+          name: Bật thông báo Zalo
+          description: Gửi thông báo qua Zalo khi có cập nhật
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_group_id:
+          name: Zalo Group ID
+          description: ID nhóm Zalo để gửi thông báo
+          default: ''
+          selector:
+            text: {}
+
+        zalo_phone:
+          name: Zalo Account
+          description: Số điện thoại tài khoản Zalo
+          default: '+84000000000'
+          selector:
+            text: {}
+
+        zalo_types:
+          name: Zalo Type
+          default: '0'
+          selector:
+            select:
+              options:
+                - label: User
+                  value: '0'
+                - label: Group
+                  value: '1'
+
+        zalo_ttl:
+          name: TTL (Time To Live)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400000
+              step: 1000
+              unit_of_measurement: milliseconds
+
+# FIX: dung trigger_variables thay vi !input truc tiep trong enabled
+# tranh loi tren mot so phien ban HA
+trigger_variables:
+  _schedule_enabled: !input schedule_enabled
+
+trigger:
+  - platform: time_pattern
+    hours: !input schedule_hour
+    id: scheduled_check
+    enabled: "{{ _schedule_enabled }}"
+
+  - platform: event
+    event_type: blueprints_update_trigger
+    id: manual_trigger
+
+condition: []
+
+variables:
+  update_mode: !input update_mode
+  specific_blueprint_path: !input specific_blueprint_path
+  multiple_blueprints: !input multiple_blueprints
+  reload_after_update: !input reload_after_update
+  notify_enabled: !input notify_enabled
+  notify_devices: !input notify_device
+  notification_channel: !input notification_channel
+  notification_color: !input notification_color
+  notification_icon: !input notification_icon
+  include_zalo_notify: !input include_zalo_notify
+  zalo_group_id: !input zalo_group_id
+  zalo_phone: !input zalo_phone
+  zalo_types: !input zalo_types
+  zalo_ttl: !input zalo_ttl
+
+  device_name_map: >
+    {% set ns = namespace(device_names=[]) %}
+    {% for device_id in notify_devices %}
+      {% set device_name = device_attr(device_id, "name") %}
+      {% set sanitized_name = "mobile_app_" + device_name | slugify %}
+      {% set ns.device_names = ns.device_names + [sanitized_name] %}
+    {% endfor %}
+    {{ ns.device_names }}
+
+  update_time: "{{ now().strftime('%H:%M:%S %d/%m/%Y') }}"
+
+action:
+
+  - variables:
+      start_ts: "{{ as_timestamp(now()) }}"
+
+  # Gọi shell script
+  - action: shell_command.blueprints_update
+    data:
+      arguments: >
+        {% if update_mode == 'check' %}
+        {% elif update_mode == 'update_all' %}
+        --update
+        {% elif update_mode == 'update_self' %}
+        --update --file self
+        {% elif update_mode == 'update_specific' %}
+        --update --file "{{ specific_blueprint_path }}"
+        {% else %}
+        --update
+        {% endif %}
+    response_variable: cmd_result
+
+  # Phân tích stdout
+  - variables:
+      raw_output: "{{ cmd_result.stdout }}"
+      updated_list: >
+        {% set ns = namespace(files=[], current='') %}
+        {% for line in raw_output.split('\n') %}
+          {% if line.startswith('> ') %}
+            {% set ns.current = line | replace('> ','') %}
+          {% endif %}
+          {% if '-! blueprint updated!' in line %}
+            {% if ns.current != '' %}
+              {% set ns.files = ns.files + [ns.current] %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.files }}
+
+      uptodate_count: "{{ raw_output.count('-> blueprint up-2-date') }}"
+      failed_count: "{{ raw_output.count('download failed') }}"
+      nosource_count: "{{ raw_output.count('no source_url') }}"
+      total_files: "{{ raw_output.count('> ') }}"
+      update_count: "{{ updated_list | length }}"
+      duration: "{{ (as_timestamp(now()) - start_ts) | float | round(2) }}"
+      update_time: "{{ now().strftime('%H:%M:%S %d/%m/%Y') }}"
+
+  # Reload nếu có thay đổi
+  - if:
+      - condition: template
+        value_template: "{{ update_count | int > 0 and reload_after_update }}"
+    then:
+      - parallel:
+          - action: automation.reload
+          - action: script.reload
+
+  # Logbook Summary
+  - action: logbook.log
+    data:
+      name: Blueprint Update
+      message: >
+        Total: {{ total_files }} |
+        Updated: {{ update_count }} |
+        Up-to-date: {{ uptodate_count }} |
+        Failed: {{ failed_count }} |
+        No source_url: {{ nosource_count }} |
+        Time: {{ duration }}s
+
+  # Mobile Notification
+  - if:
+      - condition: template
+        value_template: "{{ notify_enabled and update_count | int > 0 }}"
+    then:
+      - repeat:
+          for_each: "{{ device_name_map }}"
+          sequence:
+            - action: "notify.{{ repeat.item }}"
+              data:
+                title: "Blueprint Updated ({{ update_count }})"
+                message: >
+                  🔄 {{ update_count }} updated / {{ total_files }}
+
+                  {% for f in updated_list %}
+                  • {{ f }}
+                  {% endfor %}
+
+                  ⏱ {{ duration }}s
+
+  # Zalo Notification
+  - if:
+      - condition: template
+        value_template: "{{ include_zalo_notify }}"
+    then:
+      - action: zalo_bot.send_message
+        data:
+          type: !input zalo_types
+          ttl: !input zalo_ttl
+          thread_id: !input zalo_group_id
+          account_selection: !input zalo_phone
+          message: >
+            📋 BLUEPRINT UPDATE REPORT
+
+            📊 Summary
+            • Total: {{ total_files }}
+            • Updated: {{ update_count }}
+            • Up-to-date: {{ uptodate_count }}
+            • Failed: {{ failed_count }}
+            • No source_url: {{ nosource_count }}
+            {% if update_count | int > 0 %}
+
+            🔄 Updated Files:
+            {% for f in updated_list %}
+            • {{ f }}
+            {% endfor %}
+            {% endif %}
+
+            ⏱ Duration: {{ duration }}s
+            ⏰ {{ update_time }}
+
+# single: khong chay song song
+# silent: neu dang chay thi bo qua trigger moi (khong bao loi)
+mode: single
+max_exceeded: silent

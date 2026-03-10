@@ -1,0 +1,55 @@
+blueprint:
+  name: Check Device Source (Multi-Entity)
+  author: luuquangvu
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/check_device_source_multi.yaml
+  description: |-
+    # Phân biệt 3 nguồn: Tay vật lý / App / Automation
+    - Hỗ trợ nhiều entity trong 1 automation
+    - Quy ước đặt tên: input_select.source_<entity_object_id>
+    - Options phải có đủ: manual | app | auto
+  domain: automation
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    linked_entities:
+      name: Danh sách thiết bị
+      description: Chọn tất cả Switch/Light cần theo dõi
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - domain:
+                - switch
+                - light
+
+mode: parallel
+max_exceeded: silent
+
+variables:
+  version: 20251209
+  select_id: "input_select.source_{{ trigger.entity_id.split('.')[1] }}"
+  source: >
+    {% if trigger.to_state.context.parent_id is not none %}
+      auto
+    {% elif trigger.to_state.context.user_id is not none %}
+      app
+    {% else %}
+      manual
+    {% endif %}
+
+triggers:
+  - trigger: state
+    entity_id: !input linked_entities
+    from:
+      - "on"
+      - "off"
+    to:
+      - "on"
+      - "off"
+
+actions:
+  - action: input_select.select_option
+    target:
+      entity_id: "{{ select_id }}"
+    data:
+      option: "{{ source }}"
