@@ -1,11 +1,11 @@
 blueprint:
   name: Voice - Send to Zalo (Ultimate)
-  author: luuquangvu + ultimate merge
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/send_to_zalo_bot_full_llm.yaml
+  author: TriTue2011 nguồn luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/send_to_zalo_bot_full_llm.yaml
   description: |-
-    Ultimate Zalo sender for Voice Assistant.
-    Supports information, location, image.
-    Resolves local paths and safely deletes temporary images after sending.
+    Công cụ gửi nội dung qua Zalo cho Voice Assistant.
+    Hỗ trợ gửi thông tin, vị trí, hình ảnh.
+    Tự động chuyển đổi đường dẫn local và xóa ảnh tạm sau khi gửi.
   domain: script
 
   homeassistant:
@@ -157,9 +157,9 @@ sequence:
       delete_after_send: !input delete_after_send
       delete_delay: !input delete_delay
 
-      summary: "{{ summary | trim }}"
+      summary: "{{ summary | default('') | trim }}"
       detail: "{{ detail | default('') | trim }}"
-      content_type: "{{ content_type | trim }}"
+      content_type: "{{ content_type | default('') | trim }}"
       location: "{{ location | default('') | trim }}"
       image_path: "{{ image_path | default('') | trim }}"
       override_chat_id: "{{ target_chat_id | default('') | trim }}"
@@ -193,10 +193,18 @@ sequence:
             or (content_type == 'image' and not image_path)
           }}
     then:
+      - variables:
+          zalo_response:
+            error: >-
+              Invalid input for sending Zalo message. Check summary,
+              content_type, chat_id, location, or image_path.
       - stop: Invalid input for sending Zalo message.
+        response_variable: zalo_response
 
   - choose:
-      - conditions: "{{ content_type == 'information' }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ content_type == 'information' }}"
         sequence:
           - action: pyscript.send_zalo_message
             data:
@@ -206,11 +214,13 @@ sequence:
 
                 {{ detail }}{% endif %}
 
-                {% set q = summary.split() | join('+') %}
+                {% set q = summary | urlencode -%}
                 Google Search (https://www.google.com/search?q={{ q }})
             response_variable: zalo_response
 
-      - conditions: "{{ content_type == 'location' }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ content_type == 'location' }}"
         sequence:
           - action: pyscript.send_zalo_message
             data:
@@ -220,11 +230,13 @@ sequence:
 
                 {{ detail }}{% endif %}
 
-                {% set p = (summary ~ ' ' ~ location).split() | join('+') %}
+                {% set p = (summary ~ ' ' ~ location) | urlencode -%}
                 Google Maps (https://www.google.com/maps/search/?api=1&query={{ p }})
             response_variable: zalo_response
 
-      - conditions: "{{ content_type == 'image' }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ content_type == 'image' }}"
         sequence:
           - action: pyscript.send_zalo_photo
             data:
@@ -246,5 +258,14 @@ sequence:
                 data:
                   file: "{{ image_path_resolved }}"
 
+  - alias: Build final response
+    variables:
+      final_response: >-
+        {% if zalo_response is defined and zalo_response %}
+          {{ zalo_response }}
+        {% else %}
+          {{ { 'error': 'No response received from Zalo service. Check pyscript logs.' } }}
+        {% endif %}
+
   - stop: ""
-    response_variable: zalo_response
+    response_variable: final_response

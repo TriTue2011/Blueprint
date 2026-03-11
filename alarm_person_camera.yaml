@@ -8,7 +8,7 @@ blueprint:
     AI qua điện thoại, Telegram, Zalo và TTS ra loa.
     Hỗ trợ HA 2026.3+: continue_on_error cho các action gửi thông báo.
   domain: automation
-  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/AI_Camera_Event_Summary_Zalo.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/alarm_person_camera.yaml
 
   input:
     trigger_section:
@@ -663,7 +663,7 @@ action:
         sequence:
           - alias: "Gửi ảnh qua Telegram"
             continue_on_error: true
-            service: telegram_bot.send_photo
+            action: telegram_bot.send_photo
             data: >
               {% set data = {
                 'config_entry_id': telegram_config_entry,
@@ -867,7 +867,7 @@ action:
                         value_template: "{{ include_telegram_notify }}"
                     then:
                       - continue_on_error: true
-                        service: telegram_bot.send_message
+                        action: telegram_bot.send_message
                         data: >
                           {% set data = {
                             'config_entry_id': telegram_config_entry,
@@ -998,7 +998,7 @@ action:
                     value_template: "{{ include_telegram_notify }}"
                 then:
                   - continue_on_error: true
-                    service: telegram_bot.send_message
+                    action: telegram_bot.send_message
                     data: >
                       {% set data = {
                         'config_entry_id': telegram_config_entry,

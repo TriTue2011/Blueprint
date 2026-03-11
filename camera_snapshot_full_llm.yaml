@@ -1,29 +1,11 @@
 blueprint:
   name: Voice - Capture Camera Snapshot
-  author: luuquangvu
-  description: "# Tool for capturing camera snapshots used for Voice Assistant\n##
-    Blueprint Setup\n### Required\n* A template sensor stores all information about
-    entity aliases needs to be configured in `config/configuration.yaml`; The sensor
-    is required for friendly-name lookup.\n```\n#File configuration.yaml\nshell_command:\n
-    \ get_entity_alias: jq '[.data.entities[] | select(.options.conversation.should_expose
-    == true and (.aliases | length > 0)) | {entity_id, aliases}]' ./.storage/core.entity_registry\ntemplate:\n
-    \ - triggers:\n      - trigger: homeassistant\n        event: start\n      - trigger:
-    event\n        event_type: event_template_reloaded\n    actions:\n      - action:
-    shell_command.get_entity_alias\n        response_variable: response\n    sensor:\n
-    \     - name: \"Assist: Entity IDs and Aliases\"\n        unique_id: entity_ids_and_aliases\n
-    \       icon: mdi:format-list-bulleted\n        device_class: timestamp\n        state:
-    \"{{ now().isoformat() }}\"\n        attributes:\n          entities: \"{{ response.stdout
-    }}\"\n\n```\n* Ensure the directory defined in the snapshot settings exists (default
-    is `/media`).\n### Optional\n* Adjust the prompts for each field used in the script.
-    The descriptions guide the LLM to provide the correct input.\n### Note\n* Provide
-    a concise and precise description for the script. This will be utilized by the
-    LLM to understand it should use this script for capturing a snapshot from a camera.\n*
-    Make sure to expose camera entities to Assist.\n* Make sure to expose the script
-    to Assist after the script has been saved.\n* Do not alter the default script
-    name.\n* Once the script is created, click the three dots in the top right corner,
-    choose \"Edit in YAML,\" and remove the `description: ...` line to restore the
-    default. This step is important because it helps the LLM better understand the
-    script's purpose."
+  author: TriTue2011 nguồn luuquangvu
+  description: >
+    Công cụ chụp ảnh camera cho Voice Assistant.
+    Yêu cầu template sensor lưu entity aliases trong configuration.yaml.
+    Hỗ trợ tìm camera theo friendly name và alias.
+    Nhớ expose camera và script cho Assist sau khi lưu.
   domain: script
   homeassistant:
     min_version: 2024.10.0
@@ -100,7 +82,7 @@ blueprint:
             Door Camera").
 
             The tool will return a local file path to the generated snapshot.'
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/camera_snapshot_full_llm.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/camera_snapshot_full_llm.yaml
 mode: parallel
 max_exceeded: silent
 description: Takes a snapshot from a specified camera.

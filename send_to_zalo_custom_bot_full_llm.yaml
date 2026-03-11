@@ -1,26 +1,27 @@
 blueprint:
   name: Voice - Send to Zalo
-  author: luuquangvu
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/send_to_zalo_custom_bot_full_llm.yaml
+  author: TriTue2011 nguồn luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/send_to_zalo_custom_bot_full_llm.yaml
   description: |-
-    # Tool for sending content to Zalo used for Voice Assistant
+    # Công cụ gửi nội dung qua Zalo cho Voice Assistant
 
-    ## Blueprint Setup
+    ## Hướng dẫn cài đặt
 
-    ### Required
+    ### Bắt buộc
 
-    - The Zalo Bot integration must be installed through HACS and properly configured.
+    - Phải cài đặt Zalo Bot integration qua HACS và cấu hình đúng.
+    - Cài đặt integration `delete-file-home-assistant` qua HACS nếu dùng tính năng xóa ảnh sau khi gửi.
 
-    ### Optional
+    ### Tùy chọn
 
-    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+    - Điều chỉnh các prompt cho từng trường. Mô tả sẽ hướng dẫn LLM cung cấp đầu vào đúng.
 
-    ### Note
+    ### Lưu ý
 
-    - Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for sending user requested content to Zalo.
-    - Make sure to expose the script to Assist after the script has been saved.
-    - Do not alter the default script name.
-    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+    - Cung cấp mô tả ngắn gọn và chính xác cho script để LLM hiểu đây là script gửi nội dung qua Zalo.
+    - Nhớ expose script cho Assist sau khi lưu.
+    - Không thay đổi tên script mặc định.
+    - Sau khi tạo script, nhấn dấu 3 chấm góc trên phải, chọn "Edit in YAML", xóa dòng description để khôi phục mặc định.
   domain: script
   homeassistant:
     min_version: 2024.10.0
@@ -170,6 +171,7 @@ sequence:
         {% else %}
           {{ path }}
         {% endif %}
+
   - alias: Check if variables were set correctly
     if:
       - condition: template
@@ -185,10 +187,13 @@ sequence:
         variables:
           response:
             error: >-
-              Unable to send the message to Zalo because one or more inputs are missing or invalid (summary, content_type, account, thread_id, receiver, location, or image_path).
+              Unable to send the message to Zalo because one or more inputs are
+              missing or invalid (summary, content_type, account, thread_id,
+              receiver, location, or image_path).
       - alias: Stop the script
         stop: Unable to send the message to Zalo due to invalid inputs.
         response_variable: response
+
   - choose:
       - conditions:
           - condition: template
@@ -204,10 +209,11 @@ sequence:
 
                 {{ detail }}{% endif %}
 
-                {% set query = summary.split() | join('+') -%}
+                {% set query = summary | urlencode -%}
                 {% set url = 'https://www.google.com/search?q=' ~ query -%}
                 Google Search ({{ url }})
               ttl: !input ttl
+
       - conditions:
           - condition: template
             value_template: "{{ content_type == 'location' }}"
@@ -222,10 +228,11 @@ sequence:
 
                 {{ detail }}{% endif %}
 
-                {% set place = (summary ~ ' ' ~ location).split() | join('+') -%}
+                {% set place = (summary ~ ' ' ~ location) | urlencode -%}
                 {% set url = 'https://www.google.com/maps/search/?api=1&query=' ~ place -%}
                 Google Maps ({{ url }})
               ttl: !input ttl
+
       - conditions:
           - condition: template
             value_template: "{{ content_type == 'image' }}"
@@ -241,6 +248,7 @@ sequence:
 
                 {{ detail }}{% endif %}
               ttl: !input ttl
+
           - if:
               - condition: template
                 value_template: "{{ delete_after_send }}"
@@ -248,11 +256,13 @@ sequence:
               - action: delete.file
                 data:
                   file: "{{ image_path_resolved }}"
+
   - alias: Prepare success response for Assist
     variables:
       response:
         success: >-
           Sent the {{ content_type }} "{{ summary }}" to Zalo (thread
           {{ default_thread_id | default('unspecified') }}) successfully.
+
   - stop: Finish and return response data
     response_variable: response
