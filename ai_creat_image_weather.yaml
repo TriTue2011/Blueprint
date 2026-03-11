@@ -494,7 +494,7 @@ action:
           image_path: >-
             {% set sid = ai_result.media_source_id | default('') %}
             {% if sid.startswith('media-source://ai_task/image/') %}
-              /config/ai_task/image/{{ sid.split('/')[-1] }}
+              /config/media/ai_task/image/{{ sid.split('/')[-1] }}
             {% elif sid.startswith('media-source://') %}
               /media/{{ sid.replace('media-source://', '').replace('//', '/') }}
             {% else %}
