@@ -1,5 +1,5 @@
 blueprint:
-  name: Tạo ảnh thời tiết bằng ai
+  name: Tạo ảnh thời tiết bằng ai
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/ai_creat_image_weather.yaml
   description: |
@@ -13,7 +13,6 @@ blueprint:
     ⏰ TRIGGER: Kích hoạt khi pha thời gian trong ngày thay đổi
   domain: automation
   homeassistant:
-    
     min_version: 2025.10.0
 
   input:
@@ -29,7 +28,6 @@ blueprint:
           selector:
             entity:
               filter:
-                # FIX: domain phải là string, không phải list [sensor]
                 - domain: sensor
               multiple: false
 
@@ -181,7 +179,8 @@ blueprint:
           description: |
             ⚠️ Yêu cầu: Phải khai báo shell_command trong configuration.yaml:
             shell_command:
-              copy_weather_image: cp "{{ source }}" "{{ destination }}"
+              copy_weather_image: mv "{{ source }}" "{{ destination }}"
+            💡 Dùng mv thay vì cp — vừa copy vừa xóa ảnh gốc cùng lúc.
           default: true
           selector:
             boolean:
@@ -228,10 +227,10 @@ blueprint:
           name: Xóa ảnh AI sau khi lưu
           description: |
             Tự động xóa ảnh do AI tạo sau khi copy xong.
-            ⚠️ Yêu cầu: shell_command.delete_file trong configuration.yaml:
-            shell_command:
-              delete_file: rm -f "{{ file }}"
-          default: true
+            💡 Nếu dùng mv trong copy_weather_image thì ảnh gốc đã bị xóa tự động.
+            Tùy chọn này dùng delete.file integration (HACS) như một bước dự phòng.
+            ⚠️ Yêu cầu: Cài đặt integration delete-file-home-assistant qua HACS.
+          default: false
           selector:
             boolean:
 
@@ -456,8 +455,6 @@ action:
       task_name: "Weather {{ time_phase }} - {{ weather_state }}"
 
   # === GỌI AI TẠO ẢNH ===
-  # FIX: attachments phải là LIST, không phải object đơn
-  # FIX: theo chuẩn HA docs, format đúng là list of objects
   - if:
       - condition: template
         value_template: "{{ use_background_image and background_image_path != '' }}"
@@ -469,7 +466,6 @@ action:
           entity_id: !input ai_task_entity
           task_name: "{{ task_name }}"
           instructions: "{{ optimized_prompt }}"
-          # FIX: attachments phải là list (xem docs HA ai_task.generate_data)
           attachments:
             - media_content_id: "{{ background_image_path }}"
               media_content_type: "{{ background_mime_type }}"
@@ -484,15 +480,10 @@ action:
           instructions: "{{ optimized_prompt }}"
         response_variable: ai_result
 
-  # === LƯU ẢNH (nếu được chọn) ===
-  # FIX: dùng ai_result.url thay vì ai_result.media_source_id
-  # Theo HA docs, generate_image trả về: { url, media_source_id, metadata }
-  # ai_result.url là /api/media_source/ai_task/image/... (path HTTP nội bộ)
-  # File thực tế nằm tại /config/ai_task/image/...
+  # === LƯU ẢNH ===
+  # Dùng shell_command.copy_weather_image với mv — vừa move vừa xóa ảnh gốc
   - if:
       - condition: template
-        # FIX: không dùng !input trực tiếp trong condition template
-        # Phải dùng biến đã được resolve trong variables block
         value_template: >
           {{ ai_result is defined
              and (ai_result.url is defined or ai_result.media_source_id is defined) }}
@@ -512,7 +503,6 @@ action:
 
       - if:
           - condition: template
-            # FIX: dùng biến save_image_flag thay vì !input trực tiếp
             value_template: "{{ true }}"
         then:
           - variables:
@@ -531,10 +521,10 @@ action:
                 {% endif %}
               dest_path: "{{ output_directory }}/{{ filename }}"
 
-          # FIX: shell_command.copy_weather_image phải được khai báo trong configuration.yaml:
+          # FIX: dùng mv → vừa copy vừa xóa ảnh gốc AI trong 1 bước
+          # Khai báo trong configuration.yaml:
           #   shell_command:
-          #     copy_weather_image: cp "{{ source }}" "{{ destination }}"
-          # Đây là cách duy nhất để copy file trong HA blueprint - không có service built-in
+          #     copy_weather_image: mv "{{ source }}" "{{ destination }}"
           - continue_on_error: true
             action: shell_command.copy_weather_image
             data:
@@ -542,21 +532,17 @@ action:
               destination: "{{ dest_path }}"
             response_variable: copy_result
 
-          # FIX: Không có service delete.file trong HA
-          # Phải dùng shell_command.delete_file, khai báo trong configuration.yaml:
-          #   shell_command:
-          #     delete_file: rm -f "{{ file }}"
+          # FIX: Dùng delete.file (HACS: delete-file-home-assistant) làm bước dự phòng
+          # mv đã xóa ảnh gốc rồi nên bước này thường không cần thiết
+          # Chỉ chạy nếu delete_ai_image = true (mặc định false)
           - if:
               - condition: template
                 value_template: "{{ delete_ai_image and image_path != '' }}"
             then:
               - continue_on_error: true
-                action: shell_command.delete_file
+                action: delete.file          # ✅ FIX: dùng HACS delete.file thay vì shell_command.delete_file
                 data:
                   file: "{{ image_path }}"
 
 mode: single
 max_exceeded: silent
-
-
-
