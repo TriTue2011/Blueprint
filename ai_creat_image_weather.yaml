@@ -187,7 +187,7 @@ blueprint:
 
         output_directory:
           name: Thư mục đầu ra
-          default: "/media/weather_images"
+          default: "/config/media/weather"
           selector:
             text:
 
@@ -490,13 +490,14 @@ action:
     then:
       - variables:
           # Resolve đường dẫn file thực từ media_source_id
+          # FIX: ai_task lưu ảnh tại /config/media/weather/ không phải /config/ai_task/image/
           ai_image_source_id: "{{ ai_result.media_source_id | default('') }}"
           image_path: >-
             {% set sid = ai_result.media_source_id | default('') %}
             {% if sid.startswith('media-source://ai_task/image/') %}
               /config/media/ai_task/image/{{ sid.split('/')[-1] }}
             {% elif sid.startswith('media-source://') %}
-              /media/{{ sid.replace('media-source://', '').replace('//', '/') }}
+              /config/media/{{ sid.replace('media-source://', '') }}
             {% else %}
               {{ sid }}
             {% endif %}
