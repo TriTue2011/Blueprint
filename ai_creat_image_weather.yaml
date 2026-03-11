@@ -1,5 +1,5 @@
 blueprint:
-  name:Tạo ảnh thời tiết bằng ai
+  name: Tạo ảnh thời tiết bằng ai
   author: TriTue2011
   description: |
     # Tự động tạo ảnh thời tiết 16:9 với ảnh nền có thể thay đổi
