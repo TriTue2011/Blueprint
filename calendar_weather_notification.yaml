@@ -1,5 +1,5 @@
 blueprint:
-  name: Thông báo lịch âm và thời tiết
+  name: Thông báo lịch âm và thời tiết
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/calendar_weather_notification.yaml
   description: >
@@ -47,8 +47,6 @@ blueprint:
           selector:
             object:
 
-        # FIX: notification_times là list → trigger at: !input hoạt động đúng
-        # với selector object (list of time strings)
         notification_times:
           name: Các thời điểm thông báo
           description: >
@@ -184,7 +182,6 @@ blueprint:
         ai_task_entity:
           name: 🧠 AI Task Entity
           description: Entity AI task để biên tập
-          # FIX: bỏ hardcoded default ai_task.google_ai_task → dùng [] để người dùng tự chọn
           default: []
           selector:
             entity:
@@ -470,7 +467,6 @@ variables:
   is_ios_android: !input is_ios_android
   notify_device: !input notify_device
   mobile_notification_color: !input mobile_notification_color
-  # FIX: dùng cú pháp đúng, tránh conflict dấu % trong Jinja2 string
   mobile_notification_color_hex: >
     {{ '#%02x%02x%02x' | format(
       mobile_notification_color[0],
@@ -488,14 +484,25 @@ variables:
 
   enable_zalo_custom: !input enable_zalo_custom
   zalo_custom_account: !input zalo_custom_account
-  # FIX: resolve tất cả zalo IDs ở đây, trong variables gốc
-  # để không phải dùng !input bên trong sequence lồng sâu
-  zalo_custom_thread_id_1: !input zalo_custom_thread_id_1
-  zalo_custom_thread_id_2: !input zalo_custom_thread_id_2
-  zalo_custom_thread_id_3: !input zalo_custom_thread_id_3
-  zalo_custom_user_id_1: !input zalo_custom_user_id_1
-  zalo_custom_user_id_2: !input zalo_custom_user_id_2
-  zalo_custom_user_id_3: !input zalo_custom_user_id_3
+
+  # [FIX] Ép kiểu string ngay tại đây để tránh mất độ chính xác số nguyên lớn
+  # khi Jinja2 chuyển số 19 chữ số sang float IEEE 754
+  zalo_custom_thread_id_1: "{{ ('{}'.format(iif(zalo_custom_thread_id_1_raw | string | length > 0, zalo_custom_thread_id_1_raw, ''))) }}"
+  zalo_custom_thread_id_2: "{{ ('{}'.format(iif(zalo_custom_thread_id_2_raw | string | length > 0, zalo_custom_thread_id_2_raw, ''))) }}"
+  zalo_custom_thread_id_3: "{{ ('{}'.format(iif(zalo_custom_thread_id_3_raw | string | length > 0, zalo_custom_thread_id_3_raw, ''))) }}"
+  zalo_custom_user_id_1: "{{ ('{}'.format(iif(zalo_custom_user_id_1_raw | string | length > 0, zalo_custom_user_id_1_raw, ''))) }}"
+  zalo_custom_user_id_2: "{{ ('{}'.format(iif(zalo_custom_user_id_2_raw | string | length > 0, zalo_custom_user_id_2_raw, ''))) }}"
+  zalo_custom_user_id_3: "{{ ('{}'.format(iif(zalo_custom_user_id_3_raw | string | length > 0, zalo_custom_user_id_3_raw, ''))) }}"
+
+  # Raw values từ !input — dùng selector: text nên HA đọc là string,
+  # nhưng khi đưa vào template vẫn có thể bị cast sang float nếu trông như số
+  zalo_custom_thread_id_1_raw: !input zalo_custom_thread_id_1
+  zalo_custom_thread_id_2_raw: !input zalo_custom_thread_id_2
+  zalo_custom_thread_id_3_raw: !input zalo_custom_thread_id_3
+  zalo_custom_user_id_1_raw: !input zalo_custom_user_id_1
+  zalo_custom_user_id_2_raw: !input zalo_custom_user_id_2
+  zalo_custom_user_id_3_raw: !input zalo_custom_user_id_3
+
   zalo_custom_receiver_type: !input zalo_custom_receiver_type
   zalo_custom_ttl: !input zalo_custom_ttl
 
@@ -510,8 +517,6 @@ variables:
 # TRIGGER
 # ============================================================
 trigger:
-  # FIX: at: !input notification_times — hợp lệ khi notification_times là list of time strings
-  # HA time trigger hỗ trợ list trực tiếp từ !input với selector: object
   - platform: time
     at: !input notification_times
 
@@ -567,8 +572,7 @@ action:
           {{ states(pm25_sensor) | float(0) | round(1) }}
         {% else %}0{% endif %}
 
-  # FIX: Gộp 2 lần iterate states.sensor thành 1 lần duy nhất
-  # Vừa kiểm tra has_lunar_event vừa lấy sensor_entity_ids trong cùng 1 pass
+  # Gộp 2 lần iterate states.sensor thành 1 lần duy nhất
   - variables:
       lunar_scan_result: >
         {% set ns = namespace(found=false, ids=[]) %}
@@ -757,7 +761,6 @@ action:
                                 - repeat:
                                     for_each: "{{ notify_device }}"
                                     sequence:
-                                      # FIX: service: → action:
                                       - continue_on_error: true
                                         action: >
                                           notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
@@ -793,7 +796,6 @@ action:
                         - condition: template
                           value_template: "{{ include_telegram_notify and telegram_config_entry != '' }}"
                       sequence:
-                        # FIX: service: → action:
                         - continue_on_error: true
                           action: telegram_bot.send_message
                           data: >
@@ -815,7 +817,6 @@ action:
                         - condition: template
                           value_template: "{{ enable_zalo_bot and zalo_bot_chat_id != '' }}"
                       sequence:
-                        # FIX: service: → action:
                         - continue_on_error: true
                           action: pyscript.send_zalo_message
                           data:
@@ -823,6 +824,8 @@ action:
                             message: "{{ final_title }}\n\n{{ final_message }}"
 
                 # --- GỬI ZALO CUSTOM ---
+                # [FIX] Tất cả thread_id/user_id đều dùng | string để đảm bảo
+                # không bị mất độ chính xác khi HA render template thành số float
                 - choose:
                     - conditions:
                         - condition: template
@@ -836,8 +839,8 @@ action:
                                 - continue_on_error: true
                                   action: zalo_bot.send_message
                                   data:
-                                    account_selection: "{{ zalo_custom_account }}"
-                                    thread_id: "{{ zalo_custom_thread_id_1 | trim }}"
+                                    account_selection: "{{ zalo_custom_account | string }}"
+                                    thread_id: "{{ zalo_custom_thread_id_1 | trim | string }}"
                                     type: "{{ zalo_custom_receiver_type }}"
                                     message: "{{ final_title }}\n\n{{ final_message }}"
                                     ttl: "{{ zalo_custom_ttl }}"
@@ -849,8 +852,8 @@ action:
                                 - continue_on_error: true
                                   action: zalo_bot.send_message
                                   data:
-                                    account_selection: "{{ zalo_custom_account }}"
-                                    thread_id: "{{ zalo_custom_thread_id_2 | trim }}"
+                                    account_selection: "{{ zalo_custom_account | string }}"
+                                    thread_id: "{{ zalo_custom_thread_id_2 | trim | string }}"
                                     type: "{{ zalo_custom_receiver_type }}"
                                     message: "{{ final_title }}\n\n{{ final_message }}"
                                     ttl: "{{ zalo_custom_ttl }}"
@@ -862,8 +865,8 @@ action:
                                 - continue_on_error: true
                                   action: zalo_bot.send_message
                                   data:
-                                    account_selection: "{{ zalo_custom_account }}"
-                                    thread_id: "{{ zalo_custom_thread_id_3 | trim }}"
+                                    account_selection: "{{ zalo_custom_account | string }}"
+                                    thread_id: "{{ zalo_custom_thread_id_3 | trim | string }}"
                                     type: "{{ zalo_custom_receiver_type }}"
                                     message: "{{ final_title }}\n\n{{ final_message }}"
                                     ttl: "{{ zalo_custom_ttl }}"
@@ -875,8 +878,8 @@ action:
                                 - continue_on_error: true
                                   action: zalo_bot.send_message
                                   data:
-                                    account_selection: "{{ zalo_custom_account }}"
-                                    thread_id: "{{ zalo_custom_user_id_1 | trim }}"
+                                    account_selection: "{{ zalo_custom_account | string }}"
+                                    thread_id: "{{ zalo_custom_user_id_1 | trim | string }}"
                                     type: "{{ zalo_custom_receiver_type }}"
                                     message: "{{ final_title }}\n\n{{ final_message }}"
                                     ttl: "{{ zalo_custom_ttl }}"
@@ -888,8 +891,8 @@ action:
                                 - continue_on_error: true
                                   action: zalo_bot.send_message
                                   data:
-                                    account_selection: "{{ zalo_custom_account }}"
-                                    thread_id: "{{ zalo_custom_user_id_2 | trim }}"
+                                    account_selection: "{{ zalo_custom_account | string }}"
+                                    thread_id: "{{ zalo_custom_user_id_2 | trim | string }}"
                                     type: "{{ zalo_custom_receiver_type }}"
                                     message: "{{ final_title }}\n\n{{ final_message }}"
                                     ttl: "{{ zalo_custom_ttl }}"
@@ -901,8 +904,8 @@ action:
                                 - continue_on_error: true
                                   action: zalo_bot.send_message
                                   data:
-                                    account_selection: "{{ zalo_custom_account }}"
-                                    thread_id: "{{ zalo_custom_user_id_3 | trim }}"
+                                    account_selection: "{{ zalo_custom_account | string }}"
+                                    thread_id: "{{ zalo_custom_user_id_3 | trim | string }}"
                                     type: "{{ zalo_custom_receiver_type }}"
                                     message: "{{ final_title }}\n\n{{ final_message }}"
                                     ttl: "{{ zalo_custom_ttl }}"
@@ -980,7 +983,6 @@ action:
                                   volume_level: "{{ tts_volume }}"
                                 target:
                                   entity_id: "{{ repeat.item }}"
-                              # FIX: tts.speak dùng target.entity_id thay vì data.entity_id
                               - continue_on_error: true
                                 action: tts.speak
                                 target:
@@ -1164,6 +1166,7 @@ action:
                       message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
 
           # --- GỬI ZALO CUSTOM THỜI TIẾT ---
+          # [FIX] Tất cả thread_id/user_id đều dùng | string
           - choose:
               - conditions:
                   - condition: template
@@ -1177,8 +1180,8 @@ action:
                           - continue_on_error: true
                             action: zalo_bot.send_message
                             data:
-                              account_selection: "{{ zalo_custom_account }}"
-                              thread_id: "{{ zalo_custom_thread_id_1 | trim }}"
+                              account_selection: "{{ zalo_custom_account | string }}"
+                              thread_id: "{{ zalo_custom_thread_id_1 | trim | string }}"
                               type: "{{ zalo_custom_receiver_type }}"
                               message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                               ttl: "{{ zalo_custom_ttl }}"
@@ -1190,8 +1193,8 @@ action:
                           - continue_on_error: true
                             action: zalo_bot.send_message
                             data:
-                              account_selection: "{{ zalo_custom_account }}"
-                              thread_id: "{{ zalo_custom_thread_id_2 | trim }}"
+                              account_selection: "{{ zalo_custom_account | string }}"
+                              thread_id: "{{ zalo_custom_thread_id_2 | trim | string }}"
                               type: "{{ zalo_custom_receiver_type }}"
                               message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                               ttl: "{{ zalo_custom_ttl }}"
@@ -1203,8 +1206,8 @@ action:
                           - continue_on_error: true
                             action: zalo_bot.send_message
                             data:
-                              account_selection: "{{ zalo_custom_account }}"
-                              thread_id: "{{ zalo_custom_thread_id_3 | trim }}"
+                              account_selection: "{{ zalo_custom_account | string }}"
+                              thread_id: "{{ zalo_custom_thread_id_3 | trim | string }}"
                               type: "{{ zalo_custom_receiver_type }}"
                               message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                               ttl: "{{ zalo_custom_ttl }}"
@@ -1216,8 +1219,8 @@ action:
                           - continue_on_error: true
                             action: zalo_bot.send_message
                             data:
-                              account_selection: "{{ zalo_custom_account }}"
-                              thread_id: "{{ zalo_custom_user_id_1 | trim }}"
+                              account_selection: "{{ zalo_custom_account | string }}"
+                              thread_id: "{{ zalo_custom_user_id_1 | trim | string }}"
                               type: "{{ zalo_custom_receiver_type }}"
                               message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                               ttl: "{{ zalo_custom_ttl }}"
@@ -1229,8 +1232,8 @@ action:
                           - continue_on_error: true
                             action: zalo_bot.send_message
                             data:
-                              account_selection: "{{ zalo_custom_account }}"
-                              thread_id: "{{ zalo_custom_user_id_2 | trim }}"
+                              account_selection: "{{ zalo_custom_account | string }}"
+                              thread_id: "{{ zalo_custom_user_id_2 | trim | string }}"
                               type: "{{ zalo_custom_receiver_type }}"
                               message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                               ttl: "{{ zalo_custom_ttl }}"
@@ -1242,8 +1245,8 @@ action:
                           - continue_on_error: true
                             action: zalo_bot.send_message
                             data:
-                              account_selection: "{{ zalo_custom_account }}"
-                              thread_id: "{{ zalo_custom_user_id_3 | trim }}"
+                              account_selection: "{{ zalo_custom_account | string }}"
+                              thread_id: "{{ zalo_custom_user_id_3 | trim | string }}"
                               type: "{{ zalo_custom_receiver_type }}"
                               message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                               ttl: "{{ zalo_custom_ttl }}"
@@ -1316,7 +1319,6 @@ action:
                             volume_level: "{{ tts_volume }}"
                           target:
                             entity_id: "{{ repeat.item }}"
-                        # FIX: tts.speak dùng target.entity_id thay vì data.entity_id
                         - continue_on_error: true
                           action: tts.speak
                           target:
