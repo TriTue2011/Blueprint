@@ -11,18 +11,6 @@ blueprint:
     - Tự động cập nhật vào input_text helper
     - AI chọn ngẫu nhiên, tránh lặp lại
 
-    ⚠️ Lưu ý về time_pattern:
-    - Trigger kích hoạt theo mốc cố định trong giờ/ngày, không phải đếm từ lần cuối.
-      Ví dụ "/15min" = kích hoạt vào phút 0, 15, 30, 45 của mỗi giờ.
-
-    🔧 v1.1.0 Fixes:
-    - Sửa min_version 2024.8.0 → 2025.7.0 (ai_task.generate_data có từ HA 2025.7)
-    - Bỏ hardcoded default ai_task.google_ai_task
-    - Thêm continue_on_error cho ai_task và input_text.set_value
-    - Truncate full_text xuống 255 ký tự (giới hạn input_text)
-    - Thay stop: bằng xử lý graceful khi AI timeout
-    - Thêm continue_on_error cho notification action
-    - Dùng namespace() đúng chuẩn Jinja2 HA cho quote_sources
 
   domain: automation
   homeassistant:
