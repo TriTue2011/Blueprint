@@ -9,22 +9,10 @@ blueprint:
     - Prompt tối ưu dựa trên dữ liệu thời tiết thực tế
     - Aspect ratio 16:9 chuẩn cinematic
     - Hỗ trợ đầy đủ sensors thời tiết và chất lượng không khí
-
-    🔧 v1.1.0 Fixes:
-    - Sửa lỗi attachments format sai (phải là list, không phải object)
-    - Sửa lỗi condition template dùng !input trực tiếp (không hợp lệ)
-    - Sửa lỗi delete.file → shell_command (không có service delete.file trong HA)
-    - Sửa lỗi shell_command.copy_weather_image phải khai báo trong configuration.yaml
-      → Thay bằng python_script hoặc hướng dẫn rõ ràng
-    - Thêm continue_on_error cho các action có thể lỗi
-    - Sửa lỗi ai_result.url vs ai_result.media_source_id (dùng url theo chuẩn HA)
-    - Thêm min_version đúng (ai_task.generate_image có từ HA 2025.10)
-    - Sửa domain filter dùng list [sensor] → chuỗi sensor
-
     ⏰ TRIGGER: Kích hoạt khi pha thời gian trong ngày thay đổi
   domain: automation
   homeassistant:
-    # FIX: ai_task.generate_image chỉ có từ HA 2025.10, không phải 2024.8
+    
     min_version: 2025.10.0
 
   input:
@@ -568,5 +556,6 @@ action:
 
 mode: single
 max_exceeded: silent
+
 
 
