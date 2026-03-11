@@ -10,6 +10,7 @@ blueprint:
     ### Bắt buộc
 
     - Phải cài đặt Zalo Bot integration qua HACS và cấu hình đúng.
+    - Cài đặt integration `delete-file-home-assistant` qua HACS nếu dùng tính năng xóa ảnh sau khi gửi.
 
     ### Tùy chọn
 
@@ -170,6 +171,7 @@ sequence:
         {% else %}
           {{ path }}
         {% endif %}
+
   - alias: Check if variables were set correctly
     if:
       - condition: template
@@ -185,10 +187,13 @@ sequence:
         variables:
           response:
             error: >-
-              Unable to send the message to Zalo because one or more inputs are missing or invalid (summary, content_type, account, thread_id, receiver, location, or image_path).
+              Unable to send the message to Zalo because one or more inputs are
+              missing or invalid (summary, content_type, account, thread_id,
+              receiver, location, or image_path).
       - alias: Stop the script
         stop: Unable to send the message to Zalo due to invalid inputs.
         response_variable: response
+
   - choose:
       - conditions:
           - condition: template
@@ -204,10 +209,11 @@ sequence:
 
                 {{ detail }}{% endif %}
 
-                {% set query = summary.split() | join('+') -%}
+                {% set query = summary | urlencode -%}
                 {% set url = 'https://www.google.com/search?q=' ~ query -%}
                 Google Search ({{ url }})
               ttl: !input ttl
+
       - conditions:
           - condition: template
             value_template: "{{ content_type == 'location' }}"
@@ -222,10 +228,11 @@ sequence:
 
                 {{ detail }}{% endif %}
 
-                {% set place = (summary ~ ' ' ~ location).split() | join('+') -%}
+                {% set place = (summary ~ ' ' ~ location) | urlencode -%}
                 {% set url = 'https://www.google.com/maps/search/?api=1&query=' ~ place -%}
                 Google Maps ({{ url }})
               ttl: !input ttl
+
       - conditions:
           - condition: template
             value_template: "{{ content_type == 'image' }}"
@@ -241,18 +248,21 @@ sequence:
 
                 {{ detail }}{% endif %}
               ttl: !input ttl
+
           - if:
               - condition: template
                 value_template: "{{ delete_after_send }}"
             then:
-              - action: shell_command.delete_file
+              - action: delete.file
                 data:
                   file: "{{ image_path_resolved }}"
+
   - alias: Prepare success response for Assist
     variables:
       response:
         success: >-
           Sent the {{ content_type }} "{{ summary }}" to Zalo (thread
           {{ default_thread_id | default('unspecified') }}) successfully.
+
   - stop: Finish and return response data
     response_variable: response
