@@ -16,6 +16,7 @@ blueprint:
     - The mentioned file(s) is/are included in the repository.
     - You need to enable two Pyscript options through the UI or via YAML to allow importing all Python packages and to make hass available as a global variable.
     - A Telegram bot token needs to be configured in `config/configuration.yaml` and `config/secrets.yaml`.
+    - The `delete-file-home-assistant` integration needs to be installed through HACS.
 
     ```
     # File configuration.yaml
@@ -23,6 +24,7 @@ blueprint:
       allow_all_imports: true
       hass_is_global: true
       telegram_bot_token: !secret telegram_bot_token
+    delete:
     ```
 
     ```
@@ -197,12 +199,13 @@ sequence:
         {{ '' if candidate is none else (candidate | string | trim) }}
       message_thread_id_value: >-
         {% if override_message_thread_id %}
-          {{ override_message_thread_id }}
+          {{ override_message_thread_id | int(0) }}
         {% elif default_thread_id is not none %}
-          {{ (default_thread_id | string) | trim }}
+          {{ default_thread_id | int(0) }}
         {% else %}
           {{ '' }}
         {% endif %}
+
   - alias: Check if variables were set correctly
     if:
       - condition: template
@@ -211,6 +214,7 @@ sequence:
             (not summary)
             or (content_type not in ['information', 'location', 'image'])
             or (not chat_id_value)
+            or (not chat_id_value | regex_match('^-?\d+$'))
             or (content_type == 'location' and not location)
             or (content_type == 'image' and not image_path)
             or (
@@ -223,10 +227,13 @@ sequence:
         variables:
           response:
             error: >-
-              Unable to send the message to Telegram because one or more inputs are missing or invalid (summary, content_type, chat_id, location, image_path, or message_thread_id).
+              Unable to send the message to Telegram because one or more inputs
+              are missing or invalid (summary, content_type, chat_id, location,
+              image_path, or message_thread_id).
       - alias: Stop the script
         stop: Unable to send the message to Telegram due to invalid inputs.
         response_variable: response
+
   - choose:
       - conditions:
           - condition: template
@@ -234,44 +241,49 @@ sequence:
         sequence:
           - action: pyscript.send_telegram_message
             data:
-              chat_id: "{{ chat_id_value }}"
-              message_thread_id: "{{ message_thread_id_value }}"
+              chat_id: "{{ chat_id_value | int }}"
+              message_thread_id: >-
+                {{ message_thread_id_value | int if message_thread_id_value != '' else omit }}
               parse_mode: HTML
               message: |-
                 <b>{{ summary | e }}</b>{% if detail %}
 
                 {{ detail | e }}{% endif %}
 
-                {% set query = summary.split() | join('+') -%}
+                {% set query = summary | urlencode -%}
                 {% set url = 'https://www.google.com/search?q=' ~ query -%}
                 <a href="{{ url }}">Google Search</a>
             response_variable: telegram_response
+
       - conditions:
           - condition: template
             value_template: "{{ content_type == 'location' }}"
         sequence:
           - action: pyscript.send_telegram_message
             data:
-              chat_id: "{{ chat_id_value }}"
-              message_thread_id: "{{ message_thread_id_value }}"
+              chat_id: "{{ chat_id_value | int }}"
+              message_thread_id: >-
+                {{ message_thread_id_value | int if message_thread_id_value != '' else omit }}
               parse_mode: HTML
               message: |-
                 <b>{{ summary | e }}</b>{% if detail %}
 
                 {{ detail | e }}{% endif %}
 
-                {% set place = (summary ~ ' ' ~ location).split() | join('+') -%}
+                {% set place = (summary ~ ' ' ~ location) | urlencode -%}
                 {% set url = 'https://www.google.com/maps/search/?api=1&query=' ~ place -%}
                 <a href="{{ url }}">Google Maps</a>
             response_variable: telegram_response
+
       - conditions:
           - condition: template
             value_template: "{{ content_type == 'image' }}"
         sequence:
           - action: pyscript.send_telegram_photo
             data:
-              chat_id: "{{ chat_id_value }}"
-              message_thread_id: "{{ message_thread_id_value }}"
+              chat_id: "{{ chat_id_value | int }}"
+              message_thread_id: >-
+                {{ message_thread_id_value | int if message_thread_id_value != '' else omit }}
               parse_mode: HTML
               file_path: "{{ image_path }}"
               caption: |-
@@ -279,6 +291,7 @@ sequence:
 
                 {{ detail | e }}{% endif %}
             response_variable: telegram_response
+
           - if:
               - condition: template
                 value_template: "{{ delete_after_send }}"
@@ -286,5 +299,15 @@ sequence:
               - action: delete.file
                 data:
                   file: "{{ image_path }}"
+
+  - alias: Build final response
+    variables:
+      final_response: >-
+        {% if telegram_response is defined and telegram_response %}
+          {{ telegram_response }}
+        {% else %}
+          {{ { 'error': 'No response received from Telegram service. Check pyscript logs.' } }}
+        {% endif %}
+
   - stop: ""
-    response_variable: telegram_response
+    response_variable: final_response
