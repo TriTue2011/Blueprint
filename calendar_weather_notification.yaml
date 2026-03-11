@@ -465,13 +465,13 @@ variables:
   zalo_custom_user_id: !input zalo_custom_user_id
   zalo_custom_receiver_type: !input zalo_custom_receiver_type
   zalo_custom_ttl: !input zalo_custom_ttl
-  # [FIX v3] Template phải nằm trên 1 dòng, KHÔNG có whitespace thừa xung quanh.
-  # HA NativeTemplate KHÔNG strip() trước ast.literal_eval:
-  #   multiline → '\n  "id"\n' → literal_eval FAIL → fallback raw string '"id"' (có quote chars)
-  #   → | tojson lần 2 → "\"id\"" ❌
-  # Single-line → '"id"' → literal_eval OK → Python str 'id' ✅
-  # Service data dùng | string (không tojson) vì result đã là Python str.
-  zalo_resolved_id: "{{ (zalo_custom_thread_id if zalo_custom_receiver_type == '1' else zalo_custom_user_id) | tojson }}"
+  # [FIX] Bỏ | string — giữ nguyên như camera blueprint để tránh lỗi hiển thị trace
+  zalo_resolved_id: >
+    {% if zalo_custom_receiver_type == '1' %}
+      {{ zalo_custom_thread_id if zalo_custom_thread_id | length > 0 else '' }}
+    {% else %}
+      {{ zalo_custom_user_id if zalo_custom_user_id | length > 0 else '' }}
+    {% endif %}
 
   include_tts_announcement: !input include_tts_announcement
   tts_volume: !input tts_volume
@@ -796,7 +796,7 @@ action:
                         - condition: template
                           value_template: >
                             {{ enable_zalo_custom
-                               and zalo_resolved_id | string | trim | length > 0
+                               and zalo_resolved_id | trim | length > 0
                                and zalo_custom_account | length > 0 }}
                       sequence:
                         - alias: "Gửi lịch âm qua Zalo Custom"
@@ -804,7 +804,7 @@ action:
                           action: zalo_bot.send_message
                           data:
                             account_selection: !input zalo_custom_account
-                            thread_id: "{{ zalo_resolved_id | string }}"
+                            thread_id: "{{ zalo_resolved_id | trim }}"
                             type: "{{ zalo_custom_receiver_type }}"
                             message: "{{ final_title }}\n\n{{ final_message }}"
                             ttl: "{{ zalo_custom_ttl }}"
@@ -1070,7 +1070,7 @@ action:
                   - condition: template
                     value_template: >
                       {{ enable_zalo_custom
-                         and zalo_resolved_id | string | trim | length > 0
+                         and zalo_resolved_id | trim | length > 0
                          and zalo_custom_account | length > 0 }}
                 sequence:
                   - alias: "Gửi thời tiết qua Zalo Custom"
@@ -1078,7 +1078,7 @@ action:
                     action: zalo_bot.send_message
                     data:
                       account_selection: !input zalo_custom_account
-                      thread_id: "{{ zalo_resolved_id | string }}"
+                      thread_id: "{{ zalo_resolved_id | trim }}"
                       type: "{{ zalo_custom_receiver_type }}"
                       message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                       ttl: "{{ zalo_custom_ttl }}"
