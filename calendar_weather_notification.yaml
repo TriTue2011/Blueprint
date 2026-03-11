@@ -469,11 +469,10 @@ variables:
   # mất độ chính xác số nguyên lớn khi Jinja2 cast sang float IEEE 754
   zalo_resolved_id: >
     {% if zalo_custom_receiver_type == '1' %}
-      {{ zalo_custom_thread_id | string if zalo_custom_thread_id | length > 0 else '' }}
+      {{ zalo_custom_thread_id | tojson if zalo_custom_thread_id | length > 0 else '""' }}
     {% else %}
-      {{ zalo_custom_user_id | string if zalo_custom_user_id | length > 0 else '' }}
+      {{ zalo_custom_user_id | tojson if zalo_custom_user_id | length > 0 else '""' }}
     {% endif %}
-
   include_tts_announcement: !input include_tts_announcement
   tts_volume: !input tts_volume
   tts_engine: !input tts_engine
