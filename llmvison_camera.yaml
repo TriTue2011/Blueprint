@@ -4,11 +4,11 @@ blueprint:
   homeassistant:
     min_version: 2024.10.0
   description: >
-    AI-powered summaries for door entry events with person detection and Zalo
-    notification support. Analyzes camera when door opens and person is detected
-    in the area.
+    Tóm tắt sự kiện cửa ra vào bằng AI với phát hiện người.
+    Hỗ trợ gửi thông báo qua điện thoại, Zalo và phân tích camera khi cửa mở
+    và phát hiện người trong khu vực.
   domain: automation
-  source_url: https://github.com/custom/door-entry-ai-summary
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/llmvison_camera.yaml
 
   input:
     door_contact_sensor:
@@ -547,7 +547,7 @@ action:
                             value_template: "{{ take_snapshot and preview_mode == 'Snapshot' }}"
                         then:
                           - continue_on_error: true
-                            service: camera.snapshot
+                            action: camera.snapshot
                             target:
                               entity_id: !input camera_entities
                             data:

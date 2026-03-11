@@ -2,11 +2,15 @@
 # Import: Settings > Automations > Blueprints > Import Blueprint
 # Yeu cau: Home Assistant >= 2024.10.0
 blueprint:
-  name: Tự động update Pýcript
+  name: Tự động update Pyscript
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/Blueprint_pyscript_update_manager.yaml
+  homeassistant:
+    min_version: 2024.10.0
   description: >
-    Sync file / folder tu GitHub ve /config/pyscript.
-    Config chinh doc tu /config/scripts/pyscript_sync.conf.
-    Blueprint chi quan ly lich chay va thong bao.
+    Đồng bộ file / folder từ GitHub về /config/pyscript.
+    Cấu hình chính đọc từ /config/scripts/pyscript_sync.conf.
+    Blueprint chỉ quản lý lịch chạy và thông báo.
   domain: automation
 
   input:

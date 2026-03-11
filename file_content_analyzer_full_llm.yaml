@@ -1,25 +1,25 @@
 blueprint:
   name: Voice - File Content Analyzer
-  author: luuquangvu
+  author: TriTue2011 nguồn luuquangvu
   description: |
-    # Tool designed to analyze and extract all types of information from media and document files
+    # Công cụ phân tích và trích xuất thông tin từ file đa phương tiện và tài liệu
 
-    ## Blueprint Setup
+    ## Hướng dẫn cài đặt
 
-    ### Required
+    ### Bắt buộc
 
-    - An AI Task entity must be created and configured in the System - General settings.
+    - Phải tạo và cấu hình AI Task entity trong phần Hệ thống - Cài đặt chung.
 
-    ### Optional
+    ### Tùy chọn
 
-    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+    - Điều chỉnh các prompt cho từng trường. Mô tả sẽ hướng dẫn LLM cung cấp đầu vào đúng.
 
-    ### Note
+    ### Lưu ý
 
-    - Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to extract data from a media or document file.
-    - Make sure to expose the script to Assist after the script has been saved.
-    - Do not alter the default script name.
-    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+    - Cung cấp mô tả ngắn gọn và chính xác cho script để LLM nhận biết đây là script trích xuất dữ liệu từ file.
+    - Nhớ expose script cho Assist sau khi lưu.
+    - Không thay đổi tên script mặc định.
+    - Sau khi tạo script, nhấn dấu 3 chấm góc trên phải, chọn "Edit in YAML", xóa dòng description để khôi phục mặc định.
   domain: script
   homeassistant:
     min_version: 2025.8.0
@@ -74,7 +74,7 @@ blueprint:
             This argument is mandatory and must always be included.
             Always specify the MIME type of the file.
             Choose a value that matches the file contents (for example image/jpeg, video/mp4, audio/mp3, text/plain, or application/pdf).
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/file_content_analyzer_full_llm.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/file_content_analyzer_full_llm.yaml
 mode: parallel
 max_exceeded: silent
 description: 'Takes a snapshot from a camera and saves it as an image file. Use ONLY when the user explicitly requests to capture/save/take a photo from a camera, NOT for analyzing or checking what the camera sees.'

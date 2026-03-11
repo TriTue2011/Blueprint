@@ -1,18 +1,18 @@
 blueprint:
   name: Voice - AI Image Generator
-  author: TriTue2011
+  author: TriTue2011 nguồn luuquangvu
   description: |
-    # Tool for generating images using AI based on text descriptions
-    ## Blueprint Setup
-    ### Required
-    * An AI Task entity with image generation capability must be created and configured in the System - General settings.
-    ### Optional
-    * Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
-    * Configure a custom AI Task entity if you want to use a specific model.
-    ### Note
-    * Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to generate images from text prompts.
-    * Make sure to expose the script to Assist after the script has been saved.
-    * Do not alter the default script name.
+    # Công cụ tạo ảnh bằng AI từ mô tả văn bản cho Voice Assistant
+    ## Hướng dẫn cài đặt
+    ### Bắt buộc
+    * Phải tạo và cấu hình AI Task entity hỗ trợ tạo ảnh trong phần Hệ thống - Cài đặt chung.
+    ### Tùy chọn
+    * Điều chỉnh các prompt cho từng trường trong script. Mô tả sẽ hướng dẫn LLM cung cấp đầu vào đúng.
+    * Cấu hình AI Task entity tùy chỉnh nếu muốn dùng model cụ thể.
+    ### Lưu ý
+    * Cung cấp mô tả ngắn gọn và chính xác cho script để LLM nhận biết đây là script tạo ảnh từ prompt văn bản.
+    * Nhớ expose script cho Assist sau khi lưu.
+    * Không thay đổi tên script mặc định.
   domain: script
   homeassistant:
     min_version: 2025.8.0
@@ -106,7 +106,7 @@ blueprint:
             Avoid adding any hashtags, symbols, or AI-related terms.
             If not provided, the name will be auto-generated based on the instructions.
 
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/ai_image_generator_full_llm.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/ai_image_generator_full_llm.yaml
 
 mode: parallel
 max: 10
