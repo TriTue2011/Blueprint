@@ -804,7 +804,7 @@ action:
                           continue_on_error: true
                           action: zalo_bot.send_message
                           data:
-                            account_selection: "{{ zalo_custom_account | string }}"
+                            account_selection: !input zalo_custom_account
                             thread_id: "{{ zalo_resolved_id | trim | string }}"
                             type: "{{ zalo_custom_receiver_type }}"
                             message: "{{ final_title }}\n\n{{ final_message }}"
@@ -1078,7 +1078,7 @@ action:
                     continue_on_error: true
                     action: zalo_bot.send_message
                     data:
-                      account_selection: "{{ zalo_custom_account | string }}"
+                      account_selection: !input zalo_custom_account
                       thread_id: "{{ zalo_resolved_id | trim | string }}"
                       type: "{{ zalo_custom_receiver_type }}"
                       message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
