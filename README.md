@@ -682,26 +682,11 @@ chmod +x /config/scripts/blueprints_update.sh
 **Cấu hình** (`blueprints_update.sh.conf`):
 
 ```bash
-_blueprints_update_server="http://ip:8123"    # Địa chỉ HA server (BẮT BUỘC)
-_blueprints_update_token=""                    # Long-lived access token (BẮT BUỘC)
 _blueprints_update_auto_update="false"         # false = chỉ kiểm tra
 _blueprints_update_curl_options="--silent"
 ```
 
-> **Lưu ý:** Script cập nhật Blueprints **CẦN** cấu hình server HA và Long-lived access token để có thể reload automations/scripts sau khi cập nhật.
-
-**Hướng dẫn tạo Long-lived Access Token:**
-
-```
-1. Mở Home Assistant, nhấn vào tên người dùng (góc dưới trái) để vào trang Profile
-2. Cuộn xuống cuối trang, tìm mục "Long-lived access tokens"
-3. Nhấn "CREATE TOKEN"
-4. Đặt tên cho token (ví dụ: "Blueprint Update Script")
-5. Nhấn "OK"
-6. ⚠️ QUAN TRỌNG: Copy token ngay lập tức — token chỉ hiển thị MỘT LẦN duy nhất
-7. Dán token vào file cấu hình:
-   _blueprints_update_token="eyJ0eXAiOiJKV1Q..."
-```
+> **Lưu ý:** Script này **KHÔNG cần** cấu hình server HA hay Long-lived access token. Script chỉ tải file từ GitHub và ghi đè local. Việc reload automations/scripts được blueprint automation xử lý qua HA internal actions (`automation.reload`, `script.reload`).
 
 **Sử dụng:**
 
@@ -751,7 +736,7 @@ _pyscript_sync_curl_options="--silent"
 _pyscript_sync_debug="false"
 ```
 
-> **Lưu ý:** Script pyscript sync **KHÔNG cần** cấu hình server HA hay Long-lived access token như script cập nhật Blueprints. Script này tải file trực tiếp từ GitHub về thư mục local, chỉ cần GitHub token nếu repo là private.
+> **Lưu ý:** Script này **KHÔNG cần** server HA hay Long-lived access token. Chỉ cần GitHub token nếu repo là private. Reload pyscript được thực hiện qua lệnh `ha` CLI local.
 
 **Tạo file manifest** (`/config/pyscript/_sources.txt`):
 
