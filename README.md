@@ -682,11 +682,13 @@ chmod +x /config/scripts/blueprints_update.sh
 **Cấu hình** (`blueprints_update.sh.conf`):
 
 ```bash
-_blueprints_update_server="http://ip:8123"    # Địa chỉ HA server
-_blueprints_update_token=""                    # Long-lived access token
+_blueprints_update_server="http://ip:8123"    # Địa chỉ HA server (BẮT BUỘC)
+_blueprints_update_token=""                    # Long-lived access token (BẮT BUỘC)
 _blueprints_update_auto_update="false"         # false = chỉ kiểm tra
 _blueprints_update_curl_options="--silent"
 ```
+
+> **Lưu ý:** Script cập nhật Blueprints **CẦN** cấu hình server HA và Long-lived access token để có thể reload automations/scripts sau khi cập nhật. Tạo token tại: **Profile → Long-lived access tokens → Create Token**.
 
 **Sử dụng:**
 
@@ -735,6 +737,8 @@ _pyscript_sync_reload="true"                                  # Tự động rel
 _pyscript_sync_curl_options="--silent"
 _pyscript_sync_debug="false"
 ```
+
+> **Lưu ý:** Script pyscript sync **KHÔNG cần** cấu hình server HA hay Long-lived access token như script cập nhật Blueprints. Script này tải file trực tiếp từ GitHub về thư mục local, chỉ cần GitHub token nếu repo là private.
 
 **Tạo file manifest** (`/config/pyscript/_sources.txt`):
 
