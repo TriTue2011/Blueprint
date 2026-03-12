@@ -688,7 +688,20 @@ _blueprints_update_auto_update="false"         # false = chỉ kiểm tra
 _blueprints_update_curl_options="--silent"
 ```
 
-> **Lưu ý:** Script cập nhật Blueprints **CẦN** cấu hình server HA và Long-lived access token để có thể reload automations/scripts sau khi cập nhật. Tạo token tại: **Profile → Long-lived access tokens → Create Token**.
+> **Lưu ý:** Script cập nhật Blueprints **CẦN** cấu hình server HA và Long-lived access token để có thể reload automations/scripts sau khi cập nhật.
+
+**Hướng dẫn tạo Long-lived Access Token:**
+
+```
+1. Mở Home Assistant, nhấn vào tên người dùng (góc dưới trái) để vào trang Profile
+2. Cuộn xuống cuối trang, tìm mục "Long-lived access tokens"
+3. Nhấn "CREATE TOKEN"
+4. Đặt tên cho token (ví dụ: "Blueprint Update Script")
+5. Nhấn "OK"
+6. ⚠️ QUAN TRỌNG: Copy token ngay lập tức — token chỉ hiển thị MỘT LẦN duy nhất
+7. Dán token vào file cấu hình:
+   _blueprints_update_token="eyJ0eXAiOiJKV1Q..."
+```
 
 **Sử dụng:**
 
