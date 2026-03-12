@@ -195,7 +195,8 @@ blueprint:
             Đây là chuỗi hình ảnh từ máy ảnh của tôi.
             Hãy phân tích chuỗi ảnh này.
             Qui tắc trả về kết quả phân tích chuỗi ảnh:
-            - Phải sử dụng Tiếng Việt có đầy đủ dấu
+            - BẮT BUỘC phải sử dụng Tiếng Việt có ĐẦY ĐỦ DẤU (ví dụ: "phụ nữ" KHÔNG PHẢI "phu nu", "đang đi" KHÔNG PHẢI "dang di", "áo khoác" KHÔNG PHẢI "ao khoac")
+            - TUYỆT ĐỐI KHÔNG được viết tiếng Việt không dấu
             - Bỏ qua các ký tự đặc biệt như *, emoji, /,...
             - Bỏ qua các dòng trống
             - Chỉ thể hiện văn bản thuần
@@ -210,8 +211,10 @@ blueprint:
           default: |
             Hãy so sánh và mô tả rất ngắn gọn những gì bạn thấy trong chuỗi hình ảnh sau từ máy ảnh của tôi.
             - Nếu có người, động vật, xe máy hoặc ô tô, hãy mô tả chi tiết về chúng.
-            - Chỉ rõ giới tính, người lớn hay trẻ em.
+            - Chỉ rõ giới tính (đàn ông/phụ nữ/trẻ em), số lượng từng loại.
+            - Mô tả trang phục, hành động cụ thể của từng người.
             - Không mô tả các vật thể hoặc tòa nhà cố định.
+            - BẮT BUỘC viết tiếng Việt có đầy đủ dấu (ví dụ: "một phụ nữ đeo kính mặc áo khoác nâu đang di chuyển" KHÔNG PHẢI "mot phu nu deo kinh mac ao khoac nau dang di chuyen").
             - Nếu trong chuỗi ảnh không có người hãy trả lời "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
           selector:
             text:
@@ -775,10 +778,18 @@ action:
               attachments: "{{ snapshots_url }}"
               structure:
                 humans_detected:
-                  description: Đếm số người trong chuỗi ảnh
+                  description: Đếm tổng số người trong chuỗi ảnh
                   required: true
                   selector:
                     number:
+                humans_detected_summary:
+                  description: >
+                    Tóm tắt số lượng người theo loại, viết tiếng Việt có dấu.
+                    Ví dụ: "1 phụ nữ", "2 đàn ông, 1 trẻ em", "1 đàn ông, 1 phụ nữ".
+                    Nếu không có người, trả về chuỗi rỗng.
+                  required: true
+                  selector:
+                    text:
                 humans_detected_description:
                   description: "{{ ai_structure_description }}"
                   required: true
@@ -799,9 +810,10 @@ action:
               # Build message với notification_time
               - variables:
                   ai_messages: >
-                    📍 {{ camera_name }} | 🚶: {{ humans_detected_report.data.humans_detected }}
-                    🏞️👉 {{ humans_detected_report.data.humans_detected_description }}
-                    🕒 {{ now().strftime('%H:%M:%S %a, %d-%b-%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
+                    📊  {{ camera_name }}
+                    🚶: {{ humans_detected_report.data.humans_detected }}{{ ' ' + humans_detected_report.data.humans_detected_summary if humans_detected_report.data.humans_detected_summary | default('') | length > 0 else '' }}
+                    👉 {{ humans_detected_report.data.humans_detected_description }}
+                    {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
 
               - if:
                   - condition: template
