@@ -813,7 +813,7 @@ action:
                     📊  {{ camera_name }}
                     🚶: {{ humans_detected_report.data.humans_detected }}{{ ' ' + humans_detected_report.data.humans_detected_summary if humans_detected_report.data.humans_detected_summary | default('') | length > 0 else '' }}
                     👉 {{ humans_detected_report.data.humans_detected_description }}
-                    🕒 {{ now().strftime('%H:%M:%S %A Ngày %d Tháng %m Năm %Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
+                    {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
 
               - if:
                   - condition: template
