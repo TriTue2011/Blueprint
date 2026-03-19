@@ -8,6 +8,7 @@ blueprint:
     AI qua điện thoại, Telegram, Zalo và TTS ra loa.
     Hỗ trợ HA 2026.3+: continue_on_error cho các action gửi thông báo.
   domain: automation
+  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/alarm_person_camera.yaml
   input:
     trigger_section:
       name: Trigger Settings
