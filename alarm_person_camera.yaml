@@ -9,6 +9,7 @@ blueprint:
     Hỗ trợ HA 2026.3+: continue_on_error cho các action gửi thông báo.
   domain: automation
   source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/alarm_person_camera.yaml
+
   input:
     trigger_section:
       name: Trigger Settings
@@ -21,7 +22,7 @@ blueprint:
             entity:
               filter:
                 - domain: binary_sensor
-              multiple: true   # FIX 1: Đổi false → true để chọn nhiều sensor
+              multiple: true
 
         trigger_from_state:
           name: Trigger From State
@@ -557,7 +558,7 @@ max_exceeded: silent
 mode: single
 
 # ============================================================
-# TRIGGER VARIABLES — FIX 2: Bắt buộc để UI hiển thị multi-select
+# TRIGGER VARIABLES — bắt buộc để UI hiển thị multi-select
 # ============================================================
 trigger_variables:
   _trigger_sensors: !input trigger_sensor
@@ -662,7 +663,6 @@ action:
       snapshot_first: /media/local/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
 
   # === TELEGRAM: Gửi ảnh ngay lập tức ===
-  # FIX 3: Đổi target → chat_id (target bị deprecated)
   - choose:
       - conditions:
           - condition: template
@@ -721,7 +721,7 @@ action:
               ttl: !input zalo_custom_ttl
             response_variable: zalo_custom_image_response
 
-  # === MOBILE NOTIFICATION: Gửi ảnh trước (placeholder "Đang phân tích...") ===
+  # === MOBILE NOTIFICATION: Gửi ảnh trước ===
   - if:
       - condition: template
         value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
@@ -829,7 +829,7 @@ action:
                       ) }}
                 then:
 
-                  # === CẬP NHẬT MOBILE NOTIFICATION VỚI KẾT QUẢ AI ===
+                  # === CẬP NHẬT MOBILE NOTIFICATION ===
                   - if:
                       - condition: template
                         value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
@@ -877,7 +877,6 @@ action:
                                           tag: "{{ tag }}"
 
                   # === TELEGRAM: Gửi phân tích AI ===
-                  # FIX 3+4: Đổi target → chat_id, thêm parse_mode: plain_text
                   - if:
                       - condition: template
                         value_template: "{{ include_telegram_notify }}"
@@ -963,7 +962,6 @@ action:
                     ⚠️ AI phân tích ảnh chụp không thành công (timeout).
                     🕒 {{ now().strftime('%H:%M:%S %a, %d-%b-%Y') }}
 
-              # Thông báo lỗi qua Mobile App
               - if:
                   - condition: template
                     value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
@@ -1009,8 +1007,6 @@ action:
                                         content_type: JPEG
                                       tag: "{{ tag }}"
 
-              # Thông báo lỗi qua Telegram
-              # FIX 3+4: Đổi target → chat_id, thêm parse_mode: plain_text
               - if:
                   - condition: template
                     value_template: "{{ include_telegram_notify }}"
@@ -1031,7 +1027,6 @@ action:
                       {% endif %}
                       {{ data }}
 
-              # Thông báo lỗi qua Zalo Bot
               - choose:
                   - conditions:
                       - condition: template
@@ -1043,7 +1038,6 @@ action:
                           chat_id: "{{ zalo_bot_chat_id }}"
                           message: "{{ error_message }}"
 
-              # Thông báo lỗi qua Zalo Custom
               - choose:
                   - conditions:
                       - condition: template
