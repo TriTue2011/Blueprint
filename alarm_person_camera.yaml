@@ -1,5 +1,5 @@
 blueprint:
-  name: Cảnh báo người qua camera bằng ai
+  name: Cảnh báo người qua camera bằng ai
   author: TriTue2011
   homeassistant:
     min_version: 2025.7.0
@@ -17,12 +17,12 @@ blueprint:
       input:
         trigger_sensor:
           name: Trigger Sensor
-          description: Cảm biến kích hoạt automation (cửa, motion sensor)
+          description: Cảm biến kích hoạt automation (cửa, motion sensor). Có thể chọn nhiều sensor.
           selector:
             entity:
               filter:
                 - domain: binary_sensor
-              multiple: false
+              multiple: true   # FIX 1: Đổi false → true để chọn nhiều sensor
 
         trigger_from_state:
           name: Trigger From State
@@ -525,7 +525,6 @@ variables:
   zalo_bot_chat_id: !input zalo_bot_chat_id
   zalo_bot_initial_caption: !input zalo_bot_initial_caption
 
-  # Zalo Custom Integration
   enable_zalo_custom: !input enable_zalo_custom
   zalo_custom_account: !input zalo_custom_account
   zalo_custom_thread_id: !input zalo_custom_thread_id
@@ -533,7 +532,6 @@ variables:
   zalo_custom_receiver_type: !input zalo_custom_receiver_type
   zalo_custom_ttl: !input zalo_custom_ttl
   zalo_custom_initial_caption: !input zalo_custom_initial_caption
-  # Resolve thread_id vs user_id dựa trên receiver_type
   zalo_resolved_id: >
     {% if zalo_custom_receiver_type == '1' %}
       {{ zalo_custom_thread_id if zalo_custom_thread_id | length > 0 else '' }}
@@ -558,6 +556,12 @@ variables:
 
 max_exceeded: silent
 mode: single
+
+# ============================================================
+# TRIGGER VARIABLES — FIX 2: Bắt buộc để UI hiển thị multi-select
+# ============================================================
+trigger_variables:
+  _trigger_sensors: !input trigger_sensor
 
 # ============================================================
 # TRIGGER
@@ -627,7 +631,7 @@ action:
   - delay:
       seconds: "{{ num_delay_before_snapshot }}"
 
-  # === CHỤP ẢNH (delay thông minh: không delay sau snap cuối) ===
+  # === CHỤP ẢNH ===
   - repeat:
       count: "{{ num_snapshots }}"
       sequence:
@@ -659,6 +663,7 @@ action:
       snapshot_first: /media/local/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
 
   # === TELEGRAM: Gửi ảnh ngay lập tức ===
+  # FIX 3: Đổi target → chat_id (target bị deprecated)
   - choose:
       - conditions:
           - condition: template
@@ -674,7 +679,7 @@ action:
                 'caption': telegram_initial_caption
               } %}
               {% if telegram_target != "" %}
-                {% set data = dict(data, target=telegram_target | int) %}
+                {% set data = dict(data, chat_id=telegram_target | int) %}
               {% endif %}
               {% if telegram_thread_id != "" %}
                 {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
@@ -807,7 +812,6 @@ action:
               - condition: template
                 value_template: "{{ wait.completed }}"
             then:
-              # Build message với notification_time
               - variables:
                   ai_messages: |
                     📊  {{ camera_name }}
@@ -874,6 +878,7 @@ action:
                                           tag: "{{ tag }}"
 
                   # === TELEGRAM: Gửi phân tích AI ===
+                  # FIX 3+4: Đổi target → chat_id, thêm parse_mode: plain_text
                   - if:
                       - condition: template
                         value_template: "{{ include_telegram_notify }}"
@@ -883,10 +888,11 @@ action:
                         data: >
                           {% set data = {
                             'config_entry_id': telegram_config_entry,
-                            'message': ai_messages
+                            'message': ai_messages,
+                            'parse_mode': 'plain_text'
                           } %}
                           {% if telegram_target != "" %}
-                            {% set data = dict(data, target=telegram_target | int) %}
+                            {% set data = dict(data, chat_id=telegram_target | int) %}
                           {% endif %}
                           {% if telegram_thread_id != "" %}
                             {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
@@ -1005,6 +1011,7 @@ action:
                                       tag: "{{ tag }}"
 
               # Thông báo lỗi qua Telegram
+              # FIX 3+4: Đổi target → chat_id, thêm parse_mode: plain_text
               - if:
                   - condition: template
                     value_template: "{{ include_telegram_notify }}"
@@ -1014,10 +1021,11 @@ action:
                     data: >
                       {% set data = {
                         'config_entry_id': telegram_config_entry,
-                        'message': error_message
+                        'message': error_message,
+                        'parse_mode': 'plain_text'
                       } %}
                       {% if telegram_target != "" %}
-                        {% set data = dict(data, target=telegram_target | int) %}
+                        {% set data = dict(data, chat_id=telegram_target | int) %}
                       {% endif %}
                       {% if telegram_thread_id != "" %}
                         {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
@@ -1058,5 +1066,3 @@ action:
   - delay:
       seconds: "{{ num_delay_actions }}"
   - delay: !input cooldown
-
-
