@@ -1,0 +1,1032 @@
+blueprint:
+  name: Cảnh báo người qua camera bằng open ai
+  author: TriTue2011
+  homeassistant:
+    min_version: 2025.7.0
+  description: >
+    Phân tích sự kiện camera bằng AI Task. Gửi thông báo với ảnh và phân tích
+    AI qua điện thoại, Telegram, Zalo và TTS ra loa.
+    Hỗ trợ HA 2026.3+: continue_on_error cho các action gửi thông báo.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/alarm_person_camera.yaml
+
+  input:
+    trigger_section:
+      name: Trigger Settings
+      icon: mdi:play-circle
+      input:
+        trigger_sensor:
+          name: Trigger Sensor
+          description: Cảm biến kích hoạt automation (cửa, motion sensor). Có thể chọn nhiều sensor.
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+              multiple: true
+
+        trigger_from_state:
+          name: Trigger From State
+          default: "off"
+          selector:
+            select:
+              options: ["off", "on"]
+              custom_value: true
+              multiple: false
+
+        trigger_to_state:
+          name: Trigger To State
+          default: "on"
+          selector:
+            select:
+              options: ["on", "off"]
+              custom_value: true
+              multiple: false
+
+        person_occupancy_sensor:
+          name: Person Occupancy Sensor (Optional)
+          description: Đợi phát hiện người trước khi phân tích
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+              multiple: false
+
+        person_detected_state:
+          name: Person Detected State
+          default: "on"
+          selector:
+            select:
+              options: ["on", "off"]
+              custom_value: true
+              multiple: false
+
+        wait_for_person:
+          name: Wait for Person Detection
+          default: false
+          selector:
+            boolean: {}
+
+        max_wait_time:
+          name: Maximum Wait Time (Optional)
+          description: Thời gian tối đa đợi phát hiện người (0 = không giới hạn)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 3600
+              unit_of_measurement: seconds
+              mode: box
+              step: 1
+
+    run_conditions:
+      name: Run Conditions
+      description: Tất cả điều kiện phải đúng để automation chạy
+      default: []
+      selector:
+        condition: {}
+
+    cooldown:
+      name: Cooldown
+      description: Thời gian chờ trước khi chạy lại automation
+      default:
+        minutes: 10
+      selector:
+        duration: {}
+
+    camera_sensor_section:
+      name: Camera & Snapshot Settings
+      icon: mdi:camera
+      input:
+        camera_entities:
+          name: Camera Entities
+          description: Danh sách camera để giám sát
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+
+        num_snapshots:
+          name: ⌛ Number of Snapshots
+          description: Số ảnh sẽ chụp để so sánh (từ 1 đến 5)
+          default: 3
+          selector:
+            number:
+              min: 1
+              max: 5
+              step: 1
+              unit_of_measurement: snapshots
+              mode: slider
+
+        num_delay_before_snapshot:
+          name: ⌛ Delay Before First Snapshot
+          description: Thời gian chờ TRƯỚC KHI chụp ảnh đầu tiên (giây)
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 10
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: slider
+
+        num_delay:
+          name: ⌛ Delay Between Snapshots
+          description: Thời gian trễ GIỮA các lần chụp (giây)
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 10
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: slider
+
+        overwrite_image:
+          name: 🏞️ Overwrite Image (Optional)
+          description: Ghi đè ảnh cũ bởi ảnh mới
+          default: true
+          selector:
+            boolean: {}
+
+        file_path:
+          name: File Path
+          description: Đường dẫn lưu snapshot
+          default: /media/llmvision/snapshots_blueprint/{{ camera_file_path }}/last_motion.jpg
+          selector:
+            select:
+              options:
+                - label: Media Folder - Secured
+                  value: /media/llmvision/snapshots_blueprint/{{ camera_file_path }}/last_motion.jpg
+                - label: Public Folder - Unsecured
+                  value: /config/www/snapshots/{{ camera_file_path }}/last_motion.jpg
+              custom_value: true
+              multiple: false
+
+    ai_task_section:
+      name: AI Task Settings
+      icon: mdi:brain
+      collapsed: true
+      input:
+        ai_powered:
+          name: ✅ AI-powered (Optional)
+          description: Sử dụng AI Task để phân tích ảnh
+          default: true
+          selector:
+            boolean: {}
+
+        ai_provider:
+          name: 🤖 AI Task Provider
+          description: >
+            Chọn AI Task provider để phân tích ảnh.
+            Bỏ trống để dùng AI provider mặc định của hệ thống (HA 2025.7+).
+          default: []
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+        ai_task_instructions:
+          name: ✏️ AI Task Instructions
+          description: Hướng dẫn cho AI khi phân tích ảnh
+          default: |
+            Đây là chuỗi hình ảnh từ máy ảnh của tôi.
+            Hãy phân tích chuỗi ảnh này.
+            Chỉ trả về JSON thuần, không giải thích thêm, theo đúng mẫu sau:
+            {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":""}
+            Quy tắc từng trường:
+            humans_detected: số nguyên đếm tổng số người trong chuỗi ảnh.
+            humans_detected_summary: tóm tắt số lượng người theo loại, ví dụ "1 phụ nữ, 2 trẻ em" hoặc "2 đàn ông, 1 phụ nữ". Nếu không có người trả về chuỗi rỗng.
+            humans_detected_description: mô tả chi tiết từng người bao gồm giới tính, trang phục màu sắc cụ thể, hành động đang làm. Ví dụ "Một phụ nữ mặc đồ bộ màu hồng cam đang ngồi chuẩn bị đồ ăn. Bên cạnh là một bé trai mặc đồ màu vàng cam đang đứng chơi.". Nếu không có người trả về "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+            BẮT BUỘC viết tiếng Việt có đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
+            TUYỆT ĐỐI KHÔNG bọc kết quả trong markdown code block.
+            Chỉ trả về JSON thuần, bắt đầu bằng { và kết thúc bằng }.
+          selector:
+            text:
+              multiline: true
+
+    notification_section:
+      name: Mobile App Notify Settings
+      icon: mdi:bell
+      collapsed: true
+      input:
+        include_notify:
+          name: ✅ Mobile App Notify Option
+          default: false
+          selector:
+            boolean: {}
+
+        is_ios_android:
+          name: 🔔 Android or iOS device?
+          default: android_device
+          selector:
+            select:
+              options:
+                - label: Android
+                  value: android_device
+                - label: iOS
+                  value: ios_device
+              multiple: false
+
+        notify_device:
+          name: 📱 Devices Notified
+          default: []
+          selector:
+            device:
+              filter:
+                - integration: mobile_app
+              multiple: true
+
+        notify_title:
+          name: 📝 Title
+          default: "🔔 <b><span style=\"color: red\">Có chuyển động</span></b>\n"
+          selector:
+            text: {}
+
+        tap_navigate:
+          name: 📲 Tap Navigate
+          default: /lovelace/camera
+          selector:
+            text: {}
+
+        status_bar_icon:
+          name: 🌠 Status Bar Icon (Android)
+          default: mdi:motion-sensor
+          selector:
+            icon: {}
+
+        notification_color:
+          name: 🎨 Notification Color (Android)
+          default: [255, 0, 0]
+          selector:
+            color_rgb: {}
+
+        notification_time:
+          name: Notification Time
+          description: Hiển thị thời gian trong thông báo
+          default: ""
+          selector:
+            select:
+              options:
+                - label: No Time Added
+                  value: ""
+                - label: 12 Hour
+                  value: "at {{ now().strftime('%-I:%M %p') }}"
+                - label: 24 Hour
+                  value: "at {{ now().strftime('%H:%M') }}"
+              multiple: false
+
+    telegram_section:
+      name: Telegram Settings
+      icon: mdi:send
+      collapsed: true
+      input:
+        include_telegram_notify:
+          name: ✅ Telegram Option
+          default: false
+          selector:
+            boolean: {}
+
+        telegram_config_entry:
+          name: Telegram Bot
+          default: ""
+          selector:
+            config_entry:
+              integration: telegram_bot
+
+        telegram_target:
+          name: Target Chat ID
+          default: ""
+          selector:
+            text: {}
+
+        telegram_thread_id:
+          name: Thread ID (Optional)
+          default: ""
+          selector:
+            text: {}
+
+        telegram_initial_caption:
+          name: Initial Caption
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text: {}
+
+    zalo_bot_section:
+      name: Zalo Bot Settings (Pyscript)
+      icon: mdi:chat
+      collapsed: true
+      input:
+        enable_zalo_bot:
+          name: ✅ Enable Zalo Bot
+          description: Bật/tắt gửi thông báo qua Zalo Bot (sử dụng pyscript)
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_bot_chat_id:
+          name: Zalo Bot Chat ID
+          description: Chat ID hoặc User ID nhận thông báo Zalo Bot
+          default: ""
+          selector:
+            text: {}
+
+        zalo_bot_initial_caption:
+          name: Zalo Bot Initial Caption
+          description: Caption khi gửi ảnh đầu tiên
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text: {}
+
+    zalo_custom_section:
+      name: Zalo Custom Integration Settings
+      icon: mdi:chat-processing
+      collapsed: true
+      input:
+        enable_zalo_custom:
+          name: ✅ Enable Zalo Custom
+          description: Bật/tắt gửi thông báo qua Zalo Custom Integration
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_custom_account:
+          name: 📱 Zalo Account
+          description: Tài khoản (số điện thoại) để gửi tin nhắn
+          default: ""
+          selector:
+            text: {}
+
+        zalo_custom_thread_id:
+          name: 💬 Thread ID (Nhóm)
+          description: >
+            ID của nhóm Zalo. Nhập dạng text để tránh mất độ chính xác
+            với số lớn (VD: 3295299208151385728). Dùng khi Receiver Type = Group.
+          default: ""
+          selector:
+            text:
+              multiple: false
+
+        zalo_custom_user_id:
+          name: 👤 User ID (Cá nhân)
+          description: >
+            ID của người nhận Zalo. Nhập dạng text để tránh mất độ chính xác
+            với số lớn (VD: 3295299208151385728). Dùng khi Receiver Type = User.
+          default: ""
+          selector:
+            text:
+              multiple: false
+
+        zalo_custom_receiver_type:
+          name: 👥 Type of Receiver
+          description: Loại người nhận tin nhắn
+          default: "0"
+          selector:
+            select:
+              options:
+                - label: User (Cá nhân)
+                  value: "0"
+                - label: Group (Nhóm)
+                  value: "1"
+              multiple: false
+
+        zalo_custom_ttl:
+          name: ⏱️ Message TTL
+          description: Thời gian tự động thu hồi tin nhắn (ms). 0 = không thu hồi
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400000
+              step: 1000
+              mode: box
+
+        zalo_custom_initial_caption:
+          name: 📝 Initial Caption
+          description: Nội dung tin nhắn ban đầu khi gửi ảnh
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text:
+              multiline: true
+
+    tts_speaker_section:
+      name: TTS Speaker Settings
+      icon: mdi:speaker
+      collapsed: true
+      input:
+        include_tts_announcement:
+          name: ✅ Use TTS Announcement
+          default: false
+          selector:
+            boolean: {}
+
+        num_volume_speaker:
+          name: 🔊 Volume Set
+          default: 0.5
+          selector:
+            number:
+              min: 0.1
+              max: 1.0
+              step: 0.1
+              mode: slider
+
+        text_to_speech_engine:
+          name: 🗣️ Text-to-Speech Service Provider
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: tts
+              multiple: false
+
+        media_player:
+          name: 🎶 Media Player
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+              multiple: true
+
+    delay_settings:
+      name: Delay Settings
+      icon: mdi:clock-start
+      collapsed: true
+      input:
+        num_delay_actions:
+          name: ⌛ Delays
+          description: Thời gian chờ sau khi hoàn thành tất cả các hành động
+          default: 10
+          selector:
+            number:
+              min: 5
+              max: 120
+              step: 5
+              unit_of_measurement: seconds
+              mode: slider
+
+# ============================================================
+# VARIABLES
+# ============================================================
+variables:
+  trigger_sensor: !input trigger_sensor
+  person_sensor: !input person_occupancy_sensor
+  person_detected_state: !input person_detected_state
+  wait_for_person: !input wait_for_person
+  max_wait_time: !input max_wait_time
+  cooldown: !input cooldown
+
+  camera_entities_list: !input camera_entities
+  camera_entity: "{{ camera_entities_list[0] if camera_entities_list else '' }}"
+  camera_name: '{{ state_attr(camera_entity, "friendly_name") | default(camera_entity) }}'
+  camera_file_path: '{{ camera_entity.replace("camera.", "") }}'
+
+  num_snapshots: !input num_snapshots
+  num_delay_before_snapshot: !input num_delay_before_snapshot
+  num_delay: !input num_delay
+  overwrite_image: !input overwrite_image
+  file_path: !input file_path
+
+  ai_powered: !input ai_powered
+  ai_provider: !input ai_provider
+  ai_task_instructions: !input ai_task_instructions
+
+  include_notify: !input include_notify
+  notify_device: !input notify_device
+  is_ios_android: !input is_ios_android
+  notify_title: !input notify_title
+  tap_navigate: !input tap_navigate
+  notification_time: !input notification_time
+  filtered_devices: "{{ notify_device }}"
+
+  include_telegram_notify: !input include_telegram_notify
+  telegram_config_entry: !input telegram_config_entry
+  telegram_target: !input telegram_target
+  telegram_thread_id: !input telegram_thread_id
+  telegram_initial_caption: !input telegram_initial_caption
+
+  enable_zalo_bot: !input enable_zalo_bot
+  zalo_bot_chat_id: !input zalo_bot_chat_id
+  zalo_bot_initial_caption: !input zalo_bot_initial_caption
+
+  enable_zalo_custom: !input enable_zalo_custom
+  zalo_custom_account: !input zalo_custom_account
+  zalo_custom_thread_id: !input zalo_custom_thread_id
+  zalo_custom_user_id: !input zalo_custom_user_id
+  zalo_custom_receiver_type: !input zalo_custom_receiver_type
+  zalo_custom_ttl: !input zalo_custom_ttl
+  zalo_custom_initial_caption: !input zalo_custom_initial_caption
+  zalo_resolved_id: >
+    {% if zalo_custom_receiver_type == '1' %}
+      {{ zalo_custom_thread_id if zalo_custom_thread_id | length > 0 else '' }}
+    {% else %}
+      {{ zalo_custom_user_id if zalo_custom_user_id | length > 0 else '' }}
+    {% endif %}
+
+  include_tts_announcement: !input include_tts_announcement
+  num_volume_speaker: !input num_volume_speaker
+  text_to_speech_engine: !input text_to_speech_engine
+  media_player: !input media_player
+  num_delay_actions: !input num_delay_actions
+
+  snapshot_access_file_path: >
+    {{ file_path | replace('/config/www', '/local') | replace('/media', '/media/local') }}
+  snapshot_access_file_path_social: >
+    {{ file_path | replace('/media/llmvision', '/media') }}
+  tag: "{{ camera_entity + int(as_timestamp(now())) | string }}"
+  notification_color: !input notification_color
+  notification_color_hex: >
+    #{{ '%02x%02x%02x' | format(notification_color[0], notification_color[1], notification_color[2]) }}
+
+max_exceeded: silent
+mode: single
+
+# ============================================================
+# TRIGGER VARIABLES
+# ============================================================
+trigger_variables:
+  _trigger_sensors: !input trigger_sensor
+
+# ============================================================
+# TRIGGER
+# ============================================================
+trigger:
+  - platform: state
+    entity_id: !input trigger_sensor
+    from: !input trigger_from_state
+    to: !input trigger_to_state
+
+# ============================================================
+# CONDITION
+# ============================================================
+condition:
+  - condition: and
+    conditions: !input run_conditions
+
+# ============================================================
+# ACTION
+# ============================================================
+action:
+
+  # === WAIT FOR PERSON (nếu được bật) ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ wait_for_person and person_sensor | length > 0 }}"
+        sequence:
+          - if:
+              - condition: state
+                entity_id: !input person_occupancy_sensor
+                state: !input person_detected_state
+            then: []
+            else:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ max_wait_time == 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        continue_on_timeout: true
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ max_wait_time > 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input person_occupancy_sensor
+                            to: !input person_detected_state
+                        timeout:
+                          seconds: "{{ max_wait_time }}"
+                        continue_on_timeout: true
+
+  # === XÁC ĐỊNH ĐƯỜNG DẪN FILE ===
+  - variables:
+      file_path_dynamic: >
+        {% if overwrite_image %}
+          {{ camera_file_path }}
+        {% else %}
+          {{ camera_file_path }}_{{ context.id }}
+        {% endif %}
+
+  # === DELAY TRƯỚC KHI CHỤP ẢNH ĐẦU TIÊN ===
+  - delay:
+      seconds: "{{ num_delay_before_snapshot }}"
+
+  # === CHỤP ẢNH ===
+  - repeat:
+      count: "{{ num_snapshots }}"
+      sequence:
+        - action: camera.snapshot
+          data:
+            filename: /media/snapshots/{{ file_path_dynamic }}_snapshot{{ repeat.index }}.jpg
+          target:
+            entity_id: "{{ camera_entity }}"
+        - if:
+            - condition: template
+              value_template: "{{ repeat.index < num_snapshots }}"
+          then:
+            - delay:
+                seconds: "{{ num_delay }}"
+
+  # === BUILD DANH SÁCH URL SNAPSHOTS CHO AI ===
+  - variables:
+      snapshots_url: >
+        {% set snap_count = num_snapshots | int %}
+        {% set camera = file_path_dynamic %}
+        {% set ns = namespace(images=[]) %}
+        {%- for i in range(1, snap_count + 1) -%}
+          {% set ns.images = ns.images + [{
+            'media_content_id': 'media-source://media_source/local/snapshots/' ~ camera ~ '_snapshot' ~ i ~ '.jpg',
+            'media_content_type': 'image/jpeg'
+          }] %}
+        {%- endfor -%}
+        {{ ns.images }}
+      snapshot_first: /media/local/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
+
+  # === TELEGRAM: Gửi ảnh ngay lập tức ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ include_telegram_notify }}"
+        sequence:
+          - alias: "Gửi ảnh qua Telegram"
+            continue_on_error: true
+            action: telegram_bot.send_photo
+            data: >
+              {% set data = {
+                'config_entry_id': telegram_config_entry,
+                'file': '/media/snapshots/' + file_path_dynamic + '_snapshot1.jpg',
+                'caption': telegram_initial_caption
+              } %}
+              {% if telegram_target != "" %}
+                {% set data = dict(data, chat_id=telegram_target | int) %}
+              {% endif %}
+              {% if telegram_thread_id != "" %}
+                {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+              {% endif %}
+              {{ data }}
+
+  # === ZALO BOT: Gửi ảnh ngay lập tức ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ enable_zalo_bot }}"
+        sequence:
+          - alias: "Gửi ảnh qua Zalo Bot (Pyscript)"
+            continue_on_error: true
+            action: pyscript.send_zalo_photo
+            data:
+              chat_id: "{{ zalo_bot_chat_id }}"
+              file_path: /media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
+              caption: "{{ zalo_bot_initial_caption }}"
+            response_variable: zalo_bot_photo_response
+
+  # === ZALO CUSTOM: Gửi ảnh ngay lập tức ===
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom
+                 and zalo_resolved_id | trim | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - alias: "Gửi ảnh qua Zalo Custom Integration"
+            continue_on_error: true
+            action: zalo_bot.send_image
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: "{{ zalo_resolved_id | trim }}"
+              type: !input zalo_custom_receiver_type
+              image_path: /media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
+              message: "{{ zalo_custom_initial_caption }}"
+              ttl: !input zalo_custom_ttl
+            response_variable: zalo_custom_image_response
+
+  # === MOBILE NOTIFICATION: Gửi ảnh trước ===
+  - if:
+      - condition: template
+        value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
+    then:
+      - choose:
+          - alias: Android - Gửi thông báo ban đầu
+            conditions:
+              - "{{ is_ios_android == 'android_device' }}"
+            sequence:
+              - repeat:
+                  for_each: "{{ filtered_devices }}"
+                  sequence:
+                    - continue_on_error: true
+                      action: >
+                        notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                      data:
+                        title: !input notify_title
+                        message: "Đang phân tích..."
+                        data:
+                          priority: high
+                          notification_icon: !input status_bar_icon
+                          color: "{{ notification_color_hex }}"
+                          image: "{{ snapshot_first }}"
+                          url: "{{ tap_navigate }}"
+                          clickAction: "{{ tap_navigate }}"
+                          tag: "{{ tag }}"
+
+          - alias: iOS - Gửi thông báo ban đầu
+            conditions:
+              - "{{ is_ios_android == 'ios_device' }}"
+            sequence:
+              - repeat:
+                  for_each: "{{ filtered_devices }}"
+                  sequence:
+                    - continue_on_error: true
+                      action: >
+                        notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                      data:
+                        title: !input notify_title
+                        message: "Đang phân tích..."
+                        data:
+                          attachment:
+                            url: "{{ snapshot_first }}"
+                            content_type: JPEG
+                          tag: "{{ tag }}"
+
+  # === AI TASK ANALYSIS ===
+  - choose:
+      - alias: "Chạy phân tích AI nếu được bật"
+        conditions:
+          - "{{ ai_powered }}"
+        sequence:
+          # [THAY ĐỔI 1] Bỏ structure, dùng instructions để yêu cầu JSON thuần
+          - action: ai_task.generate_data
+            data:
+              task_name: Phan tich anh khi co chuyen dong
+              instructions: "{{ ai_task_instructions }}"
+              entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+              attachments: "{{ snapshots_url }}"
+            response_variable: humans_detected_report
+
+          - wait_template: >
+              {{ humans_detected_report is defined
+                 and humans_detected_report.data is defined }}
+            timeout: "00:01:00"
+            continue_on_timeout: true
+
+          - if:
+              - condition: template
+                value_template: "{{ wait.completed }}"
+            then:
+              # [THAY ĐỔI 2] Parse JSON từ humans_detected_report.data
+              - variables:
+                  ai_result: "{{ humans_detected_report.data | from_json }}"
+                  ai_messages: |
+                    📊  {{ camera_name }}
+                    🚶: {{ ai_result.humans_detected_summary if ai_result.humans_detected_summary | default('') | length > 0 else ai_result.humans_detected }}
+                    👉 {{ ai_result.humans_detected_description }}
+                    {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
+
+              # [THAY ĐỔI 3] Dùng ai_result thay vì humans_detected_report.data
+              - if:
+                  - condition: template
+                    value_template: >
+                      {{ not (
+                        (ai_result.humans_detected_description | default(''))
+                        | lower
+                        | regex_search('tuy nhiên không có người trong chuỗi ảnh|không có người|không có chuỗi hình ảnh nào được cung cấp')
+                        and (ai_result.humans_detected | int(0) == 0)
+                      ) }}
+                then:
+
+                  # === CẬP NHẬT MOBILE NOTIFICATION ===
+                  - if:
+                      - condition: template
+                        value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
+                    then:
+                      - choose:
+                          - alias: Android - Cập nhật thông báo AI
+                            conditions:
+                              - "{{ is_ios_android == 'android_device' }}"
+                            sequence:
+                              - repeat:
+                                  for_each: "{{ filtered_devices }}"
+                                  sequence:
+                                    - continue_on_error: true
+                                      action: >
+                                        notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                                      data:
+                                        title: !input notify_title
+                                        message: "{{ ai_messages }}"
+                                        data:
+                                          priority: high
+                                          notification_icon: !input status_bar_icon
+                                          color: "{{ notification_color_hex }}"
+                                          image: "{{ snapshot_first }}"
+                                          url: "{{ tap_navigate }}"
+                                          clickAction: "{{ tap_navigate }}"
+                                          tag: "{{ tag }}"
+
+                          - alias: iOS - Cập nhật thông báo AI
+                            conditions:
+                              - "{{ is_ios_android == 'ios_device' }}"
+                            sequence:
+                              - repeat:
+                                  for_each: "{{ filtered_devices }}"
+                                  sequence:
+                                    - continue_on_error: true
+                                      action: >
+                                        notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                                      data:
+                                        title: !input notify_title
+                                        message: "{{ ai_messages }}"
+                                        data:
+                                          attachment:
+                                            url: "{{ snapshot_first }}"
+                                            content_type: JPEG
+                                          tag: "{{ tag }}"
+
+                  # === TELEGRAM: Gửi phân tích AI ===
+                  - if:
+                      - condition: template
+                        value_template: "{{ include_telegram_notify }}"
+                    then:
+                      - continue_on_error: true
+                        action: telegram_bot.send_message
+                        data: >
+                          {% set data = {
+                            'config_entry_id': telegram_config_entry,
+                            'message': ai_messages,
+                            'parse_mode': 'plain_text'
+                          } %}
+                          {% if telegram_target != "" %}
+                            {% set data = dict(data, chat_id=telegram_target | int) %}
+                          {% endif %}
+                          {% if telegram_thread_id != "" %}
+                            {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+                          {% endif %}
+                          {{ data }}
+
+                  # === ZALO BOT: Gửi phân tích AI ===
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ enable_zalo_bot }}"
+                        sequence:
+                          - alias: "Gửi kết quả AI qua Zalo Bot"
+                            continue_on_error: true
+                            action: pyscript.send_zalo_message
+                            data:
+                              chat_id: "{{ zalo_bot_chat_id }}"
+                              message: "{{ ai_messages }}"
+                            response_variable: zalo_bot_message_response
+
+                  # === ZALO CUSTOM: Gửi phân tích AI ===
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: >
+                              {{ enable_zalo_custom
+                                 and zalo_resolved_id | trim | length > 0
+                                 and zalo_custom_account | length > 0 }}
+                        sequence:
+                          - alias: "Gửi kết quả AI qua Zalo Custom"
+                            continue_on_error: true
+                            action: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              thread_id: "{{ zalo_resolved_id | trim }}"
+                              type: !input zalo_custom_receiver_type
+                              message: "{{ ai_messages }}"
+                              ttl: !input zalo_custom_ttl
+                            response_variable: zalo_custom_message_response
+
+                  # === TTS RA LOA ===
+                  - if:
+                      - condition: template
+                        value_template: "{{ include_tts_announcement }}"
+                    then:
+                      - alias: "TTS ra từng loa"
+                        repeat:
+                          for_each: "{{ media_player }}"
+                          sequence:
+                            - continue_on_error: true
+                              action: media_player.volume_set
+                              data:
+                                volume_level: "{{ num_volume_speaker }}"
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                            - continue_on_error: true
+                              action: tts.speak
+                              target:
+                                entity_id: !input text_to_speech_engine
+                              data:
+                                media_player_entity_id: "{{ repeat.item }}"
+                                message: >
+                                  {{ ai_result.humans_detected_description }}
+
+            else:
+              # === XỬ LÝ KHI AI TIMEOUT ===
+              - variables:
+                  error_message: >
+                    ⚠️ AI phân tích ảnh chụp không thành công (timeout).
+                    🕒 {{ now().strftime('%H:%M:%S %a, %d-%b-%Y') }}
+
+              - if:
+                  - condition: template
+                    value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
+                then:
+                  - choose:
+                      - alias: Android - Thông báo lỗi
+                        conditions:
+                          - "{{ is_ios_android == 'android_device' }}"
+                        sequence:
+                          - repeat:
+                              for_each: "{{ filtered_devices }}"
+                              sequence:
+                                - continue_on_error: true
+                                  action: >
+                                    notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                                  data:
+                                    title: !input notify_title
+                                    message: "{{ error_message }}"
+                                    data:
+                                      priority: high
+                                      notification_icon: !input status_bar_icon
+                                      color: "{{ notification_color_hex }}"
+                                      image: "{{ snapshot_first }}"
+                                      url: "{{ tap_navigate }}"
+                                      clickAction: "{{ tap_navigate }}"
+                                      tag: "{{ tag }}"
+                      - alias: iOS - Thông báo lỗi
+                        conditions:
+                          - "{{ is_ios_android == 'ios_device' }}"
+                        sequence:
+                          - repeat:
+                              for_each: "{{ filtered_devices }}"
+                              sequence:
+                                - continue_on_error: true
+                                  action: >
+                                    notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                                  data:
+                                    title: !input notify_title
+                                    message: "{{ error_message }}"
+                                    data:
+                                      attachment:
+                                        url: "{{ snapshot_first }}"
+                                        content_type: JPEG
+                                      tag: "{{ tag }}"
+
+              - if:
+                  - condition: template
+                    value_template: "{{ include_telegram_notify }}"
+                then:
+                  - continue_on_error: true
+                    action: telegram_bot.send_message
+                    data: >
+                      {% set data = {
+                        'config_entry_id': telegram_config_entry,
+                        'message': error_message,
+                        'parse_mode': 'plain_text'
+                      } %}
+                      {% if telegram_target != "" %}
+                        {% set data = dict(data, chat_id=telegram_target | int) %}
+                      {% endif %}
+                      {% if telegram_thread_id != "" %}
+                        {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+                      {% endif %}
+                      {{ data }}
+
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ enable_zalo_bot }}"
+                    sequence:
+                      - continue_on_error: true
+                        action: pyscript.send_zalo_message
+                        data:
+                          chat_id: "{{ zalo_bot_chat_id }}"
+                          message: "{{ error_message }}"
+
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: >
+                          {{ enable_zalo_custom
+                             and zalo_resolved_id | trim | length > 0
+                             and zalo_custom_account | length > 0 }}
+                    sequence:
+                      - continue_on_error: true
+                        action: zalo_bot.send_message
+                        data:
+                          account_selection: !input zalo_custom_account
+                          thread_id: "{{ zalo_resolved_id | trim }}"
+                          type: !input zalo_custom_receiver_type
+                          message: "{{ error_message }}"
+                          ttl: !input zalo_custom_ttl
+
+  # === COOLDOWN ===
+  - delay:
+      seconds: "{{ num_delay_actions }}"
+  - delay: !input cooldown
