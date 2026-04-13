@@ -541,9 +541,10 @@ action:
                 value_template: "{{ delete_ai_image and image_path != '' }}"
             then:
               - continue_on_error: true
-                action: delete.file          # ✅ FIX: dùng HACS delete.file thay vì shell_command.delete_file
+                action: delete.files_in_folder          # ✅ FIX: dùng HACS delete.file thay vì shell_command.delete_file
                 data:
-                  file: "{{ image_path }}"
+                  folder: '/config/media/music_ai'
+                  time: 3600
 
 mode: single
 max_exceeded: silent
