@@ -203,6 +203,7 @@ blueprint:
             BẮT BUỘC viết tiếng Việt có đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
             TUYỆT ĐỐI KHÔNG bọc kết quả trong markdown code block.
             Chỉ trả về JSON thuần, bắt đầu bằng { và kết thúc bằng }.
+            QUAN TRỌNG: Chỉ trả về raw JSON, KHÔNG dùng markdown, KHÔNG có \``json, KHÔNG có bất kỳ ký tự nào ngoài JSON.
           selector:
             text:
               multiline: true
