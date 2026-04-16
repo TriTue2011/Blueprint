@@ -701,7 +701,7 @@ action:
             action: zalo_bot.send_image
             data:
               account_selection: !input zalo_custom_account
-              thread_id: "{{ zalo_resolved_id | trim }}"
+              thread_id: "{{ zalo_resolved_id | trim | string }}"
               type: !input zalo_custom_receiver_type
               image_path: /media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
               message: "{{ zalo_custom_initial_caption }}"
@@ -761,7 +761,6 @@ action:
         conditions:
           - "{{ ai_powered }}"
         sequence:
-          # [THAY ĐỔI 1] Bỏ structure, dùng instructions để yêu cầu JSON thuần
           - action: ai_task.generate_data
             data:
               task_name: Phan tich anh khi co chuyen dong
@@ -780,16 +779,23 @@ action:
               - condition: template
                 value_template: "{{ wait.completed }}"
             then:
-              # [THAY ĐỔI 2] Parse JSON từ humans_detected_report.data
+              # ============================================================
+              # FIX: Xóa markdown code block (```json ... ```) trước khi
+              # parse JSON, phòng trường hợp AI trả về có bọc markdown.
+              # ============================================================
               - variables:
-                  ai_result: "{{ humans_detected_report.data | from_json }}"
+                  ai_result: >-
+                    {{ humans_detected_report.data
+                       | regex_replace('```json\s*', '')
+                       | regex_replace('```\s*', '')
+                       | trim
+                       | from_json }}
                   ai_messages: |
                     📊  {{ camera_name }}
                     🚶: {{ ai_result.humans_detected_summary if ai_result.humans_detected_summary | default('') | length > 0 else ai_result.humans_detected }}
                     👉 {{ ai_result.humans_detected_description }}
                     {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
 
-              # [THAY ĐỔI 3] Dùng ai_result thay vì humans_detected_report.data
               - if:
                   - condition: template
                     value_template: >
@@ -897,7 +903,7 @@ action:
                             action: zalo_bot.send_message
                             data:
                               account_selection: !input zalo_custom_account
-                              thread_id: "{{ zalo_resolved_id | trim }}"
+                              thread_id: "{{ zalo_resolved_id | trim | string }}"
                               type: !input zalo_custom_receiver_type
                               message: "{{ ai_messages }}"
                               ttl: !input zalo_custom_ttl
@@ -1022,7 +1028,7 @@ action:
                         action: zalo_bot.send_message
                         data:
                           account_selection: !input zalo_custom_account
-                          thread_id: "{{ zalo_resolved_id | trim }}"
+                          thread_id: "{{ zalo_resolved_id | trim | string }}"
                           type: !input zalo_custom_receiver_type
                           message: "{{ error_message }}"
                           ttl: !input zalo_custom_ttl
