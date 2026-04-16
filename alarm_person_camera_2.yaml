@@ -784,12 +784,8 @@ action:
               # parse JSON, phòng trường hợp AI trả về có bọc markdown.
               # ============================================================
               - variables:
-                  ai_result: >-
-                    {{ humans_detected_report.data
-                       | regex_replace('```json\s*', '')
-                       | regex_replace('```\s*', '')
-                       | trim
-                       | from_json }}
+
+                  ai_result: "{{ (humans_detected_report.data | regex_replace('```json\\\\s*','') | regex_replace('```\\\\s*','') | trim | from_json(default={})) if (humans_detected_report.data is defined) else {} }}"
                   ai_messages: |
                     📊  {{ camera_name }}
                     🚶: {{ ai_result.humans_detected_summary if ai_result.humans_detected_summary | default('') | length > 0 else ai_result.humans_detected }}
