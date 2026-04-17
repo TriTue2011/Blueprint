@@ -120,7 +120,19 @@ shell_command:
   copy_weather_image: >
     mv "{{ source }}" "{{ destination }}"
 ```
-
+hoặc dùng api nvidia
+trong configuration.yaml
+```yaml
+pyscript:
+  allow_all_imports: true
+  hass_is_global: true
+  nvidia_api_key: !secret nvidia_api_key
+ ```
+ trong secrets.yaml
+```yaml
+nvidia_api_key: "nvapi-xxx"
+```
+tải file https://github.com/TriTue2011/Blueprint/blob/main/scripts/weather_image.py cho vào folder pyscript. các cài pyscript https://github.com/custom-components/pyscript
 **2. Tạo Template Sensor** nhận diện buổi trong ngày:
 
 ```yaml
