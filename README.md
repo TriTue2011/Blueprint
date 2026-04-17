@@ -132,7 +132,8 @@ pyscript:
 ```yaml
 nvidia_api_key: "nvapi-xxx"
 ```
-tải file https://github.com/TriTue2011/Blueprint/blob/main/scripts/weather_image.py cho vào folder pyscript. các cài pyscript https://github.com/custom-components/pyscript
+tải file https://github.com/TriTue2011/Blueprint/blob/main/scripts/weather_image.py cho vào folder pyscript. cách cài pyscript https://github.com/custom-components/pyscript.
+
 **2. Tạo Template Sensor** nhận diện buổi trong ngày:
 
 ```yaml
