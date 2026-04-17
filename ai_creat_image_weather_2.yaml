@@ -1,24 +1,31 @@
 blueprint:
   name: Tạo ảnh thời tiết (NVIDIA Flux - PyScript)
   author: TriTue2011
-  source_url: https://github.com/TriTue2011/Blueprint/blob/main/ai_creat_image_weather_2.yaml
-  description: |
-    # Tạo ảnh thời tiết tự động với NVIDIA Flux qua PyScript
+  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/ai_creat_image_weather_2.yaml
+  description: '# Tạo ảnh thời tiết tự động với NVIDIA Flux qua PyScript
+
 
     ✨ Tính năng:
+
     - Prompt tối ưu ~750 ký tự, thay đổi phong cảnh theo buổi
+
+    - Lighting được đặt ĐẦU prompt để model ưu tiên đúng thời điểm ngày/đêm
+
     - Không cần shell_command, API key quản lý qua secrets.yaml
+
     - Hỗ trợ đầy đủ sensors thời tiết và chất lượng không khí
+
     ⏰ TRIGGER: Kích hoạt khi pha thời gian trong ngày thay đổi
+
+    🔧 FIX: Ảnh không còn bị sai thời gian (ngày/đêm nhầm lẫn)
+
+    '
   domain: automation
   homeassistant:
     min_version: 2025.10.0
-
   input:
-
-    # ===== CẢM BIẾN THỜI TIẾT =====
     weather_sensors:
-      name: "🌤️ Cảm biến thời tiết"
+      name: "\U0001F324️ Cảm biến thời tiết"
       icon: mdi:weather-partly-cloudy
       collapsed: false
       input:
@@ -28,288 +35,293 @@ blueprint:
           selector:
             entity:
               filter:
-                - domain: sensor
+              - domain:
+                - sensor
               multiple: false
-
+              reorder: false
         weather_entity:
           name: Thực thể thời tiết
           selector:
             entity:
               filter:
-                - domain: weather
+              - domain:
+                - weather
               multiple: false
-
+              reorder: false
         temperature_sensor:
           name: Cảm biến nhiệt độ (tuỳ chọn)
-          default: ""
+          default: ''
           selector:
             entity:
               filter:
-                - domain: sensor
-                  device_class: temperature
+              - domain:
+                - sensor
+                device_class:
+                - temperature
               multiple: false
-
+              reorder: false
         humidity_sensor:
           name: Cảm biến độ ẩm (tuỳ chọn)
-          default: ""
+          default: ''
           selector:
             entity:
               filter:
-                - domain: sensor
-                  device_class: humidity
+              - domain:
+                - sensor
+                device_class:
+                - humidity
               multiple: false
-
+              reorder: false
         wind_speed_sensor:
           name: Cảm biến tốc độ gió (tuỳ chọn)
-          default: ""
+          default: ''
           selector:
             entity:
               filter:
-                - domain: sensor
+              - domain:
+                - sensor
               multiple: false
-
-    # ===== CHẤT LƯỢNG KHÔNG KHÍ =====
+              reorder: false
     air_quality_sensors:
-      name: "🏭 Chất lượng không khí"
+      name: "\U0001F3ED Chất lượng không khí"
       icon: mdi:air-filter
       collapsed: true
       input:
         aqi_sensor:
           name: AQI (tuỳ chọn)
-          default: ""
+          default: ''
           selector:
             entity:
               filter:
-                - domain: sensor
-                  device_class: aqi
+              - domain:
+                - sensor
+                device_class:
+                - aqi
               multiple: false
-
+              reorder: false
         pm25_sensor:
           name: PM2.5 (tuỳ chọn)
-          default: ""
+          default: ''
           selector:
             entity:
               filter:
-                - domain: sensor
+              - domain:
+                - sensor
               multiple: false
-
-    # ===== CÀI ĐẶT ẢNH =====
+              reorder: false
     output_settings:
-      name: "💾 Cài đặt lưu ảnh"
+      name: "\U0001F4BE Cài đặt lưu ảnh"
       icon: mdi:content-save
       collapsed: false
       input:
         output_path:
           name: Đường dẫn lưu ảnh
-          default: "/config/media/weather/weather_current.png"
+          default: /config/media/weather/weather_current.png
           selector:
             text:
-
+              multiline: false
+              multiple: false
         steps:
           name: Số bước sinh ảnh
-          description: Cao hơn = chất lượng tốt hơn, chậm hơn (khuyến nghị 4–8)
+          description: Cao hơn = chất lượng tốt hơn, chậm hơn (khuyến nghị 6–8, tối thiểu 6 để đảm bảo đúng thời gian)
           default: 6
           selector:
             number:
-              min: 1
-              max: 20
-              step: 1
-
+              min: 1.0
+              max: 20.0
+              step: 1.0
+              mode: slider
         width:
           name: Chiều rộng (px)
           default: 1344
           selector:
             number:
-              min: 512
-              max: 1920
-              step: 64
-
+              min: 512.0
+              max: 1920.0
+              step: 64.0
+              mode: slider
         height:
           name: Chiều cao (px)
           default: 768
           selector:
             number:
-              min: 256
-              max: 1080
-              step: 64
+              min: 256.0
+              max: 1080.0
+              step: 64.0
+              mode: slider
 
-# ===== TRIGGER =====
 trigger:
-  - platform: state
-    entity_id: !input time_phase_sensor
+- platform: state
+  entity_id: !input time_phase_sensor
 
 condition: []
 
-# ===== ACTIONS =====
 action:
+- variables:
+    time_phase_sensor: !input time_phase_sensor
+    weather_entity: !input weather_entity
+    temperature_sensor: !input temperature_sensor
+    humidity_sensor: !input humidity_sensor
+    wind_speed_sensor: !input wind_speed_sensor
+    aqi_sensor: !input aqi_sensor
+    pm25_sensor: !input pm25_sensor
+    tp: '{{ states(time_phase_sensor) | lower }}'
+    w: '{{ states(weather_entity) | lower }}'
+    temp: >-
+      {% if temperature_sensor != '' and states(temperature_sensor) not in ['unknown','unavailable',''] %}
+        {{ states(temperature_sensor) | float(30) }}
+      {% else %}
+        {{ state_attr(weather_entity, 'temperature') | float(30) }}
+      {% endif %}
+    hum: >-
+      {% if humidity_sensor != '' and states(humidity_sensor) not in ['unknown','unavailable',''] %}
+        {{ states(humidity_sensor) | int(70) }}
+      {% else %}
+        {{ state_attr(weather_entity, 'humidity') | int(70) }}
+      {% endif %}
+    wind: >-
+      {% if wind_speed_sensor != '' and states(wind_speed_sensor) not in ['unknown','unavailable',''] %}
+        {{ states(wind_speed_sensor) | float(5) }}
+      {% else %}
+        {{ state_attr(weather_entity, 'wind_speed') | float(5) }}
+      {% endif %}
+    aqi: >-
+      {% if aqi_sensor != '' and states(aqi_sensor) not in ['unknown','unavailable',''] %}
+        {{ states(aqi_sensor) | int(0) }}
+      {% else %}0{% endif %}
+    pm25: >-
+      {% if pm25_sensor != '' and states(pm25_sensor) not in ['unknown','unavailable',''] %}
+        {{ states(pm25_sensor) | float(0) }}
+      {% else %}0{% endif %}
 
-  # ── BƯỚC 1: THU THẬP DỮ LIỆU ──────────────────────────────────────────────
-  - variables:
-      time_phase_sensor:  !input time_phase_sensor
-      weather_entity:     !input weather_entity
-      temperature_sensor: !input temperature_sensor
-      humidity_sensor:    !input humidity_sensor
-      wind_speed_sensor:  !input wind_speed_sensor
-      aqi_sensor:         !input aqi_sensor
-      pm25_sensor:        !input pm25_sensor
+- variables:
+    # ── LIGHTING: đặt ĐẦU TIÊN để model ưu tiên đúng thời gian ──────────────
+    lighting: >-
+      {% if 'sáng' in tp or 'morning' in tp %}
+        golden-hour sunrise, warm pink-orange sky, long soft morning shadows, dew on grass, bright daylight beginning
+      {% elif 'trưa' in tp or 'noon' in tp %}
+        harsh bright overhead noon sun, deep blue sky, vivid colours, short shadows, full daylight
+      {% elif 'chiều' in tp or 'afternoon' in tp %}
+        warm amber sunset light, long golden shadows, glowing orange horizon, late afternoon daylight
+      {% elif 'tối' in tp or 'evening' in tp %}
+        blue-hour twilight, NO daylight, dark sky gradient deep orange fading to indigo, first stars appearing, village lights and lanterns glowing, night atmosphere beginning
+      {% else %}
+        deep night scene, NO sun, NO daylight, full darkness, bright moonlight casting silver shadows, glowing lanterns, Milky Way overhead, stars filling sky
+      {% endif %}
 
-      tp: "{{ states(time_phase_sensor) | lower }}"
-      w:  "{{ states(weather_entity)    | lower }}"
+    # ── SCENE: phong cảnh theo buổi ─────────────────────────────────────────
+    scene: >-
+      {% if 'sáng' in tp or 'morning' in tp %}
+        Vietnam countryside, lush green rice paddy terraces, bamboo groves, wooden farmhouses, morning mist over fields, roosters crowing, farmers walking dirt paths
+      {% elif 'trưa' in tp or 'noon' in tp %}
+        Vietnam coastal fishing village, turquoise emerald sea, colorful wooden boats docked, white sand beach, palm trees swaying, fishermen sorting nets
+      {% elif 'chiều' in tp or 'afternoon' in tp %}
+        Vietnam old town street, yellowed colonial French buildings, narrow lantern-lined alley, motorbikes weaving, bougainvillea flowers on walls, street food vendors
+      {% elif 'tối' in tp or 'evening' in tp %}
+        Vietnam Sapa mountain valley at dusk, terraced rice fields reflecting twilight sky, ethnic minority hilltribe village with glowing lit windows, wooden stilt houses, pine trees on ridgeline, dark evening atmosphere
+      {% else %}
+        Vietnam remote mountain village at night, ancient stone houses, swirling fog between peaks, glowing orange lanterns, dirt road, wild forest surrounding, no daylight
+      {% endif %}
 
-      temp: >-
-        {% if temperature_sensor != '' and states(temperature_sensor) not in ['unknown','unavailable',''] %}
-          {{ states(temperature_sensor) | float(30) }}
-        {% else %}
-          {{ state_attr(weather_entity, 'temperature') | float(30) }}
+    # ── WEATHER FX ──────────────────────────────────────────────────────────
+    weather_fx: >-
+      {% if 'rain' in w or 'mưa' in w %}
+        heavy rain falling, wet reflective ground, puddles everywhere, water droplets on leaves, grey overcast sky
+      {% elif 'thunder' in w or 'bão' in w %}
+        violent thunderstorm, dramatic dark cumulonimbus clouds, distant lightning strike, powerful wind gusts
+      {% elif 'cloud' in w or 'mây' in w %}
+        thick overcast clouds, diffused soft light, flat even lighting, no harsh shadows
+      {% elif 'fog' in w or 'sương' in w %}
+        dense rolling fog, misty dreamy atmosphere, very low visibility, soft ethereal mood
+      {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
+        clear sky, vivid saturated colours, sharp defined shadows
+      {% elif 'snow' in w %}
+        light snowfall, white snow-covered ground, frosted tree branches, cold breath visible in air
+      {% else %}
+        partly cloudy, scattered white cumulus clouds, pleasant natural light
+      {% endif %}
+
+    # ── TEMPERATURE FX ──────────────────────────────────────────────────────
+    temp_fx: >-
+      {% if temp > 35 %}
+        scorching heat {{ temp | round }}°C, heat shimmer rising from ground, wilting leaves
+      {% elif temp > 30 %}
+        hot {{ temp | round }}°C, summer haze, people seeking shade
+      {% elif temp > 25 %}
+        warm {{ temp | round }}°C, comfortable outdoor weather, lush green vegetation
+      {% elif temp > 18 %}
+        cool {{ temp | round }}°C, refreshing fresh crisp air feeling
+      {% else %}
+        cold {{ temp | round }}°C, people wearing jackets, frost on surfaces, breath visible
+      {% endif %}
+
+    # ── WIND FX ─────────────────────────────────────────────────────────────
+    wind_fx: >-
+      {% if wind > 30 %}
+        powerful gale wind, trees bending violently, debris flying, rippling turbulent water
+      {% elif wind > 15 %}
+        moderate wind, leaves and branches swaying rhythmically, rippled puddle surfaces
+      {% elif wind > 5 %}
+        gentle breeze, soft subtle movement of grass tips and leaves
+      {% else %}
+        perfectly calm still air, glassy mirror-like water reflections
+      {% endif %}
+
+    # ── HUMIDITY FX ─────────────────────────────────────────────────────────
+    hum_fx: >-
+      {% if hum > 85 %}
+        oppressively humid {{ hum }}%, heavy tropical haze, damp glistening surfaces, condensation visible
+      {% elif hum > 60 %}
+        moderately humid {{ hum }}%, lush vegetation glistening with moisture
+      {% elif hum < 30 %}
+        very dry crisp air {{ hum }}%, dust particles floating, cracked dry earth
+      {% else %}
         {% endif %}
 
-      hum: >-
-        {% if humidity_sensor != '' and states(humidity_sensor) not in ['unknown','unavailable',''] %}
-          {{ states(humidity_sensor) | int(70) }}
-        {% else %}
-          {{ state_attr(weather_entity, 'humidity') | int(70) }}
+    # ── AQI FX ──────────────────────────────────────────────────────────────
+    aqi_fx: >-
+      {% if aqi > 150 %}
+        heavy toxic smog AQI {{ aqi }}, thick orange-brown haze, very poor visibility, sun barely a disc
+      {% elif aqi > 100 %}
+        significant hazy air AQI {{ aqi }}, washed-out distant objects, greyish sky tint
+      {% elif aqi > 50 %}
+        slight haze on horizon AQI {{ aqi }}, mildly muted distant colours
+      {% else %}
         {% endif %}
 
-      wind: >-
-        {% if wind_speed_sensor != '' and states(wind_speed_sensor) not in ['unknown','unavailable',''] %}
-          {{ states(wind_speed_sensor) | float(5) }}
-        {% else %}
-          {{ state_attr(weather_entity, 'wind_speed') | float(5) }}
-        {% endif %}
+    # ── ASSEMBLE PROMPT: lighting ĐẦU TIÊN ──────────────────────────────────
+    _parts: >-
+      {{ [
+        lighting | trim,
+        scene | trim,
+        weather_fx | trim,
+        temp_fx | trim,
+        wind_fx | trim,
+        hum_fx | trim,
+        aqi_fx | trim
+      ] | select('ne', '') | list | join(', ') }}
 
-      aqi: >-
-        {% if aqi_sensor != '' and states(aqi_sensor) not in ['unknown','unavailable',''] %}
-          {{ states(aqi_sensor) | int(0) }}
-        {% else %}0{% endif %}
+    prompt_safe: >-
+      {{ ('Photorealistic aerial DSLR photograph, ' ~ _parts ~ ', wide-angle panoramic composition, deep depth of field, HDR cinematic colour grade, ultra sharp details, 8K resolution, no text, no watermark, no faces')
+         | regex_replace('\\s+', ' ')
+         | trim
+         | truncate(750, True, '') }}
 
-      pm25: >-
-        {% if pm25_sensor != '' and states(pm25_sensor) not in ['unknown','unavailable',''] %}
-          {{ states(pm25_sensor) | float(0) }}
-        {% else %}0{% endif %}
+- action: pyscript.generate_weather_image
+  data:
+    prompt: '{{ prompt_safe }}'
+    output_path: !input output_path
+    steps: !input steps
+    width: !input width
+    height: !input height
 
-  # ── BƯỚC 2: BUILD PROMPT ───────────────────────────────────────────────────
-  - variables:
-
-      scene: >-
-        {% if 'sáng' in tp or 'morning' in tp %}
-          Vietnam countryside, lush green rice paddy terraces, bamboo groves, wooden farmhouses, morning mist over fields, roosters crowing, farmers walking dirt paths
-        {% elif 'trưa' in tp or 'noon' in tp %}
-          Vietnam coastal fishing village, turquoise emerald sea, colorful wooden boats docked, white sand beach, palm trees swaying, fishermen sorting nets
-        {% elif 'chiều' in tp or 'afternoon' in tp %}
-          Vietnam old town street, yellowed colonial French buildings, narrow lantern-lined alley, motorbikes weaving, bougainvillea flowers on walls, street food vendors
-        {% elif 'tối' in tp or 'evening' in tp %}
-          Vietnam Sapa mountain valley, dramatic terraced rice fields, ethnic minority hilltribe village, wooden stilt houses, pine trees on ridgeline
-        {% else %}
-          Vietnam remote mountain village at night, ancient stone houses, swirling fog between peaks, glowing lanterns, dirt road, wild forest surrounding
-        {% endif %}
-
-      weather_fx: >-
-        {% if 'rain' in w or 'mưa' in w %}
-          heavy rain falling, wet reflective ground, puddles everywhere, water droplets on leaves, grey overcast sky
-        {% elif 'thunder' in w or 'bão' in w %}
-          violent thunderstorm, dramatic dark cumulonimbus clouds, distant lightning strike, powerful wind gusts
-        {% elif 'cloud' in w or 'mây' in w %}
-          thick overcast clouds, diffused soft light, flat even lighting, no harsh shadows
-        {% elif 'fog' in w or 'sương' in w %}
-          dense rolling fog, misty dreamy atmosphere, very low visibility, soft ethereal mood
-        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
-          clear deep blue sky, crisp bright sunlight, sharp defined shadows, vivid saturated colours
-        {% elif 'snow' in w %}
-          light snowfall, white snow-covered ground, frosted tree branches, cold breath visible in air
-        {% else %}
-          partly cloudy, scattered white cumulus clouds, pleasant natural light
-        {% endif %}
-
-      temp_fx: >-
-        {% if temp > 35 %}
-          scorching heat {{ temp | round }}°C, heat shimmer rising from ground, wilting leaves, people sweating
-        {% elif temp > 30 %}
-          hot {{ temp | round }}°C, summer haze, people seeking shade under trees
-        {% elif temp > 25 %}
-          warm pleasant {{ temp | round }}°C, comfortable outdoor weather, lush green vegetation
-        {% elif temp > 18 %}
-          cool {{ temp | round }}°C, refreshing light breeze, fresh crisp air feeling
-        {% else %}
-          cold {{ temp | round }}°C, people wearing jackets, frost on surfaces, breath visible
-        {% endif %}
-
-      wind_fx: >-
-        {% if wind > 30 %}
-          powerful gale wind, trees bending violently, debris flying, rippling turbulent water surface
-        {% elif wind > 15 %}
-          moderate wind, leaves and branches swaying rhythmically, rippled puddle surfaces
-        {% elif wind > 5 %}
-          gentle breeze, soft subtle movement of grass tips and leaves
-        {% else %}
-          perfectly calm still air, glassy mirror-like water reflections
-        {% endif %}
-
-      hum_fx: >-
-        {% if hum > 85 %}
-          oppressively humid {{ hum }}%, heavy tropical haze, damp glistening surfaces, condensation visible
-        {% elif hum > 60 %}
-          moderately humid {{ hum }}%, lush vegetation glistening with moisture
-        {% elif hum < 30 %}
-          very dry crisp air {{ hum }}%, dust particles floating, cracked dry earth
-        {% else %}
-          {% endif %}
-
-      aqi_fx: >-
-        {% if aqi > 150 %}
-          heavy toxic smog AQI {{ aqi }}, thick orange-brown haze, very poor visibility, sun barely a disc
-        {% elif aqi > 100 %}
-          significant hazy air AQI {{ aqi }}, washed-out distant objects, greyish sky tint
-        {% elif aqi > 50 %}
-          slight haze on horizon AQI {{ aqi }}, mildly muted distant colours
-        {% else %}
-          {% endif %}
-
-      lighting: >-
-        {% if 'sáng' in tp or 'morning' in tp %}
-          warm golden-hour sunrise light, long soft pink shadows, sky gradient pink-orange to pale blue, dew on grass
-        {% elif 'trưa' in tp or 'noon' in tp %}
-          harsh bright overhead noon sun, vivid fully saturated colours, minimal short shadows, intense brightness
-        {% elif 'chiều' in tp or 'afternoon' in tp %}
-          warm amber-orange sunset light, long dramatic golden shadows, glowing luminous sky on horizon
-        {% elif 'tối' in tp or 'evening' in tp %}
-          blue-hour twilight, sky gradient deep orange fading to indigo, first stars appearing, village lights flickering on
-        {% else %}
-          deep night scene, bright full moonlight casting silver shadows, warm glowing lantern light pools, Milky Way visible overhead
-        {% endif %}
-
-      _parts: >-
-        {{ [
-          scene | trim,
-          weather_fx | trim,
-          temp_fx | trim,
-          wind_fx | trim,
-          hum_fx | trim,
-          aqi_fx | trim,
-          lighting | trim
-        ] | select('ne', '') | list | join(', ') }}
-
-      prompt_safe: >-
-        {{ ('Photorealistic aerial DSLR photograph, ' ~ _parts ~ ', wide-angle panoramic composition, deep depth of field, HDR cinematic colour grade, ultra sharp details, 8K resolution, no text, no watermark, no faces')
-           | regex_replace('\\s+', ' ')
-           | trim
-           | truncate(750, True, '') }}
-
-  # ── BƯỚC 3: GỌI PYSCRIPT SERVICE ──────────────────────────────────────────
-  - action: pyscript.generate_weather_image
-    data:
-      prompt:      "{{ prompt_safe }}"
-      output_path: !input output_path
-      steps:       !input steps
-      width:       !input width
-      height:      !input height
-
-  # ── BƯỚC 4: LOG ────────────────────────────────────────────────────────────
-  - action: system_log.write
-    data:
-      level: info
-      message: >-
-        [WeatherImage] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}% | wind={{ wind }} | aqi={{ aqi }}
-        | chars={{ prompt_safe | length }} | prompt={{ prompt_safe | truncate(120) }}
+- action: system_log.write
+  data:
+    level: info
+    message: >-
+      [WeatherImage] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
+      | wind={{ wind }} | aqi={{ aqi }} | chars={{ prompt_safe | length }}
+      | prompt={{ prompt_safe | truncate(120) }}
 
 mode: single
 max_exceeded: silent
