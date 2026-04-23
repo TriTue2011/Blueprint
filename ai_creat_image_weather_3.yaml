@@ -222,9 +222,9 @@ blueprint:
                 - label: Phong cách sống động (Vibrant)
                   value: vibrant
 
-    # ===== LƯU ẢNH GEMINI =====
-    gemini_output:
-      name: "💾 Lưu ảnh — Gemini"
+    # ===== LƯU ẢNH (CHUNG CHO CẢ 2 ENGINE) =====
+    image_output:
+      name: "💾 Lưu ảnh — Chung cho cả 2 Engine"
       icon: mdi:content-save
       collapsed: true
       input:
@@ -246,7 +246,7 @@ blueprint:
 
         use_fixed_filename:
           name: Sử dụng tên file cố định
-          description: Bật để ghi đè file cũ
+          description: Bật để ghi đè file cũ (khuyến nghị)
           default: true
           selector:
             boolean:
@@ -275,7 +275,7 @@ blueprint:
                 - webp
 
         delete_ai_image:
-          name: Xóa ảnh AI sau khi lưu (dự phòng)
+          name: Xóa ảnh AI sau khi lưu (dự phòng — chỉ Gemini)
           description: |
             Dùng delete.files_in_folder (HACS) như bước dự phòng.
             Nếu đã dùng mv trong shell_command thì ảnh gốc đã bị xóa.
@@ -289,13 +289,6 @@ blueprint:
       icon: mdi:flash
       collapsed: true
       input:
-        output_path:
-          name: Đường dẫn lưu ảnh (NVIDIA)
-          default: /config/media/weather/weather_current.png
-          selector:
-            text:
-              multiline: false
-
         steps:
           name: Số bước sinh ảnh
           description: Cao hơn = chất lượng tốt hơn, chậm hơn (khuyến nghị 6–8)
@@ -326,6 +319,95 @@ blueprint:
               max: 1080
               step: 64
               mode: slider
+
+    # ===== GỬI ẢNH =====
+    notify_image_section:
+      name: "📤 Gửi ảnh sau khi tạo"
+      icon: mdi:image-send
+      collapsed: false
+      input:
+        include_telegram_notify:
+          name: ✅ Gửi qua Telegram
+          default: false
+          selector:
+            boolean: {}
+
+        telegram_config_entry:
+          name: 🤖 Telegram Bot
+          default: ""
+          selector:
+            config_entry:
+              integration: telegram_bot
+
+        telegram_target:
+          name: 🧑‍💻 Target Chat ID
+          description: Bỏ trống để dùng mặc định của bot.
+          default: ""
+          selector:
+            text: {}
+
+        telegram_thread_id:
+          name: 🧵 Thread ID (tuỳ chọn)
+          default: ""
+          selector:
+            text: {}
+
+        enable_zalo_bot:
+          name: ✅ Gửi qua Zalo Bot (Pyscript)
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_bot_chat_id:
+          name: 🧑‍💻 Zalo Bot Chat ID
+          default: ""
+          selector:
+            text: {}
+
+        enable_zalo_custom:
+          name: ✅ Gửi qua Zalo Custom Integration
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_custom_account:
+          name: 📱 Tài khoản Zalo
+          default: ""
+          selector:
+            text: {}
+
+        zalo_custom_thread_id:
+          name: 💬 Thread ID (Nhóm)
+          default: ""
+          selector:
+            text: {}
+
+        zalo_custom_user_id:
+          name: 👤 User ID (Cá nhân)
+          default: ""
+          selector:
+            text: {}
+
+        zalo_custom_receiver_type:
+          name: 👥 Receiver Type
+          default: "0"
+          selector:
+            select:
+              options:
+                - label: User (Cá nhân)
+                  value: "0"
+                - label: Group (Nhóm)
+                  value: "1"
+
+        zalo_custom_ttl:
+          name: ⏳ TTL (ms)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400000
+              step: 1000
+              mode: box
 
 # ===== TRIGGER =====
 trigger:
@@ -392,6 +474,24 @@ action:
         {% else %}
           0
         {% endif %}
+
+  # ── BƯỚC 1B: TÍNH ĐƯỜNG DẪN ẢNH CHUNG (DÙNG CHO CẢ 2 ENGINE) ─────────────
+  - variables:
+      use_fixed_filename: !input use_fixed_filename
+      fixed_filename: !input fixed_filename
+      output_directory: !input output_directory
+      filename_prefix: !input filename_prefix
+      file_extension: !input file_extension
+      delete_ai_image: !input delete_ai_image
+      timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
+      filename: >-
+        {% if use_fixed_filename %}
+          {{ fixed_filename }}.{{ file_extension }}
+        {% else %}
+          {{ filename_prefix }}{{ now().strftime('%Y%m%d_%H%M%S') }}.{{ file_extension }}
+        {% endif %}
+      final_image_path: >-
+        {{ output_directory }}/{% if use_fixed_filename %}{{ fixed_filename }}.{{ file_extension }}{% else %}{{ filename_prefix }}{{ now().strftime('%Y%m%d_%H%M%S') }}.{{ file_extension }}{% endif %}
 
   # ── BƯỚC 2: BUILD PROMPT GEMINI ───────────────────────────────────────────
   - variables:
@@ -821,27 +921,11 @@ action:
                       {{ sid }}
                     {% endif %}
 
-              - variables:
-                  timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
-                  use_fixed_filename: !input use_fixed_filename
-                  fixed_filename: !input fixed_filename
-                  output_directory: !input output_directory
-                  filename_prefix: !input filename_prefix
-                  file_extension: !input file_extension
-                  delete_ai_image: !input delete_ai_image
-                  filename: >-
-                    {% if use_fixed_filename %}
-                      {{ fixed_filename }}.{{ file_extension }}
-                    {% else %}
-                      {{ filename_prefix }}{{ timestamp }}.{{ file_extension }}
-                    {% endif %}
-                  dest_path: "{{ output_directory }}/{{ filename }}"
-
               - continue_on_error: true
                 action: shell_command.copy_weather_image
                 data:
                   source: "{{ image_path }}"
-                  destination: "{{ dest_path }}"
+                  destination: "{{ final_image_path }}"
                 response_variable: copy_result
 
               - if:
@@ -862,7 +946,7 @@ action:
           - action: pyscript.generate_weather_image
             data:
               prompt: "{{ nvidia_prompt }}"
-              output_path: !input output_path
+              output_path: "{{ final_image_path }}"
               steps: !input steps
               width: !input width
               height: !input height
@@ -874,6 +958,62 @@ action:
                 [WeatherImage] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
                 | wind={{ wind }} | aqi={{ aqi }} | chars={{ nvidia_prompt | length }}
                 | prompt={{ nvidia_prompt | truncate(120) }}
+
+  # ── BƯỚC 5: GỬI ẢNH ──────────────────────────────────────────────────────
+  - variables:
+      _tg:             !input include_telegram_notify
+      _tg_cfg:         !input telegram_config_entry
+      _tg_target:      !input telegram_target
+      _tg_thread:      !input telegram_thread_id
+      _zb:             !input enable_zalo_bot
+      _zb_id:          !input zalo_bot_chat_id
+      _zc:             !input enable_zalo_custom
+      _zc_acc:         !input zalo_custom_account
+      _zc_tid:         !input zalo_custom_thread_id
+      _zc_uid:         !input zalo_custom_user_id
+      _zc_type:        !input zalo_custom_receiver_type
+      _zc_ttl:         !input zalo_custom_ttl
+      _zc_resolved: >-
+        {{ _zc_tid if _zc_type == '1' else _zc_uid }}
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ _tg }}"
+        sequence:
+          - continue_on_error: true
+            action: telegram_bot.send_photo
+            data: >
+              {% set d = {'config_entry_id': _tg_cfg, 'file': final_image_path} %}
+              {% if _tg_target != '' %}{% set d = dict(d, chat_id=_tg_target | int) %}{% endif %}
+              {% if _tg_thread != '' %}{% set d = dict(d, message_thread_id=_tg_thread | int) %}{% endif %}
+              {{ d }}
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ _zb }}"
+        sequence:
+          - continue_on_error: true
+            action: pyscript.send_zalo_photo
+            data:
+              chat_id: "{{ _zb_id }}"
+              file_path: "{{ final_image_path }}"
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ _zc and _zc_resolved | trim | length > 0 and _zc_acc | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_image
+            data:
+              account_selection: "{{ _zc_acc }}"
+              thread_id: "{{ _zc_resolved | trim | string }}"
+              type: "{{ _zc_type }}"
+              image_path: "{{ final_image_path }}"
+              ttl: "{{ _zc_ttl }}"
 
 mode: single
 max_exceeded: silent
