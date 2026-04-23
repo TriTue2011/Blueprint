@@ -10,7 +10,7 @@ blueprint:
     <details>
     <summary><b>Chi tiết:</b> - Nhấn để mở rộng</summary>
 
-      **Phiên bản: v.2025.10.22 - Full 6 Cases Edition**
+      **Phiên bản: v.2025.10.22 - Full 6 Cases Edition (fix UndefinedError animals_detected)**
 
       **Tác giả gốc: TriTue2011**
 
@@ -1266,13 +1266,17 @@ action:
               - variables:
                   ai_messages: |
                     📊  {{ camera_name }}
-                    {% set h_count = humans_detected_report.data.humans_detected | int(0) %}
-                    {% set a_count = humans_detected_report.data.animals_detected | int(0) %}
-                    {% if detect_subjects in ['humans', 'both'] %}🚶: {{ humans_detected_report.data.humans_detected_summary if humans_detected_report.data.humans_detected_summary | default('') | length > 0 else h_count }}
-                    👉 {{ humans_detected_report.data.humans_detected_description }}
+                    {% set h_count = humans_detected_report.data.get('humans_detected', 0) | int(0) %}
+                    {% set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) %}
+                    {% set h_summary = humans_detected_report.data.get('humans_detected_summary', '') %}
+                    {% set a_summary = humans_detected_report.data.get('animals_detected_summary', '') %}
+                    {% set h_desc = humans_detected_report.data.get('humans_detected_description', '') %}
+                    {% set a_desc = humans_detected_report.data.get('animals_detected_description', '') %}
+                    {% if detect_subjects in ['humans', 'both'] %}🚶: {{ h_summary if h_summary | length > 0 else h_count }}
+                    👉 {{ h_desc }}
                     {% endif %}
-                    {% if detect_subjects in ['animals', 'both'] %}🐾: {{ humans_detected_report.data.animals_detected_summary if humans_detected_report.data.animals_detected_summary | default('') | length > 0 else a_count }}
-                    👉 {{ humans_detected_report.data.animals_detected_description }}
+                    {% if detect_subjects in ['animals', 'both'] %}🐾: {{ a_summary if a_summary | length > 0 else a_count }}
+                    👉 {{ a_desc }}
                     {% endif %}
                     {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
 
@@ -1283,10 +1287,10 @@ action:
               - if:
                   - condition: template
                     value_template: >
-                      {% set h_count = humans_detected_report.data.humans_detected | int(0) %}
-                      {% set h_desc  = humans_detected_report.data.humans_detected_description | default('') | lower %}
-                      {% set a_count = humans_detected_report.data.animals_detected | int(0) %}
-                      {% set a_desc  = humans_detected_report.data.animals_detected_description | default('') | lower %}
+                      {% set h_count = humans_detected_report.data.get('humans_detected', 0) | int(0) %}
+                      {% set h_desc  = humans_detected_report.data.get('humans_detected_description', '') | lower %}
+                      {% set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) %}
+                      {% set a_desc  = humans_detected_report.data.get('animals_detected_description', '') | lower %}
 
                       {# Xác định có người hợp lệ không #}
                       {% set no_human_phrases = [
@@ -1447,14 +1451,14 @@ action:
                               data:
                                 media_player_entity_id: "{{ repeat.item }}"
                                 message: >
-                                  {% set h_count = humans_detected_report.data.humans_detected | int(0) %}
-                                  {% set a_count = humans_detected_report.data.animals_detected | int(0) %}
+                                  {% set h_count = humans_detected_report.data.get('humans_detected', 0) | int(0) %}
+                                  {% set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) %}
                                   {% set parts = [] %}
                                   {% if detect_subjects in ['humans', 'both'] and h_count > 0 %}
-                                    {% set parts = parts + [humans_detected_report.data.humans_detected_description] %}
+                                    {% set parts = parts + [humans_detected_report.data.get('humans_detected_description', '')] %}
                                   {% endif %}
                                   {% if detect_subjects in ['animals', 'both'] and a_count > 0 %}
-                                    {% set parts = parts + [humans_detected_report.data.animals_detected_description] %}
+                                    {% set parts = parts + [humans_detected_report.data.get('animals_detected_description', '')] %}
                                   {% endif %}
                                   {{ parts | join('. ') if parts | length > 0 else 'Phát hiện chuyển động.' }}
 
