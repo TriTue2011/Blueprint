@@ -175,13 +175,17 @@ template:
             {% endif %}
 ```
 
-> Xem thêm: [Hướng dẫn tạo Sensor](#-tạo-sensor-trong-configurationyaml) | [Hướng dẫn tạo Shell Command](#-tạo-shell-command)
+**Dùng Gemini. Sử dụng addon (dockercompse) https://github.com/luuquangvu/Gemini-FastAPI và tích hợp https://github.com/luuquangvu/hass_local_openai_llm** 
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_creat_image_weather.yaml)
 
-dùng api nvidia. đăng ký tại https://build.nvidia.com
+**Dùng api nvidia. đăng ký tại https://build.nvidia.com và dùng tích hợp https://github.com/luuquangvu/hass_local_openai_llm**
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_creat_image_weather_2.yaml)
+
+**Gộp 2 blueprint kèm gửi ảnh qua zalo**
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_creat_image_weather_3.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
