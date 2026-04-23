@@ -1,5 +1,5 @@
 blueprint:
-  name: Cảnh báo camera AI - Đầy đủ 6 trường hợp prompt
+  name: Cảnh báo camera AI
   author: TriTue2011
   homeassistant:
     min_version: 2025.7.0
@@ -1100,13 +1100,13 @@ action:
               ttl: !input zalo_custom_ttl
             response_variable: zalo_custom_image_response
 
-  # --- Mobile App: gửi thông báo với ảnh, message "Đang phân tích..." ---
+  # --- Mobile App: Bước 1 — Gửi ảnh ngay lập tức (thông báo riêng, không tag) ---
   - if:
       - condition: template
         value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
     then:
       - choose:
-          - alias: Android - Gửi thông báo ban đầu với ảnh
+          - alias: Android - Bước 1 gửi ảnh
             conditions:
               - "{{ is_ios_android == 'android_device' }}"
             sequence:
@@ -1118,7 +1118,7 @@ action:
                         notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
                       data:
                         title: !input notify_title
-                        message: "Đang phân tích..."
+                        message: "📷 Ảnh chụp từ {{ camera_name }}"
                         data:
                           priority: high
                           notification_icon: !input status_bar_icon
@@ -1126,9 +1126,9 @@ action:
                           image: "{{ snapshot_first }}"
                           url: "{{ tap_navigate }}"
                           clickAction: "{{ tap_navigate }}"
-                          tag: "{{ tag }}"
+                          tag: "{{ tag }}_image"
 
-          - alias: iOS - Gửi thông báo ban đầu với ảnh
+          - alias: iOS - Bước 1 gửi ảnh
             conditions:
               - "{{ is_ios_android == 'ios_device' }}"
             sequence:
@@ -1140,12 +1140,12 @@ action:
                         notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
                       data:
                         title: !input notify_title
-                        message: "Đang phân tích..."
+                        message: "📷 Ảnh chụp từ {{ camera_name }}"
                         data:
                           attachment:
                             url: "{{ snapshot_first }}"
                             content_type: JPEG
-                          tag: "{{ tag }}"
+                          tag: "{{ tag }}_image"
 
   # ============================================================
   # BƯỚC 7: PHÂN TÍCH AI
@@ -1333,13 +1333,13 @@ action:
                       {% endif %}
                 then:
 
-                  # --- Cập nhật Mobile Notification với kết quả AI ---
+                  # --- Mobile Notification Bước 2 — Gửi kết quả AI (chỉ text, không ảnh) ---
                   - if:
                       - condition: template
                         value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
                     then:
                       - choose:
-                          - alias: Android - Cập nhật thông báo với kết quả AI
+                          - alias: Android - Bước 2 gửi kết quả AI
                             conditions:
                               - "{{ is_ios_android == 'android_device' }}"
                             sequence:
@@ -1356,12 +1356,11 @@ action:
                                           priority: high
                                           notification_icon: !input status_bar_icon
                                           color: "{{ notification_color_hex }}"
-                                          image: "{{ snapshot_first }}"
                                           url: "{{ tap_navigate }}"
                                           clickAction: "{{ tap_navigate }}"
-                                          tag: "{{ tag }}"
+                                          tag: "{{ tag }}_text"
 
-                          - alias: iOS - Cập nhật thông báo với kết quả AI
+                          - alias: iOS - Bước 2 gửi kết quả AI
                             conditions:
                               - "{{ is_ios_android == 'ios_device' }}"
                             sequence:
@@ -1375,10 +1374,7 @@ action:
                                         title: !input notify_title
                                         message: "{{ ai_messages }}"
                                         data:
-                                          attachment:
-                                            url: "{{ snapshot_first }}"
-                                            content_type: JPEG
-                                          tag: "{{ tag }}"
+                                          tag: "{{ tag }}_text"
 
                   # --- Telegram: gửi kết quả phân tích AI ---
                   - if:
@@ -1482,7 +1478,7 @@ action:
                     value_template: "{{ include_notify and (filtered_devices | length > 0) }}"
                 then:
                   - choose:
-                      - alias: Android - Thông báo lỗi AI timeout
+                      - alias: Android - Thông báo lỗi AI timeout (chỉ text)
                         conditions:
                           - "{{ is_ios_android == 'android_device' }}"
                         sequence:
@@ -1499,11 +1495,10 @@ action:
                                       priority: high
                                       notification_icon: !input status_bar_icon
                                       color: "{{ notification_color_hex }}"
-                                      image: "{{ snapshot_first }}"
                                       url: "{{ tap_navigate }}"
                                       clickAction: "{{ tap_navigate }}"
-                                      tag: "{{ tag }}"
-                      - alias: iOS - Thông báo lỗi AI timeout
+                                      tag: "{{ tag }}_text"
+                      - alias: iOS - Thông báo lỗi AI timeout (chỉ text)
                         conditions:
                           - "{{ is_ios_android == 'ios_device' }}"
                         sequence:
@@ -1517,10 +1512,7 @@ action:
                                     title: !input notify_title
                                     message: "{{ error_message }}"
                                     data:
-                                      attachment:
-                                        url: "{{ snapshot_first }}"
-                                        content_type: JPEG
-                                      tag: "{{ tag }}"
+                                      tag: "{{ tag }}_text"
 
               - if:
                   - condition: template
