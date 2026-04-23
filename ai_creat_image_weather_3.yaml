@@ -1013,7 +1013,7 @@ action:
           - continue_on_error: true
             action: zalo_bot.send_image
             data:
-              account_selection: "{{ _zc_acc }}"
+              account_selection: !input zalo_custom_account
               thread_id: "{{ _zc_resolved | trim | string }}"
               type: "{{ _zc_type }}"
               image_path: "{{ final_image_path }}"
