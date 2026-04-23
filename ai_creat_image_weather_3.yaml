@@ -1,0 +1,879 @@
+blueprint:
+  name: Tạo ảnh thời tiết AI
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint
+  description: >
+    Tự động tạo ảnh thời tiết bằng AI với 2 lựa chọn engine:
+    **Gemini AI Task** (tích hợp HA native) hoặc **NVIDIA Flux qua PyScript**.
+    Phong cảnh thay đổi theo buổi trong ngày và dữ liệu thời tiết thực tế.
+
+    <details>
+    <summary><b>⚙️ Yêu cầu cấu hình chung:</b> - Nhấn để mở rộng</summary>
+
+      **Template Sensor nhận diện buổi trong ngày (bắt buộc):**
+
+      Thêm vào `configuration.yaml`:
+      ```yaml
+      template:
+        - sensor:
+            - name: "Buổi trong ngày"
+              unique_id: time_of_day_vn
+              icon: >-
+                {% set h = now().hour %}
+                {% if 6 <= h < 11 %} mdi:weather-sunny
+                {% elif 11 <= h < 13 %} mdi:white-balance-sunny
+                {% elif 13 <= h < 18 %} mdi:weather-sunset
+                {% elif 18 <= h < 21 %} mdi:weather-night
+                {% else %} mdi:weather-night
+                {% endif %}
+              state: >-
+                {% set h = now().hour %}
+                {% if 6 <= h < 11 %} Sáng
+                {% elif 11 <= h < 13 %} Trưa
+                {% elif 13 <= h < 18 %} Chiều
+                {% elif 18 <= h < 21 %} Tối
+                {% else %} Đêm
+                {% endif %}
+              attributes:
+                period_english: >-
+                  {% set h = now().hour %}
+                  {% if 6 <= h < 11 %} Morning
+                  {% elif 11 <= h < 13 %} Noon
+                  {% elif 13 <= h < 18 %} Afternoon
+                  {% elif 18 <= h < 21 %} Evening
+                  {% else %} Night
+                  {% endif %}
+      ```
+
+    </details>
+
+    <details>
+    <summary><b>⚙️ Yêu cầu khi dùng Gemini AI Task:</b> - Nhấn để mở rộng</summary>
+
+      Thêm vào `configuration.yaml`:
+      ```yaml
+      shell_command:
+        copy_weather_image: >
+          mv "{{ source }}" "{{ destination }}"
+      ```
+
+    </details>
+
+    <details>
+    <summary><b>⚙️ Yêu cầu khi dùng NVIDIA Flux PyScript:</b> - Nhấn để mở rộng</summary>
+
+      Thêm vào `configuration.yaml`:
+      ```yaml
+      pyscript:
+        allow_all_imports: true
+        hass_is_global: true
+        nvidia_api_key: !secret nvidia_api_key
+      ```
+
+      Thêm vào `secrets.yaml`:
+      ```yaml
+      nvidia_api_key: "nvapi-xxx"
+      ```
+
+      Tải file script Python tại:
+      https://github.com/TriTue2011/Blueprint/blob/main/scripts/weather_image.py
+
+      Đặt file vào thư mục `pyscript/` trong config Home Assistant.
+
+    </details>
+  domain: automation
+  homeassistant:
+    min_version: 2025.10.0
+
+  input:
+    # ===== CHỌN ENGINE AI =====
+    engine_settings:
+      name: "🤖 Chọn Engine AI"
+      icon: mdi:robot-outline
+      collapsed: false
+      input:
+        ai_engine:
+          name: Engine tạo ảnh
+          description: >
+            Chọn phương thức tạo ảnh:
+            **Gemini** dùng ai_task native của HA (khuyến nghị).
+            **NVIDIA Flux** dùng PyScript + API key riêng.
+          default: gemini
+          selector:
+            select:
+              options:
+                - label: Gemini AI Task (HA Native - Khuyến nghị)
+                  value: gemini
+                - label: NVIDIA Flux (PyScript)
+                  value: nvidia
+
+    # ===== CÀI ĐẶT THỜI TIẾT =====
+    weather_sensors:
+      name: "🌤️ Cảm biến thời tiết"
+      icon: mdi:weather-partly-cloudy
+      collapsed: false
+      input:
+        time_phase_sensor:
+          name: Pha thời gian trong ngày
+          description: Sensor hiển thị buổi trong ngày (Sáng/Trưa/Chiều/Tối/Đêm)
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+              multiple: false
+
+        weather_entity:
+          name: Thực thể thời tiết
+          description: Weather entity chính (weather.*)
+          selector:
+            entity:
+              filter:
+                - domain: weather
+              multiple: false
+
+        temperature_sensor:
+          name: Cảm biến nhiệt độ (tùy chọn)
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: temperature
+              multiple: false
+
+        humidity_sensor:
+          name: Cảm biến độ ẩm (tùy chọn)
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: humidity
+              multiple: false
+
+        wind_speed_sensor:
+          name: Cảm biến tốc độ gió (tùy chọn)
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+              multiple: false
+
+        pressure_sensor:
+          name: Cảm biến áp suất (tùy chọn) — chỉ dùng với Gemini
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+              multiple: false
+
+    # ===== CHẤT LƯỢNG KHÔNG KHÍ =====
+    air_quality_sensors:
+      name: "🏭 Cảm biến chất lượng không khí"
+      icon: mdi:air-filter
+      collapsed: true
+      input:
+        aqi_sensor:
+          name: AQI - Chỉ số chất lượng không khí (tùy chọn)
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: aqi
+              multiple: false
+
+        pm25_sensor:
+          name: PM2.5 (tùy chọn)
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+              multiple: false
+
+    # ===== CÀI ĐẶT GEMINI =====
+    gemini_settings:
+      name: "✨ Cài đặt Gemini AI Task"
+      icon: mdi:google
+      collapsed: true
+      input:
+        ai_task_entity:
+          name: AI Task Entity
+          description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended). Bỏ qua nếu dùng NVIDIA.
+          default: []
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+        image_style:
+          name: Phong cách ảnh (Gemini)
+          default: photorealistic
+          selector:
+            select:
+              options:
+                - label: Ảnh chụp chân thực (Photorealistic)
+                  value: photorealistic
+                - label: Phong cách nghệ thuật (Artistic)
+                  value: artistic
+                - label: Phong cách sống động (Vibrant)
+                  value: vibrant
+
+    # ===== LƯU ẢNH GEMINI =====
+    gemini_output:
+      name: "💾 Lưu ảnh — Gemini"
+      icon: mdi:content-save
+      collapsed: true
+      input:
+        save_image:
+          name: Lưu ảnh vào thư mục
+          description: |
+            ⚠️ Yêu cầu shell_command trong configuration.yaml:
+            shell_command:
+              copy_weather_image: mv "{{ source }}" "{{ destination }}"
+          default: true
+          selector:
+            boolean:
+
+        output_directory:
+          name: Thư mục đầu ra
+          default: "/config/media/weather"
+          selector:
+            text:
+
+        use_fixed_filename:
+          name: Sử dụng tên file cố định
+          description: Bật để ghi đè file cũ
+          default: true
+          selector:
+            boolean:
+
+        fixed_filename:
+          name: Tên file cố định
+          default: "weather_current"
+          selector:
+            text:
+
+        filename_prefix:
+          name: Tiền tố tên file (khi không cố định)
+          default: "weather_"
+          selector:
+            text:
+
+        file_extension:
+          name: Phần mở rộng file
+          default: "png"
+          selector:
+            select:
+              options:
+                - png
+                - jpg
+                - jpeg
+                - webp
+
+        delete_ai_image:
+          name: Xóa ảnh AI sau khi lưu (dự phòng)
+          description: |
+            Dùng delete.files_in_folder (HACS) như bước dự phòng.
+            Nếu đã dùng mv trong shell_command thì ảnh gốc đã bị xóa.
+          default: false
+          selector:
+            boolean:
+
+    # ===== CÀI ĐẶT NVIDIA =====
+    nvidia_settings:
+      name: "⚡ Cài đặt NVIDIA Flux PyScript"
+      icon: mdi:flash
+      collapsed: true
+      input:
+        output_path:
+          name: Đường dẫn lưu ảnh (NVIDIA)
+          default: /config/media/weather/weather_current.png
+          selector:
+            text:
+              multiline: false
+
+        steps:
+          name: Số bước sinh ảnh
+          description: Cao hơn = chất lượng tốt hơn, chậm hơn (khuyến nghị 6–8)
+          default: 6
+          selector:
+            number:
+              min: 1
+              max: 20
+              step: 1
+              mode: slider
+
+        width:
+          name: Chiều rộng (px)
+          default: 1344
+          selector:
+            number:
+              min: 512
+              max: 1920
+              step: 64
+              mode: slider
+
+        height:
+          name: Chiều cao (px)
+          default: 768
+          selector:
+            number:
+              min: 256
+              max: 1080
+              step: 64
+              mode: slider
+
+# ===== TRIGGER =====
+trigger:
+  - platform: state
+    entity_id: !input time_phase_sensor
+
+# ===== CONDITIONS =====
+condition: []
+
+# ===== ACTIONS =====
+action:
+  # ── BƯỚC 1: THU THẬP DỮ LIỆU THỜI TIẾT (CHUNG) ───────────────────────────
+  - variables:
+      ai_engine: !input ai_engine
+      time_phase_sensor: !input time_phase_sensor
+      tp: "{{ states(time_phase_sensor) | lower }}"
+      weather_entity: !input weather_entity
+      w: "{{ states(weather_entity) | lower }}"
+
+      temperature_sensor: !input temperature_sensor
+      temp: >-
+        {% if temperature_sensor and temperature_sensor != '' and states(temperature_sensor) not in ['unknown','unavailable',''] %}
+          {{ states(temperature_sensor) | float(30) | round(1) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'temperature') | float(30) | round(1) }}
+        {% endif %}
+
+      humidity_sensor: !input humidity_sensor
+      hum: >-
+        {% if humidity_sensor and humidity_sensor != '' and states(humidity_sensor) not in ['unknown','unavailable',''] %}
+          {{ states(humidity_sensor) | int(70) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'humidity') | int(70) }}
+        {% endif %}
+
+      wind_speed_sensor: !input wind_speed_sensor
+      wind: >-
+        {% if wind_speed_sensor and wind_speed_sensor != '' and states(wind_speed_sensor) not in ['unknown','unavailable',''] %}
+          {{ states(wind_speed_sensor) | float(5) | round(1) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'wind_speed') | float(5) | round(1) }}
+        {% endif %}
+
+      pressure_sensor: !input pressure_sensor
+      pressure: >-
+        {% if pressure_sensor and pressure_sensor != '' and states(pressure_sensor) not in ['unknown','unavailable',''] %}
+          {{ states(pressure_sensor) | float(0) | round(0) }}
+        {% else %}
+          {{ state_attr(weather_entity, 'pressure') | float(0) | round(0) }}
+        {% endif %}
+
+      aqi_sensor: !input aqi_sensor
+      aqi: >-
+        {% if aqi_sensor and aqi_sensor != '' and states(aqi_sensor) not in ['unknown','unavailable',''] %}
+          {{ states(aqi_sensor) | int(0) }}
+        {% else %}
+          0
+        {% endif %}
+
+      pm25_sensor: !input pm25_sensor
+      pm25: >-
+        {% if pm25_sensor and pm25_sensor != '' and states(pm25_sensor) not in ['unknown','unavailable',''] %}
+          {{ states(pm25_sensor) | float(0) | round(1) }}
+        {% else %}
+          0
+        {% endif %}
+
+  # ── BƯỚC 2: BUILD PROMPT GEMINI ───────────────────────────────────────────
+  - variables:
+      image_style: !input image_style
+
+      g_lighting: >-
+        {% if 'sáng' in tp or 'morning' in tp %}
+          Golden-hour sunrise photography, warm pink-orange-gold sky painting the horizon,
+          long soft diffused morning shadows stretching across the land,
+          delicate silver dew drops glistening on every blade of grass and leaf,
+          thin wisps of morning mist floating low over the fields,
+          fresh luminous daylight just beginning to fill the world with warmth
+        {% elif 'trưa' in tp or 'noon' in tp %}
+          Harsh dramatic overhead noon sun blazing from directly above,
+          brilliant deep cobalt blue sky without a trace of cloud,
+          extremely short sharp high-contrast shadows directly beneath objects,
+          intense full midday daylight saturating every colour to maximum vibrancy,
+          heat haze shimmering faintly on distant surfaces
+        {% elif 'chiều' in tp or 'afternoon' in tp %}
+          Breathtaking warm amber golden sunset light flooding the scene from the west,
+          long dramatic horizontal shadows stretching far across the ground,
+          glowing fiery orange-red horizon melting into deep purple sky above,
+          everything bathed in rich cinematic warm golden tones,
+          the magical last hour of daylight painting the world in honey and amber
+        {% elif 'tối' in tp or 'evening' in tp %}
+          Enchanting blue-hour twilight with absolutely NO remaining daylight,
+          sky transitioning in a stunning gradient from deep burnt orange at horizon
+          fading through violet and indigo to near-black overhead,
+          first stars timidly appearing in the darkening sky above,
+          warm glowing village lights and handmade paper lanterns casting
+          soft pools of orange light in the growing darkness,
+          the quiet magical moment between day and night
+        {% else %}
+          Deep immersive night scene with absolutely NO sun and NO daylight whatsoever,
+          complete velvety darkness enveloping everything,
+          brilliant full moon casting crisp cool silver-blue shadows across the landscape,
+          the entire Milky Way galaxy sweeping dramatically across the sky
+          in a breathtaking river of stars and cosmic dust,
+          thousands of individual stars of varying brightness filling every corner of the sky,
+          warm glowing orange lanterns providing the only earthly light source
+        {% endif %}
+
+      g_scene: >-
+        {% if 'sáng' in tp or 'morning' in tp %}
+          Sweeping aerial view of Vietnam's most beautiful countryside,
+          endless lush emerald green rice paddy terraces cascading down gentle hillsides,
+          ancient bamboo groves swaying gracefully in the morning breeze,
+          traditional Vietnamese wooden farmhouses with deep red clay tile roofs
+          nestled among the greenery,
+          winding narrow dirt paths connecting villages through the landscape,
+          towering banana trees with enormous broad glossy leaves lining the roads,
+          elderly farmers in traditional conical hats beginning their morning work,
+          water buffalo wading through flooded paddies,
+          wooden water wheels slowly turning in a shallow mountain stream,
+          smoke curling gently from farmhouse chimneys as families prepare morning meals
+        {% elif 'trưa' in tp or 'noon' in tp %}
+          Stunning aerial view of a picturesque Vietnamese coastal fishing village,
+          impossibly clear turquoise and emerald sea stretching to the horizon,
+          dozens of vibrantly painted traditional wooden fishing boats
+          bobbing gently at a weathered wooden pier,
+          pristine white sand beach curving along the shoreline,
+          magnificent tall coconut palm trees with swaying fronds casting dappled shade,
+          weathered fishermen in conical hats sorting and mending nets on the beach,
+          baskets overflowing with the morning's fresh catch of silver fish,
+          colourful fishing nets draped and drying on bamboo poles,
+          traditional fishing boats with painted eyes on the bow
+        {% elif 'chiều' in tp or 'afternoon' in tp %}
+          Immersive street-level view of Vietnam's most atmospheric ancient old town,
+          beautifully weathered centuries-old colonial French buildings
+          with faded yellow and ochre plaster walls glowing in golden light,
+          a narrow enchanting lantern-lined alley disappearing into warm hazy distance,
+          dozens of colourful traditional silk lanterns hanging overhead
+          swaying gently and casting warm coloured shadows,
+          motorbikes and bicycles weaving gracefully through the busy street,
+          cascading bougainvillea in vivid magenta and purple
+          spilling dramatically over ancient walls,
+          bustling street food vendors with steaming bowls of pho and banh mi,
+          locals sitting at tiny plastic stools sipping iced coffee,
+          carved wooden shophouse facades with intricate traditional Vietnamese details
+        {% elif 'tối' in tp or 'evening' in tp %}
+          Breathtaking aerial view of Vietnam's legendary Sapa mountain valley at dusk,
+          dramatically layered terraced rice fields carved into steep mountainsides
+          reflecting the twilight sky in their still water like a thousand mirrors,
+          a traditional ethnic minority H'Mong hilltribe village perched on the hillside,
+          warm golden light glowing invitingly from wooden stilt house windows,
+          ancient pine and fir trees forming dark silhouettes against the glowing horizon,
+          a winding mountain path with stone steps disappearing into the mist below,
+          smoke rising lazily from cooking fires inside the village homes,
+          the vast dark atmospheric valley falling away into purple shadow below,
+          distant mountain peaks fading into the darkening sky
+        {% else %}
+          Hauntingly beautiful aerial view of a remote Vietnamese mountain village at night,
+          ancient moss-covered stone houses and walls built centuries ago,
+          thick mysterious fog and mist swirling and drifting between jagged mountain peaks,
+          a row of glowing warm orange traditional paper lanterns
+          lining a narrow winding dirt road through the village,
+          dense wild primordial forest surrounding the village on all sides,
+          the occasional flicker of firelight visible through a cracked wooden shutter,
+          an ancient stone well in the village centre reflecting moonlight,
+          complete profound silence and stillness,
+          the village appearing frozen in time like a dream from centuries past
+        {% endif %}
+
+      g_weather_fx: >-
+        {% if 'rain' in w or 'mưa' in w %}
+          Dramatic heavy tropical rain falling in thick silver curtains across the entire scene,
+          every surface transformed into a dark wet mirror perfectly reflecting surrounding lights,
+          countless puddles forming and rippling with overlapping circular waves,
+          fat water droplets hanging from every leaf tip and eave,
+          rain streaks visible as silver diagonal lines against darker backgrounds,
+          the air thick with rain and moisture reducing distant visibility
+        {% elif 'thunder' in w or 'bão' in w %}
+          Epic violent tropical thunderstorm unleashing its full fury on the landscape,
+          towering apocalyptic cumulonimbus storm clouds boiling up into the stratosphere,
+          a dramatic bright lightning bolt striking in the middle distance
+          illuminating the entire scene in a split second of brilliant white light,
+          powerful destructive wind bending trees sideways,
+          leaves and debris spinning through the turbulent air,
+          the sky an ominous mixture of black purple and sickly green storm colours
+        {% elif 'cloud' in w or 'mây' in w %}
+          A dramatic sky filled with layers of thick voluminous overcast clouds,
+          rich varied cloud formations from flat stratus to billowing cumulus,
+          beautiful soft diffused light filtering through the cloud cover
+          casting no harsh shadows and illuminating everything evenly,
+          subtle variations in cloud darkness and tone creating visual depth in the sky
+        {% elif 'fog' in w or 'sương' in w %}
+          Thick atmospheric fog and mist rolling in dense waves across the landscape,
+          nearby objects crisp and clear while mid-distance elements dissolve into soft grey,
+          distant features completely swallowed by the enveloping mist,
+          the fog transforming the scene into something ethereal and dreamlike,
+          soft diffused light scattered beautifully through the moisture particles,
+          an atmosphere of mystery and tranquil isolation
+        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
+          Flawlessly clear sky of the most brilliant deep blue from horizon to horizon,
+          intense brilliant sunshine flooding every surface with pure direct light,
+          vivid oversaturated colours brought to maximum richness by the strong light,
+          crisp sharp high-contrast shadows with perfectly defined edges,
+          the air completely clean and transparent offering unlimited visibility
+        {% elif 'snow' in w %}
+          Magical snowfall with large soft snowflakes drifting gently through still air,
+          a thick pristine white blanket of snow covering every rooftop path and surface,
+          tree branches laden with heavy white snow in perfect silence,
+          each snowflake individually visible catching the available light,
+          breath condensing into delicate clouds in the freezing air
+        {% else %}
+          A beautiful sky with scattered white fluffy cumulus clouds
+          drifting lazily across a blue background,
+          pleasant natural light with gentle soft shadows,
+          the clouds casting moving shadow patches across the landscape below,
+          an atmosphere of comfortable peaceful pleasant weather
+        {% endif %}
+
+      g_temp_fx: >-
+        {% if temp > 35 %}
+          Oppressive scorching heat of {{ temp | round }}°C baking the landscape,
+          dramatic heat shimmer waves rising and distorting the air above hot surfaces,
+          plants visibly wilting and drooping under the brutal heat,
+          every creature and person seeking any available patch of shade,
+          the air itself appearing to vibrate with thermal energy
+        {% elif temp > 30 %}
+          Intense summer heat of {{ temp | round }}°C creating a heavy tropical atmosphere,
+          a soft golden heat haze hanging in the middle distance,
+          people and animals moving slowly conserving energy and seeking shade,
+          the lush vegetation radiating visible warmth
+        {% elif temp > 25 %}
+          Beautifully warm and comfortable {{ temp | round }}°C bathing the scene in gentle heat,
+          everything thriving and growing with vigour in the perfect temperature,
+          lush healthy deep green vegetation at its most vibrant and full
+        {% elif temp > 18 %}
+          Pleasantly cool and invigorating {{ temp | round }}°C filling the air with freshness,
+          a refreshing crispness to every breath,
+          light jackets and layers appearing on people going about their day
+        {% else %}
+          Biting cold of {{ temp | round }}°C gripping the entire scene,
+          people bundled in thick padded jackets scarves and warm hats,
+          white frost crystals coating every surface and blade of grass,
+          breath condensing into small clouds of white vapour in the freezing air
+        {% endif %}
+
+      g_wind_fx: >-
+        {% if wind > 30 %}
+          Ferocious gale-force wind of {{ wind | round }} km/h tearing through the scene,
+          mature trees bending dramatically to a 45-degree angle straining against the force,
+          leaves branches and debris spiralling through the air in chaotic patterns,
+          any water surface whipped into white-capped turbulent waves
+        {% elif wind > 15 %}
+          Steady moderate wind of {{ wind | round }} km/h bringing constant movement to the scene,
+          all leaves and branches engaged in continuous rhythmic swaying,
+          grass rippling in visible waves across open ground,
+          water surfaces showing clear wind-driven ripples catching the light
+        {% elif wind > 5 %}
+          A gentle pleasant breeze of {{ wind | round }} km/h barely stirring the air,
+          only the most delicate elements responding with subtle slow movement,
+          grass tips and leaf edges swaying in lazy unhurried motion
+        {% else %}
+          Absolute perfect stillness with not a breath of wind anywhere,
+          every leaf hanging motionless in complete calm,
+          any water surface transformed into a flawless mirror
+          perfectly reflecting the sky and surroundings in photographic detail
+        {% endif %}
+
+      g_hum_fx: >-
+        {% if hum > 85 %}
+          Oppressive tropical humidity of {{ hum }}% making the air feel thick and heavy,
+          a visible haze of moisture hanging throughout the atmosphere,
+          every surface shining and glistening with dampness,
+          vegetation at its most impossibly lush and intensely green
+        {% elif hum > 60 %}
+          Noticeable moderate humidity of {{ hum }}%
+          keeping all vegetation lush and deeply green,
+          leaves and surfaces carrying a healthy moist sheen
+        {% elif hum < 30 %}
+          Extremely dry parched air at only {{ hum }}% humidity,
+          fine red-brown dust particles floating visibly in shafts of sunlight,
+          the earth cracked and split into geometric patterns from extreme dryness,
+          vegetation appearing desiccated and dusty
+        {% else %}
+          Comfortable balanced humidity of {{ hum }}% creating ideal clear fresh air,
+          perfect visibility with no moisture haze
+        {% endif %}
+
+      g_aqi_fx: >-
+        {% if aqi > 150 %}
+          Dangerous heavy toxic smog with AQI of {{ aqi }},
+          the air choked with a thick acrid orange-brown chemical haze,
+          visibility reduced to a few hundred metres,
+          the sun visible only as a faint pale disc through the murk,
+          the entire scene desaturated and washed out by the pollution
+        {% elif aqi > 100 %}
+          Significant unhealthy air pollution with AQI of {{ aqi }},
+          a noticeable greyish-brown haze softening all distant objects,
+          colours appearing washed out and faded in the middle distance,
+          the sky taking on an unhealthy yellowish-grey tint overall
+        {% elif aqi > 50 %}
+          Mild haze on the distant horizon from AQI of {{ aqi }},
+          a subtle softening of colours and contrast in the far distance,
+          nearby objects still crisp and clear with full colour saturation
+        {% else %}
+          Absolutely pristine crystal clear air with perfect unlimited visibility,
+          every distant detail sharp and vivid,
+          colours fully saturated and true from foreground to horizon
+        {% endif %}
+
+      g_style_fx: >-
+        {% if image_style == 'artistic' %}
+          Painterly artistic interpretation with creative expressive colour grading,
+          bold deliberate brushstroke-like textures, impressionistic atmospheric mood,
+          colours pushed beyond realism into emotional artistic expression
+        {% elif image_style == 'vibrant' %}
+          Maximum vibrant oversaturated colours exploding with visual energy,
+          ultra-high contrast with deep blacks and blazing highlights,
+          every hue pushed to its most vivid and eye-catching extreme
+        {% else %}
+          True-to-life photorealistic natural rendering faithful to real-world colours,
+          accurate natural lighting with no artificial enhancement,
+          the scene appearing exactly as a master photographer would capture it
+        {% endif %}
+
+      g_parts: >-
+        {{ [
+          g_lighting | trim,
+          g_scene | trim,
+          g_weather_fx | trim,
+          g_temp_fx | trim,
+          g_wind_fx | trim,
+          g_hum_fx | trim,
+          g_aqi_fx | trim,
+          g_style_fx | trim
+        ] | select('ne', '') | list | join('. ') }}
+
+      gemini_prompt: >-
+        {{ (
+          'A breathtaking ultra-photorealistic cinematic aerial DSLR photograph '
+          ~ 'shot on a Hasselblad medium format camera with a 24mm wide-angle lens. '
+          ~ g_parts
+          ~ '. Wide panoramic composition with dramatic foreground-to-horizon depth. '
+          ~ 'Extraordinary depth of field bringing the entire vast landscape into razor-sharp focus. '
+          ~ 'Professional HDR cinematic colour grading with rich shadows and luminous highlights. '
+          ~ 'Ultra-high resolution 8K detail capturing every texture from individual leaves to distant mountains. '
+          ~ 'Award-winning National Geographic photography quality. '
+          ~ 'Masterful natural lighting with perfect exposure across the entire frame. '
+          ~ ('Empty scene with no human figures, only the landscape and its atmosphere. '
+             if ('tối' in tp or 'đêm' in tp or 'night' in tp or 'evening' in tp)
+             else '')
+          ~ 'Absolutely no text, no watermarks, no logos, no borders, no artificial elements, no modern intrusions.'
+          ) | regex_replace('\\s+', ' ') | trim }}
+
+      task_name: "Weather {{ states(time_phase_sensor) }} - {{ states(weather_entity) }}"
+
+  # ── BƯỚC 3: BUILD PROMPT NVIDIA ───────────────────────────────────────────
+  - variables:
+      n_lighting: >-
+        {% if 'sáng' in tp or 'morning' in tp %}
+          golden-hour sunrise, warm pink-orange sky, long soft morning shadows, dew on grass, bright daylight beginning
+        {% elif 'trưa' in tp or 'noon' in tp %}
+          harsh bright overhead noon sun, deep blue sky, vivid colours, short shadows, full daylight
+        {% elif 'chiều' in tp or 'afternoon' in tp %}
+          warm amber sunset light, long golden shadows, glowing orange horizon, late afternoon daylight
+        {% elif 'tối' in tp or 'evening' in tp %}
+          blue-hour twilight, NO daylight, dark sky gradient deep orange fading to indigo, first stars appearing, village lights and lanterns glowing, night atmosphere beginning
+        {% else %}
+          deep night scene, NO sun, NO daylight, full darkness, bright moonlight casting silver shadows, glowing lanterns, Milky Way overhead, stars filling sky
+        {% endif %}
+
+      n_scene: >-
+        {% if 'sáng' in tp or 'morning' in tp %}
+          Vietnam countryside, lush green rice paddy terraces, bamboo groves, wooden farmhouses, morning mist over fields, roosters crowing, farmers walking dirt paths
+        {% elif 'trưa' in tp or 'noon' in tp %}
+          Vietnam coastal fishing village, turquoise emerald sea, colorful wooden boats docked, white sand beach, palm trees swaying, fishermen sorting nets
+        {% elif 'chiều' in tp or 'afternoon' in tp %}
+          Vietnam old town street, yellowed colonial French buildings, narrow lantern-lined alley, motorbikes weaving, bougainvillea flowers on walls, street food vendors
+        {% elif 'tối' in tp or 'evening' in tp %}
+          Vietnam Sapa mountain valley at dusk, terraced rice fields reflecting twilight sky, ethnic minority hilltribe village with glowing lit windows, wooden stilt houses, pine trees on ridgeline, dark evening atmosphere
+        {% else %}
+          Vietnam remote mountain village at night, ancient stone houses, swirling fog between peaks, glowing orange lanterns, dirt road, wild forest surrounding, no daylight
+        {% endif %}
+
+      n_weather_fx: >-
+        {% if 'rain' in w or 'mưa' in w %}
+          heavy rain falling, wet reflective ground, puddles everywhere, water droplets on leaves, grey overcast sky
+        {% elif 'thunder' in w or 'bão' in w %}
+          violent thunderstorm, dramatic dark cumulonimbus clouds, distant lightning strike, powerful wind gusts
+        {% elif 'cloud' in w or 'mây' in w %}
+          thick overcast clouds, diffused soft light, flat even lighting, no harsh shadows
+        {% elif 'fog' in w or 'sương' in w %}
+          dense rolling fog, misty dreamy atmosphere, very low visibility, soft ethereal mood
+        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
+          clear sky, vivid saturated colours, sharp defined shadows
+        {% elif 'snow' in w %}
+          light snowfall, white snow-covered ground, frosted tree branches, cold breath visible in air
+        {% else %}
+          partly cloudy, scattered white cumulus clouds, pleasant natural light
+        {% endif %}
+
+      n_temp_fx: >-
+        {% if temp > 35 %}
+          scorching heat {{ temp | round }}°C, heat shimmer rising from ground, wilting leaves
+        {% elif temp > 30 %}
+          hot {{ temp | round }}°C, summer haze, people seeking shade
+        {% elif temp > 25 %}
+          warm {{ temp | round }}°C, comfortable outdoor weather, lush green vegetation
+        {% elif temp > 18 %}
+          cool {{ temp | round }}°C, refreshing fresh crisp air feeling
+        {% else %}
+          cold {{ temp | round }}°C, people wearing jackets, frost on surfaces, breath visible
+        {% endif %}
+
+      n_wind_fx: >-
+        {% if wind > 30 %}
+          powerful gale wind, trees bending violently, debris flying, rippling turbulent water
+        {% elif wind > 15 %}
+          moderate wind, leaves and branches swaying rhythmically, rippled puddle surfaces
+        {% elif wind > 5 %}
+          gentle breeze, soft subtle movement of grass tips and leaves
+        {% else %}
+          perfectly calm still air, glassy mirror-like water reflections
+        {% endif %}
+
+      n_hum_fx: >-
+        {% if hum > 85 %}
+          oppressively humid {{ hum }}%, heavy tropical haze, damp glistening surfaces, condensation visible
+        {% elif hum > 60 %}
+          moderately humid {{ hum }}%, lush vegetation glistening with moisture
+        {% elif hum < 30 %}
+          very dry crisp air {{ hum }}%, dust particles floating, cracked dry earth
+        {% else %}
+          {% endif %}
+
+      n_aqi_fx: >-
+        {% if aqi > 150 %}
+          heavy toxic smog AQI {{ aqi }}, thick orange-brown haze, very poor visibility, sun barely a disc
+        {% elif aqi > 100 %}
+          significant hazy air AQI {{ aqi }}, washed-out distant objects, greyish sky tint
+        {% elif aqi > 50 %}
+          slight haze on horizon AQI {{ aqi }}, mildly muted distant colours
+        {% else %}
+          {% endif %}
+
+      n_parts: >-
+        {{ [
+          n_lighting | trim,
+          n_scene | trim,
+          n_weather_fx | trim,
+          n_temp_fx | trim,
+          n_wind_fx | trim,
+          n_hum_fx | trim,
+          n_aqi_fx | trim
+        ] | select('ne', '') | list | join(', ') }}
+
+      nvidia_prompt: >-
+        {{ ('Photorealistic aerial DSLR photograph, ' ~ n_parts ~ ', wide-angle panoramic composition, deep depth of field, HDR cinematic colour grade, ultra sharp details, 8K resolution, no text, no watermark, no faces')
+           | regex_replace('\\s+', ' ')
+           | trim
+           | truncate(750, True, '') }}
+
+  # ── BƯỚC 4: GỌI AI THEO ENGINE ĐƯỢC CHỌN ─────────────────────────────────
+  - choose:
+
+      # ── NHÁNH GEMINI ────────────────────────────────────────────────────
+      - conditions:
+          - condition: template
+            value_template: "{{ ai_engine == 'gemini' }}"
+        sequence:
+          - continue_on_error: false
+            action: ai_task.generate_image
+            data:
+              entity_id: !input ai_task_entity
+              task_name: "{{ task_name }}"
+              instructions: "{{ gemini_prompt }}"
+            response_variable: ai_result
+
+          - if:
+              - condition: template
+                value_template: >
+                  {{ ai_result is defined
+                     and (ai_result.url is defined or ai_result.media_source_id is defined) }}
+            then:
+              - variables:
+                  ai_image_source_id: "{{ ai_result.media_source_id | default('') }}"
+                  image_path: >-
+                    {% set sid = ai_result.media_source_id | default('') %}
+                    {% if sid.startswith('media-source://ai_task/image/') %}
+                      /config/media/ai_task/image/{{ sid.split('/')[-1] }}
+                    {% elif sid.startswith('media-source://') %}
+                      /config/media/{{ sid.replace('media-source://', '') }}
+                    {% else %}
+                      {{ sid }}
+                    {% endif %}
+
+              - variables:
+                  timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
+                  use_fixed_filename: !input use_fixed_filename
+                  fixed_filename: !input fixed_filename
+                  output_directory: !input output_directory
+                  filename_prefix: !input filename_prefix
+                  file_extension: !input file_extension
+                  delete_ai_image: !input delete_ai_image
+                  filename: >-
+                    {% if use_fixed_filename %}
+                      {{ fixed_filename }}.{{ file_extension }}
+                    {% else %}
+                      {{ filename_prefix }}{{ timestamp }}.{{ file_extension }}
+                    {% endif %}
+                  dest_path: "{{ output_directory }}/{{ filename }}"
+
+              - continue_on_error: true
+                action: shell_command.copy_weather_image
+                data:
+                  source: "{{ image_path }}"
+                  destination: "{{ dest_path }}"
+                response_variable: copy_result
+
+              - if:
+                  - condition: template
+                    value_template: "{{ delete_ai_image and image_path != '' }}"
+                then:
+                  - continue_on_error: true
+                    action: delete.files_in_folder
+                    data:
+                      folder: '/config/media/music_ai'
+                      time: 3600
+
+      # ── NHÁNH NVIDIA FLUX ───────────────────────────────────────────────
+      - conditions:
+          - condition: template
+            value_template: "{{ ai_engine == 'nvidia' }}"
+        sequence:
+          - action: pyscript.generate_weather_image
+            data:
+              prompt: "{{ nvidia_prompt }}"
+              output_path: !input output_path
+              steps: !input steps
+              width: !input width
+              height: !input height
+
+          - action: system_log.write
+            data:
+              level: info
+              message: >-
+                [WeatherImage] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
+                | wind={{ wind }} | aqi={{ aqi }} | chars={{ nvidia_prompt | length }}
+                | prompt={{ nvidia_prompt | truncate(120) }}
+
+mode: single
+max_exceeded: silent
