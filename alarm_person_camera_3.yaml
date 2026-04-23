@@ -1264,21 +1264,27 @@ action:
               # Build message tổng hợp từ kết quả AI
               # ----------------------------------------------------------
               - variables:
-                  ai_messages: |
-                    📊  {{ camera_name }}
-                    {% set h_count = humans_detected_report.data.get('humans_detected', 0) | int(0) %}
-                    {% set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) %}
-                    {% set h_summary = humans_detected_report.data.get('humans_detected_summary', '') %}
-                    {% set a_summary = humans_detected_report.data.get('animals_detected_summary', '') %}
-                    {% set h_desc = humans_detected_report.data.get('humans_detected_description', '') %}
-                    {% set a_desc = humans_detected_report.data.get('animals_detected_description', '') %}
-                    {% if detect_subjects in ['humans', 'both'] %}🚶: {{ h_summary if h_summary | length > 0 else h_count }}
-                    👉 {{ h_desc }}
-                    {% endif %}
-                    {% if detect_subjects in ['animals', 'both'] %}🐾: {{ a_summary if a_summary | length > 0 else a_count }}
-                    👉 {{ a_desc }}
-                    {% endif %}
-                    {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
+                  ai_messages: >-
+                    {%- set h_count = humans_detected_report.data.get('humans_detected', 0) | int(0) -%}
+                    {%- set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) -%}
+                    {%- set h_summary = humans_detected_report.data.get('humans_detected_summary', '') -%}
+                    {%- set a_summary = humans_detected_report.data.get('animals_detected_summary', '') -%}
+                    {%- set h_desc = humans_detected_report.data.get('humans_detected_description', '') -%}
+                    {%- set a_desc = humans_detected_report.data.get('animals_detected_description', '') -%}
+                    {%- set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] -%}
+                    {%- set ns = namespace(lines=[]) -%}
+                    {%- set ns.lines = ns.lines + ['📊  ' + camera_name] -%}
+                    {%- if detect_subjects in ['humans', 'both'] -%}
+                      {%- set ns.lines = ns.lines + ['🚶: ' + (h_summary if h_summary | length > 0 else h_count | string)] -%}
+                      {%- set ns.lines = ns.lines + ['👉 ' + h_desc] -%}
+                    {%- endif -%}
+                    {%- if detect_subjects in ['animals', 'both'] -%}
+                      {%- set ns.lines = ns.lines + ['🐾: ' + (a_summary if a_summary | length > 0 else a_count | string)] -%}
+                      {%- set ns.lines = ns.lines + ['👉 ' + a_desc] -%}
+                    {%- endif -%}
+                    {%- set time_str = '🕒 ' + now().strftime('%H:%M:%S') + ' ' + days[now().weekday()] + ' Ngày ' + now().strftime('%d') + ' Tháng ' + now().strftime('%m') + ' Năm ' + now().strftime('%Y') + (' ' + notification_time if notification_time != '' else '') -%}
+                    {%- set ns.lines = ns.lines + [time_str] -%}
+                    {{ ns.lines | join('\n') }}
 
               # ----------------------------------------------------------
               # Điều kiện lọc thông báo
