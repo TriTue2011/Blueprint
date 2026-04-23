@@ -674,44 +674,58 @@ variables:
   # ============================================================
   ai_task_instructions: >
     {% if ai_mode == 'structured' %}
-      Đây là chuỗi hình ảnh từ máy ảnh của tôi.
-      Hãy phân tích chuỗi ảnh này.
+      <context>
+      Đây là chuỗi hình ảnh chụp từ camera an ninh trong nhà hoặc ngoài sân.
+      </context>
+      <task>
       {% if detect_subjects == 'humans' %}
-      Chỉ tập trung phát hiện và mô tả CON NGƯỜI trong ảnh. Bỏ qua động vật.
+      Phân tích chuỗi ảnh. Đếm và mô tả CON NGƯỜI xuất hiện. Bỏ qua động vật.
+      Điền số lượng người vào trường humans_detected (số nguyên). Nếu không có người, điền 0.
       {% elif detect_subjects == 'animals' %}
-      Chỉ tập trung phát hiện và mô tả ĐỘNG VẬT (đặc biệt: chó, mèo, chim) trong ảnh. Bỏ qua con người.
+      Phân tích chuỗi ảnh. Đếm và mô tả BẤT KỲ ĐỘNG VẬT nào xuất hiện (chó, mèo, chim, chuột, thằn lằn hoặc bất kỳ loài nào khác). Bỏ qua con người.
+      Điền số lượng động vật vào trường animals_detected (số nguyên). Nếu không có động vật, điền 0.
       {% else %}
-      Tập trung phát hiện và mô tả cả CON NGƯỜI lẫn ĐỘNG VẬT (chó, mèo, chim) trong ảnh.
+      Phân tích chuỗi ảnh. Đếm và mô tả cả CON NGƯỜI lẫn BẤT KỲ ĐỘNG VẬT nào xuất hiện.
+      Điền số lượng người vào humans_detected, số lượng động vật vào animals_detected (số nguyên). Điền 0 nếu không có.
       {% endif %}
-      Quy tắc trả về kết quả phân tích:
-      - BẮT BUỘC phải sử dụng Tiếng Việt có ĐẦY ĐỦ DẤU (ví dụ: "phụ nữ" KHÔNG PHẢI "phu nu")
-      - TUYỆT ĐỐI KHÔNG được viết tiếng Việt không dấu
-      - Bỏ qua các ký tự đặc biệt như *, emoji, /,...
-      - Bỏ qua các dòng trống, chỉ thể hiện văn bản thuần
-      - Tin nhắn cần đủ ngắn để đưa vào thông báo trên điện thoại
-      QUAN TRỌNG: TUYỆT ĐỐI KHÔNG dùng markdown, KHÔNG có ```json, KHÔNG có bất kỳ ký tự định dạng nào ngoài văn bản thuần.
+      </task>
+      <rules>
+      - Viết tiếng Việt có đầy đủ dấu. Ví dụ: "phụ nữ" KHÔNG PHẢI "phu nu".
+      - Chỉ văn bản thuần, không dùng ký tự đặc biệt (*, /, emoji) hay markdown.
+      - Mô tả súc tích, đủ để đưa vào thông báo điện thoại.
+      </rules>
     {% else %}
-      Đây là chuỗi hình ảnh từ máy ảnh của tôi.
-      Hãy phân tích chuỗi ảnh này.
+      <context>
+      Đây là chuỗi hình ảnh chụp từ camera an ninh trong nhà hoặc ngoài sân.
+      </context>
+      <task>
       {% if detect_subjects == 'humans' %}
-      Chỉ tập trung phát hiện CON NGƯỜI. Không cần điền thông tin động vật.
+      Phân tích chuỗi ảnh. Đếm và mô tả CON NGƯỜI xuất hiện. Bỏ qua động vật.
+      Trả về JSON với animals_detected = 0 và animals_detected_summary = "" và animals_detected_description = "Không phân tích động vật theo yêu cầu".
       {% elif detect_subjects == 'animals' %}
-      Chỉ tập trung phát hiện ĐỘNG VẬT (chó, mèo, chim). Không cần điền thông tin con người.
+      Phân tích chuỗi ảnh. Đếm và mô tả BẤT KỲ ĐỘNG VẬT nào xuất hiện (chó, mèo, chim, chuột, thằn lằn hoặc bất kỳ loài nào khác). Bỏ qua con người.
+      Trả về JSON với humans_detected = 0 và humans_detected_summary = "" và humans_detected_description = "Không phân tích người theo yêu cầu".
       {% else %}
-      Tập trung phát hiện cả CON NGƯỜI lẫn ĐỘNG VẬT (chó, mèo, chim).
+      Phân tích chuỗi ảnh. Đếm và mô tả cả CON NGƯỜI lẫn BẤT KỲ ĐỘNG VẬT nào xuất hiện.
       {% endif %}
-      Chỉ trả về JSON thuần, không giải thích thêm, theo đúng mẫu sau:
+      </task>
+      <output_format>
+      Chỉ trả về JSON thuần theo đúng mẫu sau, bắt đầu bằng { và kết thúc bằng }:
       {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":"","animals_detected":0,"animals_detected_summary":"","animals_detected_description":""}
-      Quy tắc từng trường:
-      humans_detected: số nguyên đếm tổng số người trong chuỗi ảnh (0 nếu không phát hiện người hoặc không phân tích người).
-      humans_detected_summary: tóm tắt số lượng người theo loại, ví dụ "1 phụ nữ, 2 trẻ em" hoặc "2 đàn ông, 1 phụ nữ". Nếu không có người trả về chuỗi rỗng.
-      humans_detected_description: mô tả chi tiết từng người bao gồm giới tính, trang phục màu sắc cụ thể, hành động đang làm. Ví dụ "Một phụ nữ mặc đồ bộ màu hồng cam đang ngồi chuẩn bị đồ ăn. Bên cạnh là một bé trai mặc đồ màu vàng cam đang đứng chơi.". Nếu không có người trả về "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh". GIỚI HẠN TỐI ĐA 800 TỪ.
-      animals_detected: số nguyên đếm tổng số động vật (chó, mèo, chim) trong chuỗi ảnh (0 nếu không phát hiện hoặc không phân tích động vật).
-      animals_detected_summary: tóm tắt số lượng động vật theo loài, ví dụ "1 con chó vàng, 2 con mèo đen". Nếu không có động vật trả về chuỗi rỗng.
-      animals_detected_description: mô tả chi tiết từng con vật bao gồm loài, màu sắc lông/vũ cụ thể, hành động đang làm. Ví dụ "Một con chó màu vàng đang nằm ngủ trên sàn nhà. Bên cạnh là một con mèo đen trắng đang ngồi liếm chân.". Nếu không có động vật trả về "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh". GIỚI HẠN TỐI ĐA 800 TỪ.
-      QUAN TRỌNG - GIỚI HẠN ĐỘ DÀI: Tổng nội dung của tất cả các trường text (summary + description) KHÔNG ĐƯỢC vượt quá 800 từ. Ưu tiên súc tích, rõ ràng, đủ thông tin để nhận dạng.
-      BẮT BUỘC viết tiếng Việt có đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-      QUAN TRỌNG: Chỉ trả về raw JSON, KHÔNG dùng markdown, KHÔNG có ```json, KHÔNG có bất kỳ ký tự nào ngoài JSON thuần bắt đầu bằng { và kết thúc bằng }.
+      </output_format>
+      <field_rules>
+      humans_detected: số nguyên — tổng số người đếm được trong chuỗi ảnh. Điền 0 nếu không có hoặc không phân tích.
+      humans_detected_summary: tóm tắt số lượng người theo loại. Ví dụ: "1 phụ nữ, 2 trẻ em". Trả về "" nếu không có người.
+      humans_detected_description: mô tả từng người gồm giới tính, trang phục màu sắc cụ thể, hành động. Ví dụ: "Một phụ nữ mặc đồ bộ màu hồng cam đang ngồi chuẩn bị đồ ăn. Bên cạnh là một bé trai mặc đồ màu vàng cam đang đứng chơi." Nếu humans_detected = 0, trả về "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+      animals_detected: số nguyên — tổng số động vật đếm được trong chuỗi ảnh. Điền 0 nếu không có hoặc không phân tích.
+      animals_detected_summary: tóm tắt số lượng động vật theo loài. Ví dụ: "1 con chó vàng, 2 con mèo đen". Trả về "" nếu không có động vật.
+      animals_detected_description: mô tả từng con vật gồm loài, màu sắc lông/vũ cụ thể, hành động. Ví dụ: "Một con chó màu vàng đang nằm ngủ trên sàn nhà. Bên cạnh là một con mèo đen trắng đang ngồi liếm chân." Nếu animals_detected = 0, trả về "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
+      </field_rules>
+      <rules>
+      - Viết tiếng Việt có đầy đủ dấu. Ví dụ: "phụ nữ" KHÔNG PHẢI "phu nu".
+      - Tổng nội dung tất cả trường text không vượt quá 800 từ.
+      - Chỉ trả về raw JSON. Không dùng markdown, không có ```json, không có bất kỳ ký tự nào ngoài JSON.
+      </rules>
     {% endif %}
 
   # ============================================================
