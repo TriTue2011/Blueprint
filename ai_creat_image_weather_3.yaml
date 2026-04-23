@@ -50,6 +50,8 @@ blueprint:
     <details>
     <summary><b>⚙️ Yêu cầu khi dùng Gemini AI Task:</b> - Nhấn để mở rộng</summary>
 
+      Sử dụng addon (dockercompse) https://github.com/luuquangvu/Gemini-FastAPI và tích hợp https://github.com/luuquangvu/hass_local_openai_llm.
+      
       Thêm vào `configuration.yaml`:
       ```yaml
       shell_command:
@@ -62,6 +64,8 @@ blueprint:
     <details>
     <summary><b>⚙️ Yêu cầu khi dùng NVIDIA Flux PyScript:</b> - Nhấn để mở rộng</summary>
 
+      Dùng api nvidia. đăng ký tại https://build.nvidia.com và dùng tích hợp https://github.com/luuquangvu/hass_local_openai_llm
+      
       Thêm vào `configuration.yaml`:
       ```yaml
       pyscript:
