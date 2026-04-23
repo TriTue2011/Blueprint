@@ -2,16 +2,125 @@ blueprint:
   name: Tạo ảnh thời tiết bằng ai (Gemini Optimized)
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/ai_creat_image_weather.yaml
-  description: |
-    # Tự động tạo ảnh thời tiết với prompt tối ưu cho Gemini
+  description: >
+    Tự động tạo ảnh thời tiết bằng Gemini AI với prompt tối ưu, phong cảnh thay đổi theo buổi trong ngày và dữ liệu thời tiết thực tế.
 
-    ✨ Tính năng:
-    - Prompt chi tiết, giàu hình ảnh tối ưu cho Gemini
-    - Phong cảnh thay đổi theo buổi (sáng/trưa/chiều/tối/đêm)
-    - Lighting đặt đầu prompt để Gemini ưu tiên đúng thời điểm
-    - Không giới hạn ký tự prompt
-    - Hỗ trợ đầy đủ sensors thời tiết và chất lượng không khí
-    ⏰ TRIGGER: Kích hoạt khi pha thời gian trong ngày thay đổi
+    <details>
+    <summary><b>Chi tiết:</b> - Nhấn để mở rộng</summary>
+
+      **Phiên bản: v.2025.10.22 - Gemini Optimized Edition**
+
+      **Tác giả: TriTue2011**
+
+      **Tính năng:**
+
+        1- **Prompt tối ưu cho Gemini:** Chi tiết, giàu hình ảnh, không giới hạn ký tự, dùng dấu chấm làm phân cách để Gemini hiểu đúng ngữ cảnh.
+
+        2- **Phong cảnh thay đổi theo buổi:** Sáng → ruộng lúa nông thôn / Trưa → làng chài ven biển / Chiều → phố cổ đèn lồng / Tối → thung lũng Sapa / Đêm → bản làng núi rừng huyền bí.
+
+        3- **Lighting đặt đầu prompt:** Gemini ưu tiên đúng thời điểm ngày/đêm, tránh tạo ảnh sai buổi.
+
+        4- **Dữ liệu thời tiết thực tế:** Nhiệt độ, độ ẩm, tốc độ gió, AQI/PM2.5 ảnh hưởng trực tiếp đến hình ảnh tạo ra.
+
+        5- **Ba phong cách ảnh:** Photorealistic / Artistic / Vibrant — mỗi phong cách tạo ra kết quả khác biệt rõ ràng.
+
+        6- **Lưu ảnh tự động:** Hỗ trợ tên file cố định (ghi đè) hoặc theo timestamp. Tích hợp shell_command để di chuyển file.
+
+      **Thay đổi so với phiên bản gốc:**
+        - Bỏ hoàn toàn tính năng ảnh nền để đơn giản hóa cấu hình.
+        - Prompt được xây dựng lại từ đầu, tối ưu riêng cho Gemini.
+        - Thêm khối style_fx tích hợp trực tiếp vào prompt thay vì chỉ là ghi chú.
+        - Thêm nhận diện buổi Trưa (noon) bên cạnh Sáng/Chiều/Tối/Đêm.
+        - Camera Hasselblad 24mm, chất lượng National Geographic, 8K detail.
+
+    </details>
+
+    <details>
+    <summary><b>⚙️ Yêu cầu cấu hình:</b> - Nhấn để mở rộng</summary>
+
+      **Bước 1 — Cấu hình lưu ảnh (chọn 1 trong 2 cách):**
+
+      **Cách 1 — Shell Command dùng với Gemini AI Task (Khuyến nghị):**
+
+      Thêm vào `configuration.yaml`:
+      ```yaml
+      shell_command:
+        copy_weather_image: >
+          mv "{{ source }}" "{{ destination }}"
+      ```
+
+      ⚠️ Dùng `mv` thay vì `cp` — vừa di chuyển vừa xóa ảnh gốc trong 1 bước, tránh tích lũy file thừa.
+
+      **Cách 2 — NVIDIA API qua PyScript:**
+
+      Thêm vào `configuration.yaml`:
+      ```yaml
+      pyscript:
+        allow_all_imports: true
+        hass_is_global: true
+        nvidia_api_key: !secret nvidia_api_key
+      ```
+
+      Thêm vào `secrets.yaml`:
+      ```yaml
+      nvidia_api_key: "nvapi-xxx"
+      ```
+
+      Tải file script Python tại:
+      https://github.com/TriTue2011/Blueprint/blob/main/scripts/weather_image.py
+
+      Đặt file vào thư mục `pyscript/` trong config Home Assistant.
+
+      Hướng dẫn cài PyScript qua HACS:
+      https://github.com/custom-components/pyscript
+
+      ---
+
+      **Bước 2 — Tạo Template Sensor nhận diện buổi trong ngày:**
+
+      Thêm vào `configuration.yaml` (hoặc file template riêng):
+      ```yaml
+      template:
+        - sensor:
+            - name: "Buổi trong ngày"
+              unique_id: time_of_day_vn
+              icon: >-
+                {% set h = now().hour %}
+                {% if 6 <= h < 11 %} mdi:weather-sunny
+                {% elif 11 <= h < 13 %} mdi:white-balance-sunny
+                {% elif 13 <= h < 18 %} mdi:weather-sunset
+                {% elif 18 <= h < 21 %} mdi:weather-night
+                {% else %} mdi:weather-night
+                {% endif %}
+              state: >-
+                {% set h = now().hour %}
+                {% if 6 <= h < 11 %} Sáng
+                {% elif 11 <= h < 13 %} Trưa
+                {% elif 13 <= h < 18 %} Chiều
+                {% elif 18 <= h < 21 %} Tối
+                {% else %} Đêm
+                {% endif %}
+              attributes:
+                hour: "{{ now().hour }}"
+                is_night: >-
+                  {% set h = now().hour %}
+                  {{ h < 6 or h >= 21 }}
+                is_daytime: >-
+                  {% set h = now().hour %}
+                  {{ h >= 6 and h < 18 }}
+                period_english: >-
+                  {% set h = now().hour %}
+                  {% if 6 <= h < 11 %} Morning
+                  {% elif 11 <= h < 13 %} Noon
+                  {% elif 13 <= h < 18 %} Afternoon
+                  {% elif 18 <= h < 21 %} Evening
+                  {% else %} Night
+                  {% endif %}
+      ```
+
+      ⚠️ Sau khi thêm, **restart Home Assistant** rồi chọn `sensor.buoi_trong_ngay` ở mục **Pha thời gian trong ngày** bên dưới.
+
+    </details>
   domain: automation
   homeassistant:
     min_version: 2025.10.0
