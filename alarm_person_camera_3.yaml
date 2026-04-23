@@ -1205,17 +1205,15 @@ action:
               # Build message tổng hợp từ kết quả AI
               # ----------------------------------------------------------
               - variables:
-                  ai_messages: >
+                  ai_messages: |
                     📊  {{ camera_name }}
                     {% set h_count = humans_detected_report.data.humans_detected | int(0) %}
                     {% set a_count = humans_detected_report.data.animals_detected | int(0) %}
-                    {% if detect_subjects in ['humans', 'both'] %}
-                    👤 Người: {{ humans_detected_report.data.humans_detected_summary if humans_detected_report.data.humans_detected_summary | default('') | length > 0 else h_count }}
-                    {{ humans_detected_report.data.humans_detected_description }}
+                    {% if detect_subjects in ['humans', 'both'] %}🚶: {{ humans_detected_report.data.humans_detected_summary if humans_detected_report.data.humans_detected_summary | default('') | length > 0 else h_count }}
+                    👉 {{ humans_detected_report.data.humans_detected_description }}
                     {% endif %}
-                    {% if detect_subjects in ['animals', 'both'] %}
-                    🐾 Động vật: {{ humans_detected_report.data.animals_detected_summary if humans_detected_report.data.animals_detected_summary | default('') | length > 0 else a_count }}
-                    {{ humans_detected_report.data.animals_detected_description }}
+                    {% if detect_subjects in ['animals', 'both'] %}🐾: {{ humans_detected_report.data.animals_detected_summary if humans_detected_report.data.animals_detected_summary | default('') | length > 0 else a_count }}
+                    👉 {{ humans_detected_report.data.animals_detected_description }}
                     {% endif %}
                     {% set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] %}🕒 {{ now().strftime('%H:%M:%S') }} {{ days[now().weekday()] }} Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }} Năm {{ now().strftime('%Y') }}{{ ' ' + notification_time if notification_time != '' else '' }}
 
