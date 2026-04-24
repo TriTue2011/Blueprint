@@ -414,12 +414,37 @@ blueprint:
               mode: box
 
 # ===== TRIGGER =====
+# Trigger 1 — Mốc giờ cố định: khớp sensor mặc định (5/11/13/18/22h)
+# Trigger 2 — State sensor: dùng cho ai tùy chỉnh giờ chuyển buổi khác mặc định
 trigger:
+  - platform: time
+    at: "05:00:00"
+  - platform: time
+    at: "11:00:00"
+  - platform: time
+    at: "13:00:00"
+  - platform: time
+    at: "18:00:00"
+  - platform: time
+    at: "22:00:00"
   - platform: state
     entity_id: !input time_phase_sensor
+    not_from:
+      - unknown
+      - unavailable
+    not_to:
+      - unknown
+      - unavailable
 
 # ===== CONDITIONS =====
-condition: []
+condition:
+  # - Nếu trigger từ time    → luôn chạy (True)
+  # - Nếu trigger từ state   → chỉ chạy khi buổi thực sự đổi (tránh trigger thừa do attribute)
+  # mode: single bên dưới đảm bảo không chạy 2 lần cùng lúc nếu cả 2 trigger cùng kích hoạt
+  - condition: template
+    value_template: >
+      {{ trigger.platform == 'time'
+         or trigger.from_state.state != trigger.to_state.state }}
 
 # ===== ACTIONS =====
 action:
