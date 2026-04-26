@@ -5,7 +5,8 @@ blueprint:
   description: >
     Tự động tạo ảnh thời tiết bằng AI với 2 lựa chọn engine:
     **Gemini AI Task** (tích hợp HA native) hoặc **NVIDIA Flux qua PyScript**.
-    Phong cảnh thay đổi theo buổi trong ngày và dữ liệu thời tiết thực tế.
+    Phong cảnh thay đổi theo buổi trong ngày, dữ liệu thời tiết thực tế,
+    và **xoay vòng 12 địa điểm đẹp nhất thế giới** cho mỗi buổi.
 
     <details>
     <summary><b>⚙️ Yêu cầu cấu hình chung:</b> - Nhấn để mở rộng</summary>
@@ -51,7 +52,7 @@ blueprint:
     <summary><b>⚙️ Yêu cầu khi dùng Gemini AI Task:</b> - Nhấn để mở rộng</summary>
 
       Sử dụng addon (dockercompse) https://github.com/luuquangvu/Gemini-FastAPI và tích hợp https://github.com/luuquangvu/hass_local_openai_llm.
-      
+
       Thêm vào `configuration.yaml`:
       ```yaml
       shell_command:
@@ -65,7 +66,7 @@ blueprint:
     <summary><b>⚙️ Yêu cầu khi dùng NVIDIA Flux PyScript:</b> - Nhấn để mở rộng</summary>
 
       Dùng api nvidia. đăng ký tại https://build.nvidia.com và dùng tích hợp https://github.com/luuquangvu/hass_local_openai_llm
-      
+
       Thêm vào `configuration.yaml`:
       ```yaml
       pyscript:
@@ -414,8 +415,6 @@ blueprint:
               mode: box
 
 # ===== TRIGGER =====
-# Trigger 1 — Mốc giờ cố định: khớp sensor mặc định (5/11/13/18/22h)
-# Trigger 2 — State sensor: dùng cho ai tùy chỉnh giờ chuyển buổi khác mặc định
 trigger:
   - platform: time
     at: "05:00:00"
@@ -438,9 +437,6 @@ trigger:
 
 # ===== CONDITIONS =====
 condition:
-  # - Nếu trigger từ time    → luôn chạy (True)
-  # - Nếu trigger từ state   → chỉ chạy khi buổi thực sự đổi (tránh trigger thừa do attribute)
-  # mode: single bên dưới đảm bảo không chạy 2 lần cùng lúc nếu cả 2 trigger cùng kích hoạt
   - condition: template
     value_template: >
       {{ trigger.platform == 'time'
@@ -448,13 +444,17 @@ condition:
 
 # ===== ACTIONS =====
 action:
-  # ── BƯỚC 1: THU THẬP DỮ LIỆU THỜI TIẾT (CHUNG) ───────────────────────────
+  # ── BƯỚC 1: THU THẬP DỮ LIỆU THỜI TIẾT ───────────────────────────────────
   - variables:
       ai_engine: !input ai_engine
       time_phase_sensor: !input time_phase_sensor
       tp: "{{ states(time_phase_sensor) | lower }}"
       weather_entity: !input weather_entity
       w: "{{ states(weather_entity) | lower }}"
+
+      # Chỉ số xoay cảnh — đổi mỗi ngày, giữ nhất quán trong ngày
+      # 12 cảnh/vòng → mỗi buổi có 12 địa điểm khác nhau
+      scene_index: "{{ now().timetuple().tm_yday % 12 }}"
 
       temperature_sensor: !input temperature_sensor
       temp: >-
@@ -504,7 +504,7 @@ action:
           0
         {% endif %}
 
-  # ── BƯỚC 1B: TÍNH ĐƯỜNG DẪN ẢNH CHUNG (DÙNG CHO CẢ 2 ENGINE) ─────────────
+  # ── BƯỚC 1B: TÍNH ĐƯỜNG DẪN ẢNH ──────────────────────────────────────────
   - variables:
       use_fixed_filename: !input use_fixed_filename
       fixed_filename: !input fixed_filename
@@ -563,65 +563,100 @@ action:
           warm glowing orange lanterns providing the only earthly light source
         {% endif %}
 
+      # ── SCENE: xoay vòng 12 địa điểm đẹp nhất thế giới theo từng buổi ──
       g_scene: >-
+        {% set si = scene_index | int %}
+
         {% if 'sáng' in tp or 'morning' in tp %}
-          Sweeping aerial view of Vietnam's most beautiful countryside,
-          endless lush emerald green rice paddy terraces cascading down gentle hillsides,
-          ancient bamboo groves swaying gracefully in the morning breeze,
-          traditional Vietnamese wooden farmhouses with deep red clay tile roofs
-          nestled among the greenery,
-          winding narrow dirt paths connecting villages through the landscape,
-          towering banana trees with enormous broad glossy leaves lining the roads,
-          elderly farmers in traditional conical hats beginning their morning work,
-          water buffalo wading through flooded paddies,
-          wooden water wheels slowly turning in a shallow mountain stream,
-          smoke curling gently from farmhouse chimneys as families prepare morning meals
+          {# CỐ ĐỊNH BUỔI SÁNG: Ruộng bậc thang / thung lũng mù sương đẹp nhất thế giới #}
+          {% set scenes = [
+            'Mu Cang Chai terraced rice paddies Vietnam, flooded terraces cascading down steep mountains reflecting pink sunrise sky, thin morning mist filling valleys between ridges, H\'Mong farmers beginning work in traditional dress, water buffalo wading through paddies',
+            'Jatiluwih rice terraces Bali Indonesia, sweeping UNESCO-listed curved terraces glowing emerald in dawn light, traditional Balinese water temples surrounded by lush tropical jungle, sacred Mount Batukaru emerging dramatically from clouds behind',
+            'Banaue rice terraces Philippines, 2000-year-old Ifugao hand-carved terraces called the eighth wonder of the world, misty mountain amphitheatre, wooden stilt houses of indigenous villages clinging to the steep slopes above flooded paddies',
+            'Yuanyang rice terraces Yunnan China, thousands of mirror-like flooded terraces built by Hani people over 1300 years, extraordinary geometric patterns covering entire mountain range, dramatic golden sunrise light flooding the valley from the east',
+            'Tegallalang rice terrace Ubud Bali, intricate stepped terraces descending into a deep jungle ravine, tall graceful coconut palms swaying along the ridgeline, river glinting far below in shadow, morning mist rising from the gorge floor',
+            'Longji Dragon\'s Backbone terraces Guilin China, impossibly steep mountain completely encased in perfectly carved rice terraces from base to summit, Zhuang minority wooden village perched dramatically at the very top in morning cloud and mist',
+            'Pu Luong nature reserve Vietnam, pristine untouched terraced valley with no tourist infrastructure, traditional White Thai stilt house villages reflected in still flooded paddies, water buffalo wading through the rice fields, absolute authentic silence',
+            'Hoang Su Phi terraced fields Ha Giang Vietnam, ancient Dao and La Chi ethnic minority terraces hundreds of years old, flooded paddies reflecting pink dawn sky, remote mountain landscape with no roads visible, mist pouring between ridgelines',
+            'Douro Valley Portugal terraced vineyards, dramatic steep granite hillsides entirely covered with meticulously maintained old-vine vineyards and olive groves, terraces plunging to the blue Douro river winding far below in morning haze',
+            'Cinque Terre terraced cliffs Italy, ancient impossibly steep terraced vineyards and lemon groves cascading down dramatic cliffsides to the turquoise Ligurian sea below, colourful fishing village clusters glowing in warm early morning light',
+            'Moray Inca circular terraces Peru, mysterious circular Inca terraces carved into natural depressions in the Andean plateau creating concentric rings, each ring a different microclimate, Andes peaks surrounding, dawn mist rising from each ring',
+            'Baliem Valley Papua Indonesia, one of the most isolated highland valleys on Earth, Dani tribe traditional grass-roofed compound villages scattered across a vast fertile mountain valley floor, waterfalls on surrounding jungle cliffs catching first light'
+          ] %}
+          {{ scenes[si] }}
+
         {% elif 'trưa' in tp or 'noon' in tp %}
-          Stunning aerial view of a picturesque Vietnamese coastal fishing village,
-          impossibly clear turquoise and emerald sea stretching to the horizon,
-          dozens of vibrantly painted traditional wooden fishing boats
-          bobbing gently at a weathered wooden pier,
-          pristine white sand beach curving along the shoreline,
-          magnificent tall coconut palm trees with swaying fronds casting dappled shade,
-          weathered fishermen in conical hats sorting and mending nets on the beach,
-          baskets overflowing with the morning's fresh catch of silver fish,
-          colourful fishing nets draped and drying on bamboo poles,
-          traditional fishing boats with painted eyes on the bow
+          {# CỐ ĐỊNH BUỔI TRƯA: Bãi biển đẹp nhất thế giới #}
+          {% set scenes = [
+            'Anse Source d\'Argent beach La Digue Seychelles, world\'s most photographed beach, extraordinary smooth rose-pink granite boulders sculpted by millennia into surreal organic forms, powder-white sand, impossibly clear warm turquoise lagoon, palm trees overhead',
+            'Navagio Shipwreck Beach Zakynthos Greece, only accessible by sea, dramatic vertical white limestone cliffs hundreds of metres tall encircling a hidden cove, electric blue water, the famous rusted shipwreck half-buried in blinding white sand',
+            'Whitehaven Beach Whitsundays Australia, seven kilometres of silica sand so pure it never gets hot, swirling tidal patterns of turquoise and green in Hill Inlet estuary seen from above like an abstract impressionist painting',
+            'Matira Beach Bora Bora French Polynesia, overwater bungalows on stilts dotting the impossibly blue lagoon, sacred volcanic Mount Otemanu rising dramatically from the island centre, crystal clear warm lagoon revealing coral gardens beneath the surface',
+            'El Nido Palawan Philippines, dramatic jagged limestone karst islands rising vertically from the sea, hidden lagoons accessible only through narrow gaps in the cliffs, finest white coral sand beaches inside each island, water in every shade of blue and green',
+            'Pink Sand Beach Harbour Island Bahamas, three kilometres of naturally pink sand caused by foraminifera shells mixed with white coral, calm crystal clear blue Atlantic water, colourful colonial Dunmore Town buildings through the tropical tree line',
+            'Maldives North Male Atoll, infinite expanse of warm Indian Ocean, reef islands barely above sea level fringed with perfect white sand, overwater villas on stilts, the water so clear every coral head and tropical fish visible from directly above',
+            'Grace Bay Beach Turks and Caicos, twelve kilometres of powdery white sand and perfectly calm clear water, the entire shallow bank visible from above in gradients from pure white through aquamarine to deep navy blue at the reef edge',
+            'Playa Paraiso Cayo Largo Cuba, completely undeveloped remote island beach accessible only by boat, fine white sand curving around a perfect shallow bay, warm translucent Caribbean water without a single tourist building or human footprint',
+            'Anse Lazio Beach Praslin Seychelles, sheltered bay of perfectly clear warm water, large smooth weathered granite boulders framing the beach naturally, lush tropical forest reaching the sand, tall Coco de Mer palms casting gentle dappled shade',
+            'Radhanagar Beach Havelock Island Andaman India, seven kilometres of pristine beach barely visited, lush tropical rainforest pressing right to the sand edge, water so clear you can see coral in six metres depth, perfect waves for swimming',
+            'Komodo Island volcanic black sand beach Indonesia, otherworldly black volcanic sand fringed with tropical forest, Komodo dragon tracks visible in the dark sand, crystal clear turquoise water above spectacular coral reef, dramatic volcanic peaks behind'
+          ] %}
+          {{ scenes[si] }}
+
         {% elif 'chiều' in tp or 'afternoon' in tp %}
-          Immersive street-level view of Vietnam's most atmospheric ancient old town,
-          beautifully weathered centuries-old colonial French buildings
-          with faded yellow and ochre plaster walls glowing in golden light,
-          a narrow enchanting lantern-lined alley disappearing into warm hazy distance,
-          dozens of colourful traditional silk lanterns hanging overhead
-          swaying gently and casting warm coloured shadows,
-          motorbikes and bicycles weaving gracefully through the busy street,
-          cascading bougainvillea in vivid magenta and purple
-          spilling dramatically over ancient walls,
-          bustling street food vendors with steaming bowls of pho and banh mi,
-          locals sitting at tiny plastic stools sipping iced coffee,
-          carved wooden shophouse facades with intricate traditional Vietnamese details
+          {# CỐ ĐỊNH BUỔI CHIỀU: Phố cổ / thị trấn đẹp nhất thế giới #}
+          {% set scenes = [
+            'Hoi An ancient town Vietnam golden hour, narrow lantern-filled alleyways of 15th-century trading port glowing amber, centuries-old Japanese covered bridge, yellow-plastered merchant houses, Thu Bon river reflecting orange sky, silk lanterns swaying',
+            'Santorini Oia village Greece sunset, iconic white cubic Cycladic architecture cascading down caldera cliffs, famous blue-domed churches luminous in last light, infinite Aegean Sea horizon blazing orange and crimson, tourists watching from terrace edges',
+            'Prague old town Czech Republic golden hour, Gothic Tyn Church spires piercing the golden sky above red-roofed medieval buildings, Charles Bridge glowing warm over the Vltava river, hilltop castle silhouetted against amber clouds',
+            'Kyoto Gion district Japan late afternoon, perfectly preserved Edo-period machiya wooden merchant houses lining narrow cobblestone streets, willow trees trailing over a stone-edged canal, a geisha in full kimono slipping between the old buildings in golden light',
+            'Dubrovnik old city Croatia golden hour, intact medieval limestone city walls glowing honey-gold in late light, terracotta rooftops of the entire walled city, the Adriatic Sea glittering electric blue beyond the ancient fortifications',
+            'Luang Prabang Laos afternoon, UNESCO-listed ancient royal capital at the confluence of Mekong and Nam Khan rivers, golden spires of dozens of Buddhist temples rising above a town of wooden French colonial shophouses, monks in saffron robes',
+            'Colmar Alsace France golden hour, fairy-tale town of half-timbered medieval houses painted in pastels reflected in the Lauch river in the famous Petite Venise quarter, geraniums overflowing from every window box and balcony in warm light',
+            'Valletta Malta afternoon, one of Europe\'s smallest capitals, grand Baroque limestone palaces and churches glowing golden in late Mediterranean sun, Grand Harbour with ancient fortifications on both sides, fishing boats in the creeks below',
+            'Chefchaouen Morocco afternoon, the legendary Blue City in the Rif Mountains, every street building staircase and flowerpot painted in a different shade of blue and white, cats sleeping in the afternoon sun, artisan weavers at their looms in doorways',
+            'Cartagena Colombia golden hour, perfectly preserved walled colonial Spanish city, pastel-coloured plaster buildings draped with bougainvillea, balconies overflowing with tropical flowers, cathedral towers above the colonial heart, Caribbean sea beyond the walls',
+            'Tbilisi Georgia afternoon, dramatically situated on cliffs and gorges, distinctive carved wooden balconies overhanging narrow streets, Persian bathhouse domed roofs steaming, medieval Narikala fortress ruin on a clifftop above all, Mtkvari river below',
+            'Plovdiv Bulgaria old town afternoon, one of Europe\'s oldest cities, pastel-coloured National Revival period mansions perched on dramatic hills above a Roman amphitheatre still in use, cobblestone streets, art galleries, and rose gardens in golden light'
+          ] %}
+          {{ scenes[si] }}
+
         {% elif 'tối' in tp or 'evening' in tp %}
-          Breathtaking aerial view of Vietnam's legendary Sapa mountain valley at dusk,
-          dramatically layered terraced rice fields carved into steep mountainsides
-          reflecting the twilight sky in their still water like a thousand mirrors,
-          a traditional ethnic minority H'Mong hilltribe village perched on the hillside,
-          warm golden light glowing invitingly from wooden stilt house windows,
-          ancient pine and fir trees forming dark silhouettes against the glowing horizon,
-          a winding mountain path with stone steps disappearing into the mist below,
-          smoke rising lazily from cooking fires inside the village homes,
-          the vast dark atmospheric valley falling away into purple shadow below,
-          distant mountain peaks fading into the darkening sky
+          {# CỐ ĐỊNH BUỔI TỐI: Núi + hoàng hôn kỳ vĩ nhất thế giới #}
+          {% set scenes = [
+            'Dolomites Tre Cime di Lavaredo Italy blue hour, the three iconic vertical rock spires turning from molten gold to deep violet as the last light dies, alpenglow lingering on the highest pale limestone peaks, mountain huts glowing warmly in gathering darkness below',
+            'Torres del Paine Patagonia Chile twilight, the extraordinary granite towers glowing in famous Patagonian alpenglow of pink and gold, perfectly mirrored in the still waters of Lago Nordenskjöld, guanaco silhouettes motionless on the dark shore',
+            'Aoraki Mount Cook New Zealand at dusk, the highest peak reflected in Lake Pukaki turning from turquoise to deep violet as the sky darkens, lupine flower fields in purple and pink stretching across the entire foreground to the water edge',
+            'Lofoten Islands Norway blue hour, dramatic jagged mountain peaks plunging directly into the Arctic fjord, red and yellow traditional fishermen\'s rorbuer cabins on stilts over the dark still water, last orange glow on the horizon reflected perfectly below',
+            'Karakoram K2 Pakistan twilight, the second highest mountain on Earth turning deep crimson then violet in alpenglow, the savage rocky ridges of the Karakoram range extending in every direction, ancient glaciers catching the absolute last light below the summit',
+            'Yosemite Valley California USA golden hour, El Capitan and Half Dome simultaneously glowing in warm amber light, the Merced River reflecting the entire spectacle in its still water, Jeffrey pines in silhouette, waterfalls catching the last light',
+            'Zhangjiajie pillar mountains Hunan China dusk, the other-worldly vertical sandstone columns that inspired Avatar rising from cloud, hundreds of pillar-shaped mountains disappearing into low mist, ancient suspended walkways between them lit with lanterns',
+            'Bryce Canyon Utah USA sunset, thousands of orange-red hoodoo rock spires glowing impossibly vivid in last direct sunlight, the canyon amphitheatre a sea of fire and shadow, snow still lodged in north-facing crevices, purple and indigo sky above',
+            'Himalaya Everest base camp Nepal evening, the world\'s highest mountain glowing pink then deep purple in alpenglow above a sea of glaciers and high altitude rocky moraines, prayer flags strung between boulders snapping in the thin cold wind',
+            'Faroe Islands Slattaratindur sea cliffs evening, extraordinary vertical cliffs 700 metres tall dropping directly into the North Atlantic, grass-topped with sheep grazing at the very edge, gannet seabirds wheeling far below, sea turning pewter and violet',
+            'Mont Blanc Chamonix France blue hour, Europe\'s highest peak above a sea of ice and cloud, the Aiguilles Rouges glowing deep red against violet sky, cable car lights moving up to the Aiguille du Midi observatory, valley lights twinkling far below',
+            'Virunga volcanoes Rwanda DRC Uganda twilight, chain of active shield volcanoes with Nyiragongo visible as a faint red glow against darkening sky, mountain gorilla habitat rainforest clothing the lower slopes, African savanna glowing far below'
+          ] %}
+          {{ scenes[si] }}
+
         {% else %}
-          Hauntingly beautiful aerial view of a remote Vietnamese mountain village at night,
-          ancient moss-covered stone houses and walls built centuries ago,
-          thick mysterious fog and mist swirling and drifting between jagged mountain peaks,
-          a row of glowing warm orange traditional paper lanterns
-          lining a narrow winding dirt road through the village,
-          dense wild primordial forest surrounding the village on all sides,
-          the occasional flicker of firelight visible through a cracked wooden shutter,
-          an ancient stone well in the village centre reflecting moonlight,
-          complete profound silence and stillness,
-          the village appearing frozen in time like a dream from centuries past
+          {# CỐ ĐỊNH BAN ĐÊM: Núi đêm + thiên hà Milky Way đẹp nhất thế giới #}
+          {% set scenes = [
+            'Mont Blanc massif Alps France Italy midnight, Europe\'s highest peak silvered by full moon above a vast sea of glaciers and seracs, the entire Milky Way galaxy blazing overhead with extraordinary clarity above 4800 metres, absolute zero light pollution in any direction',
+            'Lofoten Islands Norway winter midnight, the full fury of the Northern Lights aurora borealis in magnificent curtains of green white and violet dancing and rippling above jagged black mountain peaks reflected perfectly in the glass-flat Arctic fjord below',
+            'Torres del Paine Patagonia Chile at night, the jagged granite towers standing in complete darkness save for cold moonlight, the Milky Way core rising dramatically behind the tallest tower over the perfectly still reflecting lake below, Southern Cross constellation high overhead',
+            'Atacama Desert Chile high plateau at night, the driest place on Earth at 5000 metres altitude, zero humidity and zero light pollution, the most extraordinary dark sky on Earth, entire nebulae and star clusters visible to the naked eye, giant cacti as dark silhouettes',
+            'Mauna Kea Hawaii volcano summit at night, the dormant shield volcano at 4200 metres above the Pacific Ocean rising above 40 percent of Earth\'s atmosphere, cluster of astronomical observatories domed in cold moonlight, the entire Milky Way reflected in a crater lake below',
+            'Dolomites Seceda ridge Italy at night, the extraordinary ancient sawtooth rocky ridgeline standing against a sky blazing with stars, the Milky Way core casting faint silver light on pale limestone, a single remote mountain hut glowing with warm orange lamplight far below',
+            'Aoraki Mount Cook New Zealand midnight, the highest peak in New Zealand under the most spectacular Southern Hemisphere night sky, the Milky Way core visible from horizon to complete horizon, Lake Pukaki a perfect black mirror reflecting every star below the mountain',
+            'Namib Desert Sossusvlei Namibia at night, the world\'s oldest desert, the enormous ancient red sand dunes of Deadvlei standing in brilliant moonlight, skeletal camel thorn trees dead for centuries casting silver shadows, Milky Way and Magellanic Clouds blazing overhead',
+            'Cappadocia Turkey midnight, extraordinary surreal landscape of ancient volcanic tufa fairy chimney rock formations stretching to the horizon under a blazing Milky Way, hundreds of hot air balloons moored in lines on the dark valley floor waiting for dawn launch',
+            'Tromsø Norway Arctic winter at night, deep inside the Arctic Circle at 70 degrees north, the full fury of the Northern Lights aurora borealis in green white and violet dancing above a snow-covered Arctic mountain landscape, frozen fjord below reflecting the lights',
+            'Everest high camp Nepal at night, above 7000 metres elevation the thin freezing air perfectly transparent, the entire Himalayan range stretching from horizon to horizon in moonlight, the jet stream forming a visible ice crystal plume blowing off the Everest summit in darkness',
+            'Andes altiplano Bolivia at night, 4500 metres high plateau near the Chilean border, extraordinary darkness of the high altitude wilderness, flamingos roosting on a frozen volcanic salt lake that perfectly reflects the entire Milky Way, snow-capped volcanoes as black silhouettes'
+          ] %}
+          {{ scenes[si] }}
+
         {% endif %}
 
       g_weather_fx: >-
@@ -808,7 +843,7 @@ action:
           ~ 'Absolutely no text, no watermarks, no logos, no borders, no artificial elements, no modern intrusions.'
           ) | regex_replace('\\s+', ' ') | trim }}
 
-      task_name: "Weather {{ states(time_phase_sensor) }} - {{ states(weather_entity) }}"
+      task_name: "Weather {{ states(time_phase_sensor) }} - {{ states(weather_entity) }} - Scene {{ scene_index }}"
 
   # ── BƯỚC 3: BUILD PROMPT NVIDIA ───────────────────────────────────────────
   - variables:
@@ -820,22 +855,100 @@ action:
         {% elif 'chiều' in tp or 'afternoon' in tp %}
           warm amber sunset light, long golden shadows, glowing orange horizon, late afternoon daylight
         {% elif 'tối' in tp or 'evening' in tp %}
-          blue-hour twilight, NO daylight, dark sky gradient deep orange fading to indigo, first stars appearing, village lights and lanterns glowing, night atmosphere beginning
+          blue-hour twilight, NO daylight, dark sky gradient deep orange fading to indigo, first stars appearing, village lights and lanterns glowing
         {% else %}
-          deep night scene, NO sun, NO daylight, full darkness, bright moonlight casting silver shadows, glowing lanterns, Milky Way overhead, stars filling sky
+          deep night scene, NO sun, NO daylight, full darkness, bright moonlight casting silver shadows, Milky Way overhead, stars filling sky
         {% endif %}
 
+      # ── N_SCENE: phiên bản ngắn cho NVIDIA, cùng 12 địa điểm theo scene_index ──
       n_scene: >-
+        {% set si = scene_index | int %}
+
         {% if 'sáng' in tp or 'morning' in tp %}
-          Vietnam countryside, lush green rice paddy terraces, bamboo groves, wooden farmhouses, morning mist over fields, roosters crowing, farmers walking dirt paths
+          {% set scenes = [
+            'Vietnam Mu Cang Chai rice terraces, flooded paddies reflecting pink sunrise sky, morning mist filling valleys, H\'Mong farmers, water buffalo',
+            'Jatiluwih rice terraces Bali Indonesia, UNESCO curved emerald terraces at dawn, Balinese water temples, tropical jungle, Mount Batukaru in cloud',
+            'Banaue rice terraces Philippines, 2000-year-old Ifugao terraces, misty mountain amphitheatre, wooden stilt houses on steep slopes, flooded paddies',
+            'Yuanyang rice terraces Yunnan China, thousands of mirror-like flooded terraces, geometric patterns covering mountains, golden sunrise light flooding valley',
+            'Tegallalang rice terrace Ubud Bali, stepped terraces descending into jungle ravine, tall coconut palms on ridgeline, river glinting far below, morning mist',
+            'Longji Dragon\'s Backbone terraces Guilin China, steep mountain covered in carved terraces base to summit, Zhuang village at very top in morning cloud',
+            'Pu Luong nature reserve Vietnam, pristine untouched terraced valley, White Thai stilt house villages in still flooded paddies, no tourists, silence',
+            'Hoang Su Phi Ha Giang Vietnam, ancient ethnic minority terraces, flooded paddies reflecting pink dawn, remote landscape, mist pouring between ridgelines',
+            'Douro Valley Portugal, steep granite hillsides covered in old-vine vineyards and olive groves, terraces plunging to blue river in morning haze',
+            'Cinque Terre Italy, ancient terraced vineyards and lemon groves on dramatic cliffsides above turquoise Ligurian sea, colourful villages in morning light',
+            'Moray Inca circular terraces Peru, mysterious concentric circular terraces in Andean plateau, each ring different microclimate, dawn mist rising from rings',
+            'Baliem Valley Papua Indonesia, most isolated highland valley on Earth, Dani tribe grass-roofed villages, waterfalls on jungle cliffs catching first light'
+          ] %}
+          {{ scenes[si] }}
+
         {% elif 'trưa' in tp or 'noon' in tp %}
-          Vietnam coastal fishing village, turquoise emerald sea, colorful wooden boats docked, white sand beach, palm trees swaying, fishermen sorting nets
+          {% set scenes = [
+            'Anse Source d\'Argent beach Seychelles, pink granite boulders, powder-white sand, clear turquoise lagoon, palm trees, world\'s most beautiful beach',
+            'Navagio Shipwreck Beach Zakynthos Greece, vertical white limestone cliffs encircling hidden cove, electric blue water, rusted shipwreck in white sand',
+            'Whitehaven Beach Whitsundays Australia, silica sand, swirling tidal turquoise and green patterns in Hill Inlet seen from above, pristine coastline',
+            'Matira Beach Bora Bora French Polynesia, overwater bungalows on stilts, impossibly blue lagoon, Mount Otemanu volcano, crystal clear coral-filled water',
+            'El Nido Palawan Philippines, jagged limestone karst islands rising from sea, hidden lagoons inside cliffs, white coral sand beaches, vivid blue-green water',
+            'Pink Sand Beach Harbour Island Bahamas, three kilometres of natural pink sand, calm clear Atlantic water, colourful colonial buildings through tropical trees',
+            'Maldives North Male Atoll, warm Indian Ocean, reef islands fringed with white sand, overwater villas, crystal clear water showing every coral head below',
+            'Grace Bay Beach Turks and Caicos, twelve kilometres powdery white sand, perfectly calm clear water, gradients from white through aquamarine to deep navy',
+            'Playa Paraiso Cayo Largo Cuba, undeveloped remote beach only by boat, fine white sand, perfect shallow Caribbean bay, no buildings no footprints anywhere',
+            'Anse Lazio Beach Praslin Seychelles, clear warm water, large smooth granite boulders framing bay, lush tropical forest to sand edge, Coco de Mer palms',
+            'Radhanagar Beach Havelock Andaman India, pristine seven kilometres barely visited, rainforest to sand edge, crystal clear water revealing coral at depth',
+            'Komodo Island black sand beach Indonesia, otherworldly volcanic black sand, Komodo dragon tracks, clear turquoise water above coral reef, volcanic peaks behind'
+          ] %}
+          {{ scenes[si] }}
+
         {% elif 'chiều' in tp or 'afternoon' in tp %}
-          Vietnam old town street, yellowed colonial French buildings, narrow lantern-lined alley, motorbikes weaving, bougainvillea flowers on walls, street food vendors
+          {% set scenes = [
+            'Hoi An ancient town Vietnam golden hour, narrow lantern-filled alleys, 15th-century trading port glowing amber, Japanese covered bridge, silk lanterns swaying',
+            'Santorini Oia Greece sunset, white cubic Cycladic architecture on caldera cliffs, blue-domed churches in last light, Aegean Sea horizon blazing orange crimson',
+            'Prague old town golden hour, Gothic Tyn Church spires, red-roofed medieval buildings, Charles Bridge over Vltava glowing warm, hilltop castle silhouetted',
+            'Kyoto Gion district Japan late afternoon, Edo-period machiya wooden houses, cobblestone streets, willow trees over canal, geisha in kimono in golden light',
+            'Dubrovnik old city Croatia golden hour, medieval limestone city walls glowing honey-gold, terracotta rooftops, Adriatic Sea glittering electric blue beyond walls',
+            'Luang Prabang Laos afternoon, ancient royal capital, Mekong river confluence, golden temple spires, French colonial shophouses, monks in saffron robes',
+            'Colmar Alsace France golden hour, half-timbered medieval houses in pastels, Petite Venise quarter reflected in canal, geraniums from every window box',
+            'Valletta Malta afternoon, Baroque limestone palaces glowing golden, Grand Harbour, ancient fortifications on both sides, fishing boats in coloured creeks below',
+            'Chefchaouen Morocco afternoon, legendary Blue City in Rif Mountains, every street and building in shades of blue and white, cats sleeping in sun',
+            'Cartagena Colombia golden hour, walled colonial Spanish city, pastel buildings draped with bougainvillea, flower-filled balconies, Caribbean sea beyond walls',
+            'Tbilisi Georgia afternoon, cliffs and gorges, carved wooden balconies, Persian bathhouse domed roofs, medieval Narikala fortress on clifftop, river below',
+            'Plovdiv Bulgaria old town afternoon, ancient city, pastel National Revival mansions on hills above Roman amphitheatre, cobblestone streets, rose gardens'
+          ] %}
+          {{ scenes[si] }}
+
         {% elif 'tối' in tp or 'evening' in tp %}
-          Vietnam Sapa mountain valley at dusk, terraced rice fields reflecting twilight sky, ethnic minority hilltribe village with glowing lit windows, wooden stilt houses, pine trees on ridgeline, dark evening atmosphere
+          {% set scenes = [
+            'Dolomites Tre Cime di Lavaredo Italy blue hour, three iconic rock spires from gold to violet in alpenglow, mountain huts glowing warmly in gathering darkness',
+            'Torres del Paine Patagonia Chile twilight, granite towers in pink and gold alpenglow, perfectly mirrored in still Lago Nordenskjöld, guanaco silhouettes on shore',
+            'Aoraki Mount Cook New Zealand dusk, highest peak reflected in Lake Pukaki from turquoise to violet, lupine flower fields purple and pink in foreground',
+            'Lofoten Islands Norway blue hour, jagged mountains plunging into Arctic fjord, red and yellow rorbuer fishing cabins on stilts, last orange glow on horizon',
+            'K2 Karakoram Pakistan twilight, second highest mountain on Earth turning crimson then violet in alpenglow, glaciers catching absolute last light below summit',
+            'Yosemite Valley USA golden hour, El Capitan and Half Dome glowing amber simultaneously, Merced River reflecting spectacle, Jeffrey pines silhouetted',
+            'Zhangjiajie pillar mountains China dusk, vertical sandstone columns rising from cloud, hundreds of Avatar-like pillars in mist, suspended walkways lit with lanterns',
+            'Bryce Canyon Utah USA sunset, thousands of orange-red hoodoo spires blazing in last sunlight, canyon amphitheatre in fire and shadow, purple sky above',
+            'Everest base camp Nepal evening, world\'s highest mountain glowing pink then purple in alpenglow, glaciers and moraines, prayer flags snapping in thin cold wind',
+            'Faroe Islands sea cliffs evening, vertical 700-metre cliffs dropping into North Atlantic, sheep at grass edge, gannets wheeling below, sea turning pewter violet',
+            'Mont Blanc Chamonix France blue hour, Europe\'s highest peak above sea of ice and cloud, Aiguilles Rouges glowing red against violet sky, valley lights below',
+            'Virunga volcanoes Rwanda DRC twilight, chain of volcanoes, Nyiragongo faint red glow against darkening sky, gorilla habitat rainforest, African savanna far below'
+          ] %}
+          {{ scenes[si] }}
+
         {% else %}
-          Vietnam remote mountain village at night, ancient stone houses, swirling fog between peaks, glowing orange lanterns, dirt road, wild forest surrounding, no daylight
+          {% set scenes = [
+            'Mont Blanc Alps midnight, Europe\'s highest peak silvered by full moon above glaciers, entire Milky Way blazing overhead at 4800 metres, zero light pollution',
+            'Lofoten Islands Norway winter, Northern Lights aurora borealis in green white violet curtains above black jagged mountains, reflected in glass-flat Arctic fjord',
+            'Torres del Paine Patagonia Chile night, jagged granite towers in moonlight, Milky Way core rising behind tallest tower, perfect reflecting lake, Southern Cross',
+            'Atacama Desert Chile high plateau night, 5000 metres altitude, zero humidity zero light pollution, nebulae visible to naked eye, giant cacti as dark silhouettes',
+            'Mauna Kea Hawaii volcano summit night, 4200 metres above Pacific, observatories domed in moonlight, entire Milky Way reflected in crater lake below the summit',
+            'Dolomites Seceda ridge Italy night, ancient sawtooth rocky ridgeline against blazing star-filled sky, Milky Way casting faint light on limestone, one hut glowing below',
+            'Aoraki Mount Cook New Zealand midnight, highest peak under Southern Hemisphere Milky Way, Lake Pukaki a perfect black mirror reflecting every star below',
+            'Namib Desert Namibia night, world\'s oldest desert, enormous red sand dunes and dead camel thorn trees in moonlight, Milky Way and Magellanic Clouds blazing overhead',
+            'Cappadocia Turkey midnight, volcanic tufa fairy chimney rock formations under blazing Milky Way, hundreds of hot air balloons moored on dark valley floor waiting for dawn',
+            'Tromsø Norway Arctic winter, deep inside Arctic Circle, Northern Lights aurora borealis in green and violet above snow-covered mountains, frozen fjord reflecting lights',
+            'Everest high camp Nepal night, above 7000 metres, entire Himalayan range in moonlight, jet stream ice crystal plume blowing off Everest summit in darkness',
+            'Andes altiplano Bolivia night, 4500 metres plateau, flamingos on frozen volcanic salt lake reflecting the entire Milky Way, snow-capped volcanoes as black silhouettes'
+          ] %}
+          {{ scenes[si] }}
+
         {% endif %}
 
       n_weather_fx: >-
@@ -985,7 +1098,8 @@ action:
               level: info
               message: >-
                 [WeatherImage] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
-                | wind={{ wind }} | aqi={{ aqi }} | chars={{ nvidia_prompt | length }}
+                | wind={{ wind }} | aqi={{ aqi }} | scene={{ scene_index }}
+                | chars={{ nvidia_prompt | length }}
                 | prompt={{ nvidia_prompt | truncate(120) }}
 
   # ── BƯỚC 5: GỬI ẢNH ──────────────────────────────────────────────────────
