@@ -288,6 +288,31 @@ blueprint:
           selector:
             boolean:
 
+        # ── INPUT MỚI: THƯ MỤC CẦN XÓA ──────────────────────────────────
+        ai_image_delete_folder:
+          name: Thư mục chứa ảnh AI cần xóa (dự phòng — chỉ Gemini)
+          description: |
+            Thư mục mà Gemini AI Task lưu ảnh tạm thời.
+            Chỉ dùng khi bật "Xóa ảnh AI sau khi lưu" ở trên.
+            Mặc định: `/config/media/ai_task/image`
+          default: "/config/media/ai_task/image"
+          selector:
+            text:
+
+        ai_image_delete_age:
+          name: Xóa ảnh cũ hơn (giây) — chỉ Gemini
+          description: |
+            Ảnh cũ hơn số giây này sẽ bị xóa khỏi thư mục AI tạm.
+            Mặc định: 3600 giây (1 giờ).
+          default: 3600
+          selector:
+            number:
+              min: 60
+              max: 86400
+              step: 60
+              unit_of_measurement: giây
+              mode: box
+
     # ===== CÀI ĐẶT NVIDIA =====
     nvidia_settings:
       name: "⚡ Cài đặt NVIDIA Flux PyScript"
@@ -512,6 +537,8 @@ action:
       filename_prefix: !input filename_prefix
       file_extension: !input file_extension
       delete_ai_image: !input delete_ai_image
+      ai_image_delete_folder: !input ai_image_delete_folder
+      ai_image_delete_age: !input ai_image_delete_age
       timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
       filename: >-
         {% if use_fixed_filename %}
@@ -1070,15 +1097,16 @@ action:
                   destination: "{{ final_image_path }}"
                 response_variable: copy_result
 
+              # ── XÓA ẢNH TẠM VỚI THƯ MỤC VÀ THỜI GIAN TÙY CHỈNH ──────
               - if:
                   - condition: template
-                    value_template: "{{ delete_ai_image and image_path != '' }}"
+                    value_template: "{{ delete_ai_image and ai_image_delete_folder != '' }}"
                 then:
                   - continue_on_error: true
                     action: delete.files_in_folder
                     data:
-                      folder: '/config/media/music_ai'
-                      time: 3600
+                      folder: "{{ ai_image_delete_folder }}"
+                      time: "{{ ai_image_delete_age | int(3600) }}"
 
       # ── NHÁNH NVIDIA FLUX ───────────────────────────────────────────────
       - conditions:
