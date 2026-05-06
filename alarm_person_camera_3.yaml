@@ -56,7 +56,7 @@ blueprint:
     </details>
 
   domain: automation
-  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/alarm_person_camera_full6cases.yaml
+  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/alarm_person_camera_3.yaml
 
   input:
 
