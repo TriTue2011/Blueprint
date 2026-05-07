@@ -1241,11 +1241,18 @@ action:
                             | regex_replace('```\\s*', '')
                             | trim
                             | from_json(default={})) %}
-                          {{ {'data': parsed} }}
+                          {% set fixed = {
+                            'humans_detected':              parsed.get('humans_detected',              parsed.get('humansdetected', 0)),
+                            'humans_detected_summary':      parsed.get('humans_detected_summary',      parsed.get('humansdetectedsummary', '')),
+                            'humans_detected_description':  parsed.get('humans_detected_description',  parsed.get('humansdetecteddescription', '')),
+                            'animals_detected':             parsed.get('animals_detected',             parsed.get('animalsdetected', 0)),
+                            'animals_detected_summary':     parsed.get('animals_detected_summary',     parsed.get('animalsdetectedsummary', '')),
+                            'animals_detected_description': parsed.get('animals_detected_description', parsed.get('animalsdetecteddescription', ''))
+                          } %}
+                          {{ {'data': fixed} }}
                         {% else %}
                           {{ {} }}
                         {% endif %}
-
           # Đợi AI xử lý xong
           - wait_template: >
               {{ humans_detected_report is defined
