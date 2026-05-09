@@ -1069,7 +1069,7 @@ action:
             data:
               entity_id: !input ai_task_entity
               task_name: "{{ task_name }}"
-              instructions: "{{ gemini_prompt }}"
+              instructions: "{{ gemini_prompt }} 16:9"
             response_variable: ai_result
 
           - if:
