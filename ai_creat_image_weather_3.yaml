@@ -1069,7 +1069,7 @@ action:
             data:
               entity_id: !input ai_task_entity
               task_name: "{{ task_name }}"
-              instructions: "16:9 widescreen landscape image. {{ gemini_prompt }}"
+              instructions: "{{ gemini_prompt }}"
             response_variable: ai_result
 
           - if:
