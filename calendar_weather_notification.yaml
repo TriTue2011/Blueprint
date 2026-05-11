@@ -1,6 +1,5 @@
 blueprint:
   name: Thông báo lịch âm và thời tiết
-  domain: automation
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/calendar_weather_notification.yaml
   description: >
@@ -12,8 +11,7 @@ blueprint:
     - Khi có sự kiện lịch: kết hợp cả lịch + thời tiết
     - Khi không có sự kiện: chỉ thông báo thời tiết
 
-
-
+  domain: automation
   homeassistant:
     min_version: 2024.10.0
 
@@ -190,6 +188,20 @@ blueprint:
               filter:
                 - domain: ai_task
 
+        ai_output_mode:
+          name: 🔧 Chế độ output AI
+          description: |
+            Structured: dùng structure native của HA (mặc định).
+            JSON: AI trả raw JSON, parse thủ công — dùng khi Structured lỗi "Error with structured response".
+          default: structured
+          selector:
+            select:
+              options:
+                - label: Structured Output (HA Native)
+                  value: structured
+                - label: JSON (Dùng khi Structured lỗi)
+                  value: json
+
     mobile_app_section:
       name: 📱 Mobile App Settings
       icon: mdi:cellphone
@@ -310,7 +322,7 @@ blueprint:
           name: 💬 Thread ID (Nhóm)
           description: >
             ID của nhóm Zalo. Nhập dạng text để tránh mất độ chính xác
-            với số lớn (VD: 3295299208151385728). Dùng khi Receiver Type = Group.
+            với số lớn. Dùng khi Receiver Type = Group.
           default: ""
           selector:
             text:
@@ -319,7 +331,7 @@ blueprint:
           name: 👤 User ID (Cá nhân)
           description: >
             ID của người nhận Zalo. Nhập dạng text để tránh mất độ chính xác
-            với số lớn (VD: 3295299208151385728). Dùng khi Receiver Type = User.
+            với số lớn. Dùng khi Receiver Type = User.
           default: ""
           selector:
             text:
@@ -440,6 +452,7 @@ variables:
   enable_ai_tts_editing: !input enable_ai_tts_editing
   enable_ai_weather_editing: !input enable_ai_weather_editing
   ai_task_entity: !input ai_task_entity
+  ai_output_mode: !input ai_output_mode
 
   include_mobile_notify: !input include_mobile_notify
   is_ios_android: !input is_ios_android
@@ -466,7 +479,6 @@ variables:
   zalo_custom_user_id: !input zalo_custom_user_id
   zalo_custom_receiver_type: !input zalo_custom_receiver_type
   zalo_custom_ttl: !input zalo_custom_ttl
-  # [FIX] Bỏ | string — giữ nguyên như camera blueprint để tránh lỗi hiển thị trace
   zalo_resolved_id: >
     {% if zalo_custom_receiver_type == '1' %}
       {{ zalo_custom_thread_id if zalo_custom_thread_id | length > 0 else '' }}
@@ -540,7 +552,6 @@ action:
           {{ states(pm25_sensor) | float(0) | round(1) }}
         {% else %}0{% endif %}
 
-  # Gộp 2 lần iterate states.sensor thành 1 lần duy nhất
   - variables:
       lunar_scan_result: >
         {% set ns = namespace(found=false, ids=[]) %}
@@ -634,65 +645,134 @@ action:
                       {% endif %}
                     tag: "lunar_{{ repeat.item | replace('.', '_') }}_{{ days_until | int }}"
 
-                # --- AI BIÊN TẬP TIN NHẮN ---
+                # ── AI BIÊN TẬP TIN NHẮN (Chỗ 1) ─────────────────────────
                 - choose:
                     - conditions:
                         - condition: template
                           value_template: "{{ enable_ai_message_editing }}"
                       sequence:
-                        - continue_on_error: true
-                          action: ai_task.generate_data
-                          data:
-                            task_name: "msg_edit_{{ repeat.item | replace('.', '_') }}"
-                            entity_id: "{{ ai_task_entity }}"
-                            instructions: >
-                              Viết một thông báo kết hợp Lịch Âm và Thời Tiết bằng tiếng Việt,
-                              tự nhiên và sáng tạo như người thật viết, KHÔNG theo khuôn mẫu cố định.
+                        - choose:
 
-                              THÔNG TIN ĐẦU VÀO:
-                              Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
-                              Thời gian: {{ now().strftime('%H:%M') }} ngày {{ now().day }}/{{ now().month }}/{{ now().year }}
-                              Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                            # ── JSON MODE ──────────────────────────────────
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ ai_output_mode == 'json' }}"
+                              sequence:
+                                - continue_on_error: true
+                                  action: ai_task.generate_data
+                                  data:
+                                    task_name: "msg_edit_{{ repeat.item | replace('.', '_') }}"
+                                    entity_id: "{{ ai_task_entity }}"
+                                    instructions: >
+                                      Viết một thông báo kết hợp Lịch Âm và Thời Tiết bằng tiếng Việt,
+                                      tự nhiên và sáng tạo như người thật viết, KHÔNG theo khuôn mẫu cố định.
 
-                              Thời tiết: {{ weather_state }}
-                              Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
-                              {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
-                              {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                      THÔNG TIN ĐẦU VÀO:
+                                      Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                      Thời gian: {{ now().strftime('%H:%M') }} ngày {{ now().day }}/{{ now().month }}/{{ now().year }}
+                                      Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                                      Thời tiết: {{ weather_state }}
+                                      Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                      {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                      {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                      Sự kiện: {{ event_name }}
+                                      Còn {{ days_until }} ngày | Ngày dương: {{ nearest_date }}
+                                      {% if ngay_am %}Âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
+                                      {% if mota %}Mô tả: {{ mota }}{% endif %}
 
-                              Sự kiện: {{ event_name }}
-                              Còn {{ days_until }} ngày | Ngày dương: {{ nearest_date }}
-                              {% if ngay_am %}Âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
-                              {% if mota %}Mô tả: {{ mota }}{% endif %}
+                                      NHIỆM VỤ:
+                                      Viết thông báo hoàn toàn tự nhiên, sáng tạo, KHÔNG theo khuôn mẫu cố định.
+                                      Lồng ghép lịch và thời tiết linh hoạt, có cảm xúc.
+                                      Mỗi lần tạo phải KHÁC nhau về cách mở đầu, dẫn dắt, kết thúc.
 
-                              NHIỆM VỤ:
-                              Viết thông báo hoàn toàn tự nhiên, sáng tạo, KHÔNG theo khuôn mẫu cố định.
-                              Lồng ghép lịch và thời tiết linh hoạt, có cảm xúc.
-                              Mỗi lần tạo phải KHÁC nhau về cách mở đầu, dẫn dắt, kết thúc.
+                                      NỘI DUNG CẦN ĐỦ (lồng ghép tự nhiên):
+                                      - Lời chào + buổi + thứ + cảm nhận thời tiết
+                                      - Nhiệt độ, độ ẩm, gợi ý trang phục/đồ dùng
+                                      - AQI/PM2.5 nếu có, khuyến cáo sức khỏe
+                                      - Nhắc sự kiện lịch: tên + ngày dương + âm lịch + số ngày còn lại
+                                      - Câu kết động viên hoặc nhắc nhở phù hợp
 
-                              NỘI DUNG CẦN ĐỦ (lồng ghép tự nhiên):
-                              - Lời chào + buổi + thứ + cảm nhận thời tiết
-                              - Nhiệt độ, độ ẩm, gợi ý trang phục/đồ dùng
-                              - AQI/PM2.5 nếu có, khuyến cáo sức khỏe
-                              - Nhắc sự kiện lịch: tên + ngày dương + âm lịch + số ngày còn lại
-                              - Câu kết động viên hoặc nhắc nhở phù hợp
+                                      YÊU CẦU FORMAT:
+                                      ✅ GIỮ emoji phù hợp, xuống dòng hợp lý, dễ đọc trên điện thoại
+                                      ✅ Độ dài 5-8 dòng, tiêu đề ngắn gọn có emoji gây chú ý
 
-                              YÊU CẦU FORMAT:
-                              ✅ GIỮ emoji phù hợp
-                              ✅ Xuống dòng hợp lý, dễ đọc trên điện thoại
-                              ✅ Độ dài 5-8 dòng
-                              ✅ Tiêu đề ngắn gọn, có emoji, gây chú ý
-                            structure:
-                              title:
-                                description: Tiêu đề thông báo (1 dòng, có emoji)
-                                required: true
-                                selector:
-                                  text: null
-                              message:
-                                description: Nội dung thông báo (5-8 dòng, có emoji, tự nhiên)
-                                required: true
-                                selector:
-                                  text: null
-                          response_variable: msg_edit_result
+                                      Chỉ trả về JSON thuần, không giải thích, không markdown:
+                                      {"title":"<tiêu đề 1 dòng có emoji>","message":"<nội dung 5-8 dòng có emoji, dùng \n để xuống dòng>"}
+                                      TUYỆT ĐỐI không bọc trong ```json```. Raw JSON một dòng duy nhất.
+                                  response_variable: msg_edit_raw
+
+                                - variables:
+                                    msg_edit_result: >
+                                      {% set raw = '' %}
+                                      {% if msg_edit_raw is defined %}
+                                        {% if msg_edit_raw.data is defined and msg_edit_raw.data is string %}
+                                          {% set raw = msg_edit_raw.data %}
+                                        {% elif msg_edit_raw.text is defined %}
+                                          {% set raw = msg_edit_raw.text %}
+                                        {% elif msg_edit_raw is string %}
+                                          {% set raw = msg_edit_raw %}
+                                        {% endif %}
+                                      {% endif %}
+                                      {% set clean = raw | regex_replace('```json\\s*','') | regex_replace('```\\s*','') | trim %}
+                                      {% set parsed = clean | from_json(default={}) %}
+                                      {{ {'data': {
+                                        'title': parsed.get('title', ''),
+                                        'message': parsed.get('message', '')
+                                      }} }}
+
+                            # ── STRUCTURED MODE ────────────────────────────
+                          default:
+                            - continue_on_error: true
+                              action: ai_task.generate_data
+                              data:
+                                task_name: "msg_edit_{{ repeat.item | replace('.', '_') }}"
+                                entity_id: "{{ ai_task_entity }}"
+                                instructions: >
+                                  Viết một thông báo kết hợp Lịch Âm và Thời Tiết bằng tiếng Việt,
+                                  tự nhiên và sáng tạo như người thật viết, KHÔNG theo khuôn mẫu cố định.
+
+                                  THÔNG TIN ĐẦU VÀO:
+                                  Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                  Thời gian: {{ now().strftime('%H:%M') }} ngày {{ now().day }}/{{ now().month }}/{{ now().year }}
+                                  Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                                  Thời tiết: {{ weather_state }}
+                                  Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                  {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                  {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                  Sự kiện: {{ event_name }}
+                                  Còn {{ days_until }} ngày | Ngày dương: {{ nearest_date }}
+                                  {% if ngay_am %}Âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
+                                  {% if mota %}Mô tả: {{ mota }}{% endif %}
+
+                                  NHIỆM VỤ:
+                                  Viết thông báo hoàn toàn tự nhiên, sáng tạo, KHÔNG theo khuôn mẫu cố định.
+                                  Lồng ghép lịch và thời tiết linh hoạt, có cảm xúc.
+                                  Mỗi lần tạo phải KHÁC nhau về cách mở đầu, dẫn dắt, kết thúc.
+
+                                  NỘI DUNG CẦN ĐỦ (lồng ghép tự nhiên):
+                                  - Lời chào + buổi + thứ + cảm nhận thời tiết
+                                  - Nhiệt độ, độ ẩm, gợi ý trang phục/đồ dùng
+                                  - AQI/PM2.5 nếu có, khuyến cáo sức khỏe
+                                  - Nhắc sự kiện lịch: tên + ngày dương + âm lịch + số ngày còn lại
+                                  - Câu kết động viên hoặc nhắc nhở phù hợp
+
+                                  YÊU CẦU FORMAT:
+                                  ✅ GIỮ emoji phù hợp
+                                  ✅ Xuống dòng hợp lý, dễ đọc trên điện thoại
+                                  ✅ Độ dài 5-8 dòng
+                                  ✅ Tiêu đề ngắn gọn, có emoji, gây chú ý
+                                structure:
+                                  title:
+                                    description: Tiêu đề thông báo (1 dòng, có emoji)
+                                    required: true
+                                    selector:
+                                      text: null
+                                  message:
+                                    description: Nội dung thông báo (5-8 dòng, có emoji, tự nhiên)
+                                    required: true
+                                    selector:
+                                      text: null
+                              response_variable: msg_edit_result
 
                         - wait_template: >
                             {{ msg_edit_result is defined
@@ -704,10 +784,12 @@ action:
 
                         - variables:
                             final_title: >
-                              {% if wait.completed %}{{ msg_edit_result.data.title | trim }}
+                              {% if wait.completed and msg_edit_result.data.title | trim | length > 0 %}
+                                {{ msg_edit_result.data.title | trim }}
                               {% else %}{{ original_title }}{% endif %}
                             final_message: >
-                              {% if wait.completed %}{{ msg_edit_result.data.message | trim }}
+                              {% if wait.completed and msg_edit_result.data.message | trim | length > 0 %}
+                                {{ msg_edit_result.data.message | trim }}
                               {% else %}{{ original_message }}{% endif %}
 
                   default:
@@ -810,7 +892,7 @@ action:
                             message: "{{ final_title }}\n\n{{ final_message }}"
                             ttl: "{{ zalo_custom_ttl }}"
 
-                # --- TTS CÓ LỊCH ÂM ---
+                # ── TTS CÓ LỊCH ÂM (Chỗ 2) ───────────────────────────────
                 - choose:
                     - conditions:
                         - condition: template
@@ -821,42 +903,102 @@ action:
                                 - condition: template
                                   value_template: "{{ enable_ai_tts_editing }}"
                               sequence:
-                                - continue_on_error: true
-                                  action: ai_task.generate_data
-                                  data:
-                                    task_name: "tts_edit_{{ repeat.item | replace('.', '_') }}"
-                                    entity_id: "{{ ai_task_entity }}"
-                                    instructions: >
-                                      Viết một đoạn thông báo TTS bằng tiếng Việt, giọng thân thiện,
-                                      tự nhiên như người thật đang nói chuyện.
+                                - choose:
 
-                                      THÔNG TIN ĐẦU VÀO:
-                                      Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
-                                      Thời gian: {{ now().strftime('%H') }} giờ {{ now().strftime('%M') }} phút
-                                      Ngày: {{ now().day }} tháng {{ now().month }} năm {{ now().year }}
-                                      Buổi: {% if now().hour < 12 %}sáng{% elif now().hour < 18 %}chiều{% else %}tối{% endif %}
-                                      Thời tiết: {{ weather_state }}
-                                      Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
-                                      {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
-                                      {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
-                                      Sự kiện: {{ event_name }}
-                                      Còn {{ days_until }} ngày (ngày {{ nearest_date }})
-                                      {% if ngay_am %}Âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
-                                      {% if mota %}Mô tả: {{ mota }}{% endif %}
+                                    # ── JSON MODE ──────────────────────────
+                                    - conditions:
+                                        - condition: template
+                                          value_template: "{{ ai_output_mode == 'json' }}"
+                                      sequence:
+                                        - continue_on_error: true
+                                          action: ai_task.generate_data
+                                          data:
+                                            task_name: "tts_edit_{{ repeat.item | replace('.', '_') }}"
+                                            entity_id: "{{ ai_task_entity }}"
+                                            instructions: >
+                                              Viết một đoạn thông báo TTS bằng tiếng Việt, giọng thân thiện,
+                                              tự nhiên như người thật đang nói chuyện.
 
-                                      YÊU CẦU BẮT BUỘC:
-                                      ❌ KHÔNG dùng emoji, KHÔNG xuống dòng, KHÔNG ký hiệu đặc biệt (°, %, /)
-                                      ✅ Chuyển TẤT CẢ số thành chữ
-                                      ✅ Chuyển ký hiệu thành chữ (°C → độ C, % → phần trăm, km/h → ki-lô-mét trên giờ)
-                                      ✅ Độ dài 5-8 câu, một đoạn liền mạch
-                                      ✅ Mỗi lần tạo phải KHÁC so với lần trước
-                                    structure:
-                                      tts_text:
-                                        description: Nội dung TTS, một đoạn liền mạch
-                                        required: true
-                                        selector:
-                                          text: null
-                                  response_variable: tts_edit_result
+                                              THÔNG TIN ĐẦU VÀO:
+                                              Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                              Thời gian: {{ now().strftime('%H') }} giờ {{ now().strftime('%M') }} phút
+                                              Ngày: {{ now().day }} tháng {{ now().month }} năm {{ now().year }}
+                                              Buổi: {% if now().hour < 12 %}sáng{% elif now().hour < 18 %}chiều{% else %}tối{% endif %}
+                                              Thời tiết: {{ weather_state }}
+                                              Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                              {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                              {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                              Sự kiện: {{ event_name }}
+                                              Còn {{ days_until }} ngày (ngày {{ nearest_date }})
+                                              {% if ngay_am %}Âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
+                                              {% if mota %}Mô tả: {{ mota }}{% endif %}
+
+                                              YÊU CẦU BẮT BUỘC:
+                                              ❌ KHÔNG dùng emoji, KHÔNG xuống dòng, KHÔNG ký hiệu đặc biệt (°, %, /)
+                                              ✅ Chuyển TẤT CẢ số thành chữ
+                                              ✅ Chuyển ký hiệu thành chữ (°C → độ C, % → phần trăm, km/h → ki-lô-mét trên giờ)
+                                              ✅ Độ dài 5-8 câu, một đoạn liền mạch
+                                              ✅ Mỗi lần tạo phải KHÁC so với lần trước
+
+                                              Chỉ trả về JSON thuần, không giải thích, không markdown:
+                                              {"tts_text":"<nội dung TTS một đoạn liền mạch>"}
+                                              TUYỆT ĐỐI không bọc trong ```json```. Raw JSON một dòng duy nhất.
+                                          response_variable: tts_edit_raw
+
+                                        - variables:
+                                            tts_edit_result: >
+                                              {% set raw = '' %}
+                                              {% if tts_edit_raw is defined %}
+                                                {% if tts_edit_raw.data is defined and tts_edit_raw.data is string %}
+                                                  {% set raw = tts_edit_raw.data %}
+                                                {% elif tts_edit_raw.text is defined %}
+                                                  {% set raw = tts_edit_raw.text %}
+                                                {% elif tts_edit_raw is string %}
+                                                  {% set raw = tts_edit_raw %}
+                                                {% endif %}
+                                              {% endif %}
+                                              {% set clean = raw | regex_replace('```json\\s*','') | regex_replace('```\\s*','') | trim %}
+                                              {% set parsed = clean | from_json(default={}) %}
+                                              {{ {'data': {'tts_text': parsed.get('tts_text', '')}} }}
+
+                                    # ── STRUCTURED MODE ────────────────────
+                                  default:
+                                    - continue_on_error: true
+                                      action: ai_task.generate_data
+                                      data:
+                                        task_name: "tts_edit_{{ repeat.item | replace('.', '_') }}"
+                                        entity_id: "{{ ai_task_entity }}"
+                                        instructions: >
+                                          Viết một đoạn thông báo TTS bằng tiếng Việt, giọng thân thiện,
+                                          tự nhiên như người thật đang nói chuyện.
+
+                                          THÔNG TIN ĐẦU VÀO:
+                                          Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                          Thời gian: {{ now().strftime('%H') }} giờ {{ now().strftime('%M') }} phút
+                                          Ngày: {{ now().day }} tháng {{ now().month }} năm {{ now().year }}
+                                          Buổi: {% if now().hour < 12 %}sáng{% elif now().hour < 18 %}chiều{% else %}tối{% endif %}
+                                          Thời tiết: {{ weather_state }}
+                                          Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                          {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                          {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                                          Sự kiện: {{ event_name }}
+                                          Còn {{ days_until }} ngày (ngày {{ nearest_date }})
+                                          {% if ngay_am %}Âm lịch: {{ ngay_am }}{% if thang_am %}/{{ thang_am }}{% endif %}{% endif %}
+                                          {% if mota %}Mô tả: {{ mota }}{% endif %}
+
+                                          YÊU CẦU BẮT BUỘC:
+                                          ❌ KHÔNG dùng emoji, KHÔNG xuống dòng, KHÔNG ký hiệu đặc biệt (°, %, /)
+                                          ✅ Chuyển TẤT CẢ số thành chữ
+                                          ✅ Chuyển ký hiệu thành chữ (°C → độ C, % → phần trăm, km/h → ki-lô-mét trên giờ)
+                                          ✅ Độ dài 5-8 câu, một đoạn liền mạch
+                                          ✅ Mỗi lần tạo phải KHÁC so với lần trước
+                                        structure:
+                                          tts_text:
+                                            description: Nội dung TTS, một đoạn liền mạch
+                                            required: true
+                                            selector:
+                                              text: null
+                                      response_variable: tts_edit_result
 
                                 - wait_template: >
                                     {{ tts_edit_result is defined
@@ -867,7 +1009,8 @@ action:
 
                                 - variables:
                                     tts_final_text: >
-                                      {% if wait.completed %}{{ tts_edit_result.data.tts_text | trim }}
+                                      {% if wait.completed and tts_edit_result.data.tts_text | trim | length > 0 %}
+                                        {{ tts_edit_result.data.tts_text | trim }}
                                       {% else %}{{ event_name }}. {{ original_message }}{% endif %}
 
                           default:
@@ -926,47 +1069,103 @@ action:
                 {% if aqi > 0 %}🏭 AQI: {{ aqi }}{% endif %}
                 {% if pm25 > 0 %}⚠️ PM2.5: {{ pm25 }}{% endif %}
 
-          # --- AI BIÊN TẬP TIN NHẮN THỜI TIẾT ---
+          # ── AI BIÊN TẬP TIN NHẮN THỜI TIẾT (Chỗ 3) ──────────────────
           - choose:
               - conditions:
                   - condition: template
                     value_template: "{{ enable_ai_weather_editing }}"
                 sequence:
-                  - continue_on_error: true
-                    action: ai_task.generate_data
-                    data:
-                      task_name: "weather_only_edit"
-                      entity_id: "{{ ai_task_entity }}"
-                      instructions: >
-                        Viết một thông báo thời tiết bằng tiếng Việt, tự nhiên và sáng tạo
-                        như người thật viết, KHÔNG theo khuôn mẫu cố định.
+                  - choose:
 
-                        THÔNG TIN ĐẦU VÀO:
-                        Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
-                        Thời gian: {{ now().strftime('%H:%M') }} ngày {{ now().day }}/{{ now().month }}/{{ now().year }}
-                        Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
-                        Thời tiết: {{ weather_state }}
-                        Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
-                        {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
-                        {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                      # ── JSON MODE ──────────────────────────────────────
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ ai_output_mode == 'json' }}"
+                        sequence:
+                          - continue_on_error: true
+                            action: ai_task.generate_data
+                            data:
+                              task_name: "weather_only_edit"
+                              entity_id: "{{ ai_task_entity }}"
+                              instructions: >
+                                Viết một thông báo thời tiết bằng tiếng Việt, tự nhiên và sáng tạo
+                                như người thật viết, KHÔNG theo khuôn mẫu cố định.
 
-                        YÊU CẦU FORMAT:
-                        ✅ GIỮ emoji phù hợp
-                        ✅ Xuống dòng hợp lý, dễ đọc trên điện thoại
-                        ✅ Độ dài 4-6 dòng, tiêu đề ngắn gọn có emoji
-                        ✅ Mỗi lần tạo KHÁC về cách mở đầu và dẫn dắt
-                      structure:
-                        title:
-                          description: Tiêu đề (1 dòng, có emoji)
-                          required: true
-                          selector:
-                            text: null
-                        message:
-                          description: Nội dung (4-6 dòng, có emoji, tự nhiên)
-                          required: true
-                          selector:
-                            text: null
-                    response_variable: weather_edit_result
+                                THÔNG TIN ĐẦU VÀO:
+                                Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                Thời gian: {{ now().strftime('%H:%M') }} ngày {{ now().day }}/{{ now().month }}/{{ now().year }}
+                                Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                                Thời tiết: {{ weather_state }}
+                                Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+
+                                YÊU CẦU FORMAT:
+                                ✅ GIỮ emoji phù hợp, xuống dòng hợp lý, dễ đọc trên điện thoại
+                                ✅ Độ dài 4-6 dòng, tiêu đề ngắn gọn có emoji
+                                ✅ Mỗi lần tạo KHÁC về cách mở đầu và dẫn dắt
+
+                                Chỉ trả về JSON thuần, không giải thích, không markdown:
+                                {"title":"<tiêu đề 1 dòng có emoji>","message":"<nội dung 4-6 dòng có emoji, dùng \n để xuống dòng>"}
+                                TUYỆT ĐỐI không bọc trong ```json```. Raw JSON một dòng duy nhất.
+                            response_variable: weather_edit_raw
+
+                          - variables:
+                              weather_edit_result: >
+                                {% set raw = '' %}
+                                {% if weather_edit_raw is defined %}
+                                  {% if weather_edit_raw.data is defined and weather_edit_raw.data is string %}
+                                    {% set raw = weather_edit_raw.data %}
+                                  {% elif weather_edit_raw.text is defined %}
+                                    {% set raw = weather_edit_raw.text %}
+                                  {% elif weather_edit_raw is string %}
+                                    {% set raw = weather_edit_raw %}
+                                  {% endif %}
+                                {% endif %}
+                                {% set clean = raw | regex_replace('```json\\s*','') | regex_replace('```\\s*','') | trim %}
+                                {% set parsed = clean | from_json(default={}) %}
+                                {{ {'data': {
+                                  'title': parsed.get('title', ''),
+                                  'message': parsed.get('message', '')
+                                }} }}
+
+                      # ── STRUCTURED MODE ────────────────────────────────
+                    default:
+                      - continue_on_error: true
+                        action: ai_task.generate_data
+                        data:
+                          task_name: "weather_only_edit"
+                          entity_id: "{{ ai_task_entity }}"
+                          instructions: >
+                            Viết một thông báo thời tiết bằng tiếng Việt, tự nhiên và sáng tạo
+                            như người thật viết, KHÔNG theo khuôn mẫu cố định.
+
+                            THÔNG TIN ĐẦU VÀO:
+                            Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                            Thời gian: {{ now().strftime('%H:%M') }} ngày {{ now().day }}/{{ now().month }}/{{ now().year }}
+                            Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                            Thời tiết: {{ weather_state }}
+                            Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                            {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                            {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+
+                            YÊU CẦU FORMAT:
+                            ✅ GIỮ emoji phù hợp
+                            ✅ Xuống dòng hợp lý, dễ đọc trên điện thoại
+                            ✅ Độ dài 4-6 dòng, tiêu đề ngắn gọn có emoji
+                            ✅ Mỗi lần tạo KHÁC về cách mở đầu và dẫn dắt
+                          structure:
+                            title:
+                              description: Tiêu đề (1 dòng, có emoji)
+                              required: true
+                              selector:
+                                text: null
+                            message:
+                              description: Nội dung (4-6 dòng, có emoji, tự nhiên)
+                              required: true
+                              selector:
+                                text: null
+                        response_variable: weather_edit_result
 
                   - wait_template: >
                       {{ weather_edit_result is defined
@@ -978,10 +1177,12 @@ action:
 
                   - variables:
                       weather_final_title: >
-                        {% if wait.completed %}{{ weather_edit_result.data.title | trim }}
+                        {% if wait.completed and weather_edit_result.data.title | trim | length > 0 %}
+                          {{ weather_edit_result.data.title | trim }}
                         {% else %}{{ weather_title_base }}{% endif %}
                       weather_final_message: >
-                        {% if wait.completed %}{{ weather_edit_result.data.message | trim }}
+                        {% if wait.completed and weather_edit_result.data.message | trim | length > 0 %}
+                          {{ weather_edit_result.data.message | trim }}
                         {% else %}{{ weather_message_base }}{% endif %}
 
             default:
@@ -1084,7 +1285,7 @@ action:
                       message: "{{ weather_final_title }}\n\n{{ weather_final_message }}"
                       ttl: "{{ zalo_custom_ttl }}"
 
-          # --- TTS CHỈ THỜI TIẾT ---
+          # ── TTS CHỈ THỜI TIẾT (Chỗ 4) ─────────────────────────────────
           - choose:
               - conditions:
                   - condition: template
@@ -1095,37 +1296,92 @@ action:
                           - condition: template
                             value_template: "{{ enable_ai_tts_editing }}"
                         sequence:
-                          - continue_on_error: true
-                            action: ai_task.generate_data
-                            data:
-                              task_name: "tts_weather_only"
-                              entity_id: "{{ ai_task_entity }}"
-                              instructions: >
-                                Viết một đoạn thông báo TTS thời tiết bằng tiếng Việt, giọng thân thiện,
-                                tự nhiên như người thật đang nói chuyện, một đoạn liền mạch không xuống dòng.
+                          - choose:
 
-                                THÔNG TIN ĐẦU VÀO:
-                                Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
-                                Thời gian: {{ now().strftime('%H') }} giờ {{ now().strftime('%M') }} phút
-                                Ngày: {{ now().day }} tháng {{ now().month }} năm {{ now().year }}
-                                Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
-                                Thời tiết: {{ weather_state }}
-                                Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
-                                {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
-                                {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+                              # ── JSON MODE ──────────────────────────────
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ ai_output_mode == 'json' }}"
+                                sequence:
+                                  - continue_on_error: true
+                                    action: ai_task.generate_data
+                                    data:
+                                      task_name: "tts_weather_only"
+                                      entity_id: "{{ ai_task_entity }}"
+                                      instructions: >
+                                        Viết một đoạn thông báo TTS thời tiết bằng tiếng Việt, giọng thân thiện,
+                                        tự nhiên như người thật đang nói chuyện, một đoạn liền mạch không xuống dòng.
 
-                                YÊU CẦU BẮT BUỘC:
-                                ❌ KHÔNG dùng emoji, KHÔNG xuống dòng, KHÔNG ký hiệu đặc biệt
-                                ✅ Chuyển TẤT CẢ số và ký hiệu thành chữ
-                                ✅ Độ dài 4-6 câu, một đoạn liền mạch
-                                ✅ Mỗi lần tạo phải KHÁC so với lần trước
-                              structure:
-                                tts_text:
-                                  description: Nội dung TTS, một đoạn liền mạch
-                                  required: true
-                                  selector:
-                                    text: null
-                            response_variable: tts_weather_result
+                                        THÔNG TIN ĐẦU VÀO:
+                                        Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                        Thời gian: {{ now().strftime('%H') }} giờ {{ now().strftime('%M') }} phút
+                                        Ngày: {{ now().day }} tháng {{ now().month }} năm {{ now().year }}
+                                        Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                                        Thời tiết: {{ weather_state }}
+                                        Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                        {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                        {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+
+                                        YÊU CẦU BẮT BUỘC:
+                                        ❌ KHÔNG dùng emoji, KHÔNG xuống dòng, KHÔNG ký hiệu đặc biệt
+                                        ✅ Chuyển TẤT CẢ số và ký hiệu thành chữ
+                                        ✅ Độ dài 4-6 câu, một đoạn liền mạch
+                                        ✅ Mỗi lần tạo phải KHÁC so với lần trước
+
+                                        Chỉ trả về JSON thuần, không giải thích, không markdown:
+                                        {"tts_text":"<nội dung TTS một đoạn liền mạch>"}
+                                        TUYỆT ĐỐI không bọc trong ```json```. Raw JSON một dòng duy nhất.
+                                    response_variable: tts_weather_raw
+
+                                  - variables:
+                                      tts_weather_result: >
+                                        {% set raw = '' %}
+                                        {% if tts_weather_raw is defined %}
+                                          {% if tts_weather_raw.data is defined and tts_weather_raw.data is string %}
+                                            {% set raw = tts_weather_raw.data %}
+                                          {% elif tts_weather_raw.text is defined %}
+                                            {% set raw = tts_weather_raw.text %}
+                                          {% elif tts_weather_raw is string %}
+                                            {% set raw = tts_weather_raw %}
+                                          {% endif %}
+                                        {% endif %}
+                                        {% set clean = raw | regex_replace('```json\\s*','') | regex_replace('```\\s*','') | trim %}
+                                        {% set parsed = clean | from_json(default={}) %}
+                                        {{ {'data': {'tts_text': parsed.get('tts_text', '')}} }}
+
+                              # ── STRUCTURED MODE ────────────────────────
+                            default:
+                              - continue_on_error: true
+                                action: ai_task.generate_data
+                                data:
+                                  task_name: "tts_weather_only"
+                                  entity_id: "{{ ai_task_entity }}"
+                                  instructions: >
+                                    Viết một đoạn thông báo TTS thời tiết bằng tiếng Việt, giọng thân thiện,
+                                    tự nhiên như người thật đang nói chuyện, một đoạn liền mạch không xuống dòng.
+
+                                    THÔNG TIN ĐẦU VÀO:
+                                    Thứ: {{ now().strftime('%A') | replace('Monday','Thứ Hai') | replace('Tuesday','Thứ Ba') | replace('Wednesday','Thứ Tư') | replace('Thursday','Thứ Năm') | replace('Friday','Thứ Sáu') | replace('Saturday','Thứ Bảy') | replace('Sunday','Chủ Nhật') }}
+                                    Thời gian: {{ now().strftime('%H') }} giờ {{ now().strftime('%M') }} phút
+                                    Ngày: {{ now().day }} tháng {{ now().month }} năm {{ now().year }}
+                                    Buổi: {% if hour | int < 12 %}sáng{% elif hour | int < 18 %}chiều{% else %}tối{% endif %}
+                                    Thời tiết: {{ weather_state }}
+                                    Nhiệt độ: {{ temperature }}°C | Độ ẩm: {{ humidity }}% | Gió: {{ wind_speed }} km/h
+                                    {% if aqi > 0 %}AQI: {{ aqi }}{% endif %}
+                                    {% if pm25 > 0 %}PM2.5: {{ pm25 }}{% endif %}
+
+                                    YÊU CẦU BẮT BUỘC:
+                                    ❌ KHÔNG dùng emoji, KHÔNG xuống dòng, KHÔNG ký hiệu đặc biệt
+                                    ✅ Chuyển TẤT CẢ số và ký hiệu thành chữ
+                                    ✅ Độ dài 4-6 câu, một đoạn liền mạch
+                                    ✅ Mỗi lần tạo phải KHÁC so với lần trước
+                                  structure:
+                                    tts_text:
+                                      description: Nội dung TTS, một đoạn liền mạch
+                                      required: true
+                                      selector:
+                                        text: null
+                                response_variable: tts_weather_result
 
                           - wait_template: >
                               {{ tts_weather_result is defined
@@ -1136,7 +1392,8 @@ action:
 
                           - variables:
                               tts_weather_final: >
-                                {% if wait.completed %}{{ tts_weather_result.data.tts_text | trim }}
+                                {% if wait.completed and tts_weather_result.data.tts_text | trim | length > 0 %}
+                                  {{ tts_weather_result.data.tts_text | trim }}
                                 {% else %}{{ weather_message_base }}{% endif %}
 
                     default:
