@@ -3,8 +3,9 @@ blueprint:
   author: TriTue2011
   source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/ai_creat_image_weather_3.yaml
   description: >
-    Tự động tạo ảnh thời tiết bằng AI với 2 lựa chọn engine:
-    **Gemini AI Task** (tích hợp HA native) hoặc **NVIDIA Flux qua PyScript**.
+    Tự động tạo ảnh thời tiết bằng AI với 3 lựa chọn engine:
+    **Gemini AI Task** (tích hợp HA native), **NVIDIA Flux qua PyScript**,
+    hoặc **Google Flow qua PyScript** (Local API nội bộ).
     Phong cảnh thay đổi theo buổi trong ngày, dữ liệu thời tiết thực tế,
     và **xoay vòng 12 địa điểm đẹp nhất thế giới** cho mỗi buổi.
 
@@ -86,6 +87,29 @@ blueprint:
       Đặt file vào thư mục `pyscript/` trong config Home Assistant.
 
     </details>
+
+    <details>
+    <summary><b>⚙️ Yêu cầu khi dùng Google Flow PyScript:</b> - Nhấn để mở rộng</summary>
+
+      Dùng API Google Flow nội bộ hoặc proxy server riêng.
+
+      Thêm vào `configuration.yaml`:
+      ```yaml
+      pyscript:
+        allow_all_imports: true
+        hass_is_global: true
+        flow_api_key: !secret flow_api_key
+      ```
+
+      Thêm vào `secrets.yaml`:
+      ```yaml
+      flow_api_key: "your-flow-api-key"
+      ```
+
+      Tải file script Python `flow_image.py` và đặt vào thư mục `pyscript/`.
+
+    </details>
+
   domain: automation
   homeassistant:
     min_version: 2025.10.0
@@ -103,6 +127,7 @@ blueprint:
             Chọn phương thức tạo ảnh:
             **Gemini** dùng ai_task native của HA (khuyến nghị).
             **NVIDIA Flux** dùng PyScript + API key riêng.
+            **Google Flow** dùng PyScript + Flow API nội bộ.
           default: gemini
           selector:
             select:
@@ -111,6 +136,8 @@ blueprint:
                   value: gemini
                 - label: NVIDIA Flux (PyScript)
                   value: nvidia
+                - label: Google Flow (PyScript - Local API)
+                  value: flow
 
     # ===== CÀI ĐẶT THỜI TIẾT =====
     weather_sensors:
@@ -207,7 +234,7 @@ blueprint:
       input:
         ai_task_entity:
           name: AI Task Entity
-          description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended). Bỏ qua nếu dùng NVIDIA.
+          description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended). Bỏ qua nếu dùng NVIDIA hoặc Flow.
           default: []
           selector:
             entity:
@@ -227,9 +254,9 @@ blueprint:
                 - label: Phong cách sống động (Vibrant)
                   value: vibrant
 
-    # ===== LƯU ẢNH (CHUNG CHO CẢ 2 ENGINE) =====
+    # ===== LƯU ẢNH (CHUNG CHO CẢ 3 ENGINE) =====
     image_output:
-      name: "💾 Lưu ảnh — Chung cho cả 2 Engine"
+      name: "💾 Lưu ảnh — Chung cho cả 3 Engine"
       icon: mdi:content-save
       collapsed: true
       input:
@@ -288,7 +315,6 @@ blueprint:
           selector:
             boolean:
 
-        # ── INPUT MỚI: THƯ MỤC CẦN XÓA ──────────────────────────────────
         ai_image_delete_folder:
           name: Thư mục chứa ảnh AI cần xóa (dự phòng — chỉ Gemini)
           description: |
@@ -349,6 +375,41 @@ blueprint:
               max: 1080
               step: 64
               mode: slider
+
+    # ===== CÀI ĐẶT GOOGLE FLOW =====
+    flow_settings:
+      name: "🌊 Cài đặt Google Flow PyScript"
+      icon: mdi:google-cloud
+      collapsed: true
+      input:
+        flow_api_url:
+          name: Flow API URL
+          description: URL của Flow API server nội bộ
+          default: "http://172.16.10.38:8010/v1/google/flow/generate-image"
+          selector:
+            text:
+
+        flow_project_id:
+          name: Project ID
+          description: Google Cloud Project ID dùng cho Flow API
+          default: "54468d77-02ff-4a06-bb81-05a7d1111544"
+          selector:
+            text:
+
+        flow_prompt_style:
+          name: Phong cách prompt gửi cho Flow
+          description: >
+            **Chi tiết** dùng prompt dài như Gemini (mô tả cảnh rất đầy đủ).
+            **Ngắn gọn** dùng prompt súc tích như NVIDIA.
+            Flow hoạt động tốt với cả hai; khuyến nghị Chi tiết.
+          default: detailed
+          selector:
+            select:
+              options:
+                - label: Chi tiết (Gemini style - khuyến nghị)
+                  value: detailed
+                - label: Ngắn gọn (NVIDIA style)
+                  value: compact
 
     # ===== GỬI ẢNH =====
     notify_image_section:
@@ -477,8 +538,6 @@ action:
       weather_entity: !input weather_entity
       w: "{{ states(weather_entity) | lower }}"
 
-      # Chỉ số xoay cảnh — đổi mỗi ngày, giữ nhất quán trong ngày
-      # 12 cảnh/vòng → mỗi buổi có 12 địa điểm khác nhau
       scene_index: "{{ now().timetuple().tm_yday % 12 }}"
 
       temperature_sensor: !input temperature_sensor
@@ -590,12 +649,10 @@ action:
           warm glowing orange lanterns providing the only earthly light source
         {% endif %}
 
-      # ── SCENE: xoay vòng 12 địa điểm đẹp nhất thế giới theo từng buổi ──
       g_scene: >-
         {% set si = scene_index | int %}
 
         {% if 'sáng' in tp or 'morning' in tp %}
-          {# CỐ ĐỊNH BUỔI SÁNG: Ruộng bậc thang / thung lũng mù sương đẹp nhất thế giới #}
           {% set scenes = [
             'Mu Cang Chai terraced rice paddies Vietnam, flooded terraces cascading down steep mountains reflecting pink sunrise sky, thin morning mist filling valleys between ridges, H\'Mong farmers beginning work in traditional dress, water buffalo wading through paddies',
             'Jatiluwih rice terraces Bali Indonesia, sweeping UNESCO-listed curved terraces glowing emerald in dawn light, traditional Balinese water temples surrounded by lush tropical jungle, sacred Mount Batukaru emerging dramatically from clouds behind',
@@ -613,7 +670,6 @@ action:
           {{ scenes[si] }}
 
         {% elif 'trưa' in tp or 'noon' in tp %}
-          {# CỐ ĐỊNH BUỔI TRƯA: Bãi biển đẹp nhất thế giới #}
           {% set scenes = [
             'Anse Source d\'Argent beach La Digue Seychelles, world\'s most photographed beach, extraordinary smooth rose-pink granite boulders sculpted by millennia into surreal organic forms, powder-white sand, impossibly clear warm turquoise lagoon, palm trees overhead',
             'Navagio Shipwreck Beach Zakynthos Greece, only accessible by sea, dramatic vertical white limestone cliffs hundreds of metres tall encircling a hidden cove, electric blue water, the famous rusted shipwreck half-buried in blinding white sand',
@@ -631,7 +687,6 @@ action:
           {{ scenes[si] }}
 
         {% elif 'chiều' in tp or 'afternoon' in tp %}
-          {# CỐ ĐỊNH BUỔI CHIỀU: Phố cổ / thị trấn đẹp nhất thế giới #}
           {% set scenes = [
             'Hoi An ancient town Vietnam golden hour, narrow lantern-filled alleyways of 15th-century trading port glowing amber, centuries-old Japanese covered bridge, yellow-plastered merchant houses, Thu Bon river reflecting orange sky, silk lanterns swaying',
             'Santorini Oia village Greece sunset, iconic white cubic Cycladic architecture cascading down caldera cliffs, famous blue-domed churches luminous in last light, infinite Aegean Sea horizon blazing orange and crimson, tourists watching from terrace edges',
@@ -649,7 +704,6 @@ action:
           {{ scenes[si] }}
 
         {% elif 'tối' in tp or 'evening' in tp %}
-          {# CỐ ĐỊNH BUỔI TỐI: Núi + hoàng hôn kỳ vĩ nhất thế giới #}
           {% set scenes = [
             'Dolomites Tre Cime di Lavaredo Italy blue hour, the three iconic vertical rock spires turning from molten gold to deep violet as the last light dies, alpenglow lingering on the highest pale limestone peaks, mountain huts glowing warmly in gathering darkness below',
             'Torres del Paine Patagonia Chile twilight, the extraordinary granite towers glowing in famous Patagonian alpenglow of pink and gold, perfectly mirrored in the still waters of Lago Nordenskjöld, guanaco silhouettes motionless on the dark shore',
@@ -667,7 +721,6 @@ action:
           {{ scenes[si] }}
 
         {% else %}
-          {# CỐ ĐỊNH BAN ĐÊM: Núi đêm + thiên hà Milky Way đẹp nhất thế giới #}
           {% set scenes = [
             'Mont Blanc massif Alps France Italy midnight, Europe\'s highest peak silvered by full moon above a vast sea of glaciers and seracs, the entire Milky Way galaxy blazing overhead with extraordinary clarity above 4800 metres, absolute zero light pollution in any direction',
             'Lofoten Islands Norway winter midnight, the full fury of the Northern Lights aurora borealis in magnificent curtains of green white and violet dancing and rippling above jagged black mountain peaks reflected perfectly in the glass-flat Arctic fjord below',
@@ -887,7 +940,6 @@ action:
           deep night scene, NO sun, NO daylight, full darkness, bright moonlight casting silver shadows, Milky Way overhead, stars filling sky
         {% endif %}
 
-      # ── N_SCENE: phiên bản ngắn cho NVIDIA, cùng 12 địa điểm theo scene_index ──
       n_scene: >-
         {% set si = scene_index | int %}
 
@@ -1097,7 +1149,6 @@ action:
                   destination: "{{ final_image_path }}"
                 response_variable: copy_result
 
-              # ── XÓA ẢNH TẠM VỚI THƯ MỤC VÀ THỜI GIAN TÙY CHỈNH ──────
               - if:
                   - condition: template
                     value_template: "{{ delete_ai_image and ai_image_delete_folder != '' }}"
@@ -1125,10 +1176,43 @@ action:
             data:
               level: info
               message: >-
-                [WeatherImage] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
+                [WeatherImage/NVIDIA] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
                 | wind={{ wind }} | aqi={{ aqi }} | scene={{ scene_index }}
                 | chars={{ nvidia_prompt | length }}
                 | prompt={{ nvidia_prompt | truncate(120) }}
+
+      # ── NHÁNH GOOGLE FLOW ───────────────────────────────────────────────
+      - conditions:
+          - condition: template
+            value_template: "{{ ai_engine == 'flow' }}"
+        sequence:
+          - variables:
+              flow_project_id: !input flow_project_id
+              flow_api_url: !input flow_api_url
+              flow_prompt_style: !input flow_prompt_style
+              flow_prompt: >-
+                {% if flow_prompt_style == 'compact' %}
+                  {{ nvidia_prompt }}
+                {% else %}
+                  {{ gemini_prompt }}
+                {% endif %}
+
+          - action: pyscript.generate_flow_image
+            data:
+              prompt: "{{ flow_prompt }}"
+              output_path: "{{ final_image_path }}"
+              project_id: "{{ flow_project_id }}"
+              api_url: "{{ flow_api_url }}"
+
+          - action: system_log.write
+            data:
+              level: info
+              message: >-
+                [WeatherImage/Flow] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
+                | wind={{ wind }} | aqi={{ aqi }} | scene={{ scene_index }}
+                | style={{ flow_prompt_style }}
+                | chars={{ flow_prompt | length }}
+                | prompt={{ flow_prompt | truncate(120) }}
 
   # ── BƯỚC 5: GỬI ẢNH ──────────────────────────────────────────────────────
   - variables:
