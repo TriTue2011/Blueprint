@@ -69,6 +69,7 @@ blueprint:
     trigger_section:
       name: Trigger Settings
       icon: mdi:play-circle
+      collapsed: true
       input:
         trigger_sensor:
           name: 🚶 Trigger Sensor
@@ -178,6 +179,7 @@ blueprint:
     camera_sensor_section:
       name: Camera & Snapshot Settings
       icon: mdi:camera
+      collapsed: true
       input:
         camera_entities:
           name: 📸 Camera Entities
@@ -244,12 +246,16 @@ blueprint:
             boolean: {}
 
         send_all_snapshots:
-          name: 🖼️ Gửi tất cả ảnh chụp cùng lúc (Optional)
+          name: 🖼️ [KHÔNG CÒN DÙNG] Gửi tất cả ảnh chụp cùng lúc
           description: |
             👉 Bật để gửi TOÀN BỘ các ảnh đã chụp (thay vì chỉ ảnh đầu tiên) ngay ở bước gửi ảnh ban đầu.
             ✅ Mobile App & Telegram & Zalo Bot (Pyscript): mỗi ảnh sẽ được gửi thành 1 thông báo/tin nhắn riêng biệt, đánh số thứ tự.
             ✅ Zalo Custom Integration: tất cả ảnh sẽ được gộp gửi chung trong 1 tin nhắn (tích hợp tự động xử lý khi nhận nhiều đường dẫn ảnh).
-            ⚠️ Tắt (mặc định): chỉ gửi ảnh đầu tiên (snapshot1) như bình thường.
+            ⚠️ KHÔNG CÒN DÙNG — mỗi kênh giờ có công tắc RIÊNG trong section của
+            kênh đó, vì trần mỗi kênh khác nhau: Zalo cá nhân gộp 1 album tới 50
+            ảnh, Telegram tối đa 10 ảnh/album, Zalo Bot không có album (mỗi ảnh 1
+            tin), Mobile App mỗi thông báo 1 ảnh. Một công tắc chung không diễn
+            tả được khác biệt đó. Giữ ô này để automation cũ không vỡ.
           default: false
           selector:
             boolean: {}
@@ -393,6 +399,15 @@ blueprint:
           selector:
             color_rgb: {}
 
+        mobile_send_all_images:
+          name: 🖼️ Mobile App — gửi tất cả ảnh (từng thông báo riêng)
+          description: >
+            Thông báo Android/iOS chỉ đính kèm được MỘT ảnh, nên bật là nhận N
+            thông báo. TẮT: chỉ 1 thông báo với ảnh đầu.
+          default: false
+          selector:
+            boolean: {}
+
         notification_time:
           name: 🕒 Notification Time
           description: 👉 Tùy chọn hiển thị thời gian trong nội dung thông báo.
@@ -450,6 +465,16 @@ blueprint:
           selector:
             text: {}
 
+        telegram_send_all_images:
+          name: 🖼️ Telegram — gửi tất cả ảnh (Album)
+          description: >
+            BẬT: gộp thành MỘT album (media group). Telegram chỉ nhận tối đa 10
+            ảnh mỗi album nên ảnh thứ 11 trở đi bị bỏ.
+            TẮT: chỉ gửi 1 ảnh đầu.
+          default: false
+          selector:
+            boolean: {}
+
         telegram_initial_caption:
           name: 📝 Initial Caption
           description: 👉 Caption gửi kèm ảnh ban đầu (trước khi có kết quả AI).
@@ -479,6 +504,15 @@ blueprint:
           default: ""
           selector:
             text: {}
+
+        zalo_bot_send_all_images:
+          name: 🖼️ Zalo Bot — gửi tất cả ảnh (từng tin riêng)
+          description: >
+            Zalo Bot API KHÔNG có album — mỗi ảnh là MỘT TIN RIÊNG. Bật với 3 ảnh
+            là nhận 3 tin. TẮT: chỉ gửi 1 ảnh đầu.
+          default: false
+          selector:
+            boolean: {}
 
         zalo_bot_initial_caption:
           name: 📝 Zalo Bot Initial Caption
@@ -547,6 +581,17 @@ blueprint:
                 - label: Group (Nhóm)
                   value: "1"
               multiple: false
+
+        zalo_custom_send_all_images:
+          name: 🖼️ Zalo cá nhân — gửi tất cả ảnh (Album)
+          description: >
+            BẬT: gộp TOÀN BỘ ảnh thành 1 ALBUM trong MỘT tin (giới hạn thật của
+            phiên Zalo là 50 ảnh/tin). Chú thích sẽ đi thành một tin chữ riêng
+            TRƯỚC album, vì service gửi nhiều ảnh không có tham số caption.
+            TẮT: chỉ gửi 1 ảnh đầu kèm chú thích như cũ.
+          default: false
+          selector:
+            boolean: {}
 
         zalo_custom_ttl:
           name: ⏳ Message TTL
@@ -664,6 +709,12 @@ variables:
   num_delay: !input num_delay
   overwrite_image: !input overwrite_image
   send_all_snapshots: !input send_all_snapshots
+  # Công tắc nhiều ảnh RIÊNG từng kênh — trần mỗi kênh khác nhau nên không dùng
+  # chung một cờ được (xem mô tả từng input).
+  telegram_send_all_images: !input telegram_send_all_images
+  zalo_bot_send_all_images: !input zalo_bot_send_all_images
+  zalo_custom_send_all_images: !input zalo_custom_send_all_images
+  mobile_send_all_images: !input mobile_send_all_images
 
   # AI
   ai_powered: !input ai_powered
@@ -1081,7 +1132,7 @@ action:
       - alias: "Telegram - Gửi 1 ảnh (mặc định)"
         conditions:
           - condition: template
-            value_template: "{{ include_telegram_notify and not send_all_snapshots }}"
+            value_template: "{{ include_telegram_notify and not telegram_send_all_images }}"
         sequence:
           - alias: "Gửi ảnh qua Telegram"
             continue_on_error: true
@@ -1100,37 +1151,44 @@ action:
               {% endif %}
               {{ data }}
 
-      - alias: "Telegram - Gửi tất cả ảnh"
+      - alias: "Telegram - Gửi tất cả ảnh (ALBUM)"
         conditions:
           - condition: template
-            value_template: "{{ include_telegram_notify and send_all_snapshots }}"
+            value_template: "{{ include_telegram_notify and telegram_send_all_images }}"
         sequence:
-          - alias: "Gửi toàn bộ ảnh qua Telegram"
-            repeat:
-              for_each: "{{ all_snapshot_paths }}"
-              sequence:
-                - continue_on_error: true
-                  action: telegram_bot.send_photo
-                  data: >
-                    {% set data = {
-                      'config_entry_id': telegram_config_entry,
-                      'file': repeat.item,
-                      'caption': telegram_initial_caption if repeat.index == 1 else ''
-                    } %}
-                    {% if telegram_target != "" %}
-                      {% set data = dict(data, chat_id=telegram_target | int) %}
-                    {% endif %}
-                    {% if telegram_thread_id != "" %}
-                      {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
-                    {% endif %}
-                    {{ data }}
+          # send_media_group = MỘT album, thay vì lặp send_photo thành N tin rời.
+          # `[:10]` là trần của Telegram cho media group — quá 10 là cả lời gọi
+          # bị từ chối, nên cắt ở đây chứ không để nền tảng đánh trượt cả lô.
+          - alias: "Gửi ALBUM qua Telegram"
+            continue_on_error: true
+            action: telegram_bot.send_media_group
+            data: >
+              {% set ns = namespace(media=[]) %}
+              {%- for p in all_snapshot_paths[:10] -%}
+                {% if loop.first %}
+                  {% set ns.media = ns.media + [{'type':'photo','media':p,'caption':telegram_initial_caption}] %}
+                {% else %}
+                  {% set ns.media = ns.media + [{'type':'photo','media':p}] %}
+                {% endif %}
+              {%- endfor -%}
+              {% set data = {
+                'config_entry_id': telegram_config_entry,
+                'media': ns.media
+              } %}
+              {% if telegram_target != "" %}
+                {% set data = dict(data, chat_id=telegram_target | int) %}
+              {% endif %}
+              {% if telegram_thread_id != "" %}
+                {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+              {% endif %}
+              {{ data }}
 
   # --- Zalo Bot (Pyscript): gửi ảnh + caption ban đầu ---
   - choose:
       - alias: "Zalo Bot Pyscript - Gửi 1 ảnh (mặc định)"
         conditions:
           - condition: template
-            value_template: "{{ enable_zalo_bot and not send_all_snapshots }}"
+            value_template: "{{ enable_zalo_bot and not zalo_bot_send_all_images }}"
         sequence:
           - alias: "Gửi ảnh qua Zalo Bot (Pyscript)"
             continue_on_error: true
@@ -1144,7 +1202,7 @@ action:
       - alias: "Zalo Bot Pyscript - Gửi tất cả ảnh"
         conditions:
           - condition: template
-            value_template: "{{ enable_zalo_bot and send_all_snapshots }}"
+            value_template: "{{ enable_zalo_bot and zalo_bot_send_all_images }}"
         sequence:
           - alias: "Gửi toàn bộ ảnh qua Zalo Bot (Pyscript)"
             repeat:
@@ -1167,21 +1225,62 @@ action:
                  and zalo_resolved_id | trim | length > 0
                  and zalo_custom_account | length > 0 }}
         sequence:
-          - alias: "Gửi ảnh qua Zalo Custom Integration"
-            continue_on_error: true
-            action: zalo_bot.send_image
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: "{{ zalo_resolved_id | trim | string }}"
-              type: !input zalo_custom_receiver_type
-              # Nếu bật "Gửi tất cả ảnh cùng lúc" → gộp toàn bộ đường dẫn (phân cách bằng dấu phẩy).
-              # Nếu tắt → chỉ gửi ảnh đầu tiên như trước.
-              image_path: >-
-                {{ all_snapshot_paths_comma if send_all_snapshots
-                   else '/media/snapshots/' + file_path_dynamic + '_snapshot1.jpg' }}
-              message: "{{ zalo_custom_initial_caption }}"
-              ttl: !input zalo_custom_ttl
-            response_variable: zalo_custom_image_response
+          # ── NHIỀU ẢNH: phải dùng send_images_to_user/group ──────────────────
+          #
+          # Bản trước gửi chuỗi nhiều đường dẫn (nối bằng dấu phẩy) vào
+          # `zalo_bot.send_image` — service MỘT ảnh. Nó KHÔNG tách dấu phẩy:
+          # chat_features.py:151 gọi `os.path.isfile(image_path)` trên CẢ chuỗi,
+          # không thấy tệp nào nên bỏ qua và chỉ ghi log "Không tìm thấy tệp ảnh".
+          # Schema thì hợp lệ (cv.string) nên không có lỗi nào nổi lên, và
+          # continue_on_error: true khiến automation đi tiếp — thất bại IM LẶNG.
+          # Chỉ `send_images_to_user`/`send_images_to_group` mới `.split(",")`.
+          #
+          # Hai service đó chỉ nhận ĐÚNG BA trường (const.py:104-120):
+          # image_paths · thread_id · account_selection. vol.Schema mặc định
+          # PREVENT_EXTRA nên thêm `message`/`ttl`/`type` là bị từ chối CẢ lời
+          # gọi. Vì vậy chú thích đi bằng MỘT TIN CHỮ RIÊNG trước album.
+          - alias: "Zalo cá nhân — chú thích (tin chữ riêng, trước album)"
+            if:
+              - condition: template
+                value_template: "{{ zalo_custom_send_all_images and zalo_custom_initial_caption | length > 0 }}"
+            then:
+              - continue_on_error: true
+                action: zalo_bot.send_message
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: "{{ zalo_resolved_id | trim | string }}"
+                  type: !input zalo_custom_receiver_type
+                  message: "{{ zalo_custom_initial_caption }}"
+                  ttl: !input zalo_custom_ttl
+
+          - alias: "Zalo cá nhân — gửi ảnh"
+            if:
+              - condition: template
+                value_template: "{{ zalo_custom_send_all_images }}"
+            then:
+              - alias: "ALBUM nhiều ảnh (1 tin)"
+                continue_on_error: true
+                action: >-
+                  {{ 'zalo_bot.send_images_to_group'
+                     if zalo_custom_receiver_type == '1'
+                     else 'zalo_bot.send_images_to_user' }}
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: "{{ zalo_resolved_id | trim | string }}"
+                  image_paths: "{{ all_snapshot_paths_comma }}"
+                response_variable: zalo_custom_image_response
+            else:
+              - alias: "Một ảnh kèm chú thích"
+                continue_on_error: true
+                action: zalo_bot.send_image
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: "{{ zalo_resolved_id | trim | string }}"
+                  type: !input zalo_custom_receiver_type
+                  image_path: "/media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg"
+                  message: "{{ zalo_custom_initial_caption }}"
+                  ttl: !input zalo_custom_ttl
+                response_variable: zalo_custom_image_response
 
   # --- Mobile App: Bước 1 — Gửi ảnh ngay lập tức (thông báo riêng, không tag) ---
   - if:
@@ -1200,7 +1299,7 @@ action:
                         current_device: "{{ repeat.item }}"
                     - if:
                         - condition: template
-                          value_template: "{{ not send_all_snapshots }}"
+                          value_template: "{{ not mobile_send_all_images }}"
                       then:
                         - continue_on_error: true
                           action: >
@@ -1246,7 +1345,7 @@ action:
                         current_device: "{{ repeat.item }}"
                     - if:
                         - condition: template
-                          value_template: "{{ not send_all_snapshots }}"
+                          value_template: "{{ not mobile_send_all_images }}"
                       then:
                         - continue_on_error: true
                           action: >
