@@ -963,12 +963,11 @@ variables:
   zalo_custom_receiver_type: !input zalo_custom_receiver_type
   zalo_custom_ttl: !input zalo_custom_ttl
   zalo_custom_initial_caption: !input zalo_custom_initial_caption
-  zalo_resolved_id: >
-    {% if zalo_custom_receiver_type == '1' %}
-      {{ zalo_custom_thread_id if zalo_custom_thread_id | length > 0 else '' }}
-    {% else %}
-      {{ zalo_custom_user_id if zalo_custom_user_id | length > 0 else '' }}
-    {% endif %}
+  # Chỉ dùng để KIỂM TRA có ID hay chưa. TUYỆT ĐỐI không dùng làm thread_id:
+  # kết quả template bị HA diễn giải thành số và ID 19 chữ số bị làm tròn.
+  zalo_resolved_id: >-
+    {{ (zalo_custom_thread_id if zalo_custom_receiver_type == '1'
+        else zalo_custom_user_id) | trim }}
 
   # TTS
   include_tts_announcement: !input include_tts_announcement
@@ -1217,68 +1216,122 @@ action:
                   response_variable: zalo_bot_photo_response
 
   # --- Zalo Custom Integration: gửi ảnh + caption ban đầu ---
+  #
+  # thread_id PHẢI lấy bằng `!input`, KHÔNG qua template.
+  #
+  # Đo thật (trace 30/07 04:39): khai thread_id 3295299208151385728, HA gửi đi
+  # 3295299208151385600 — LỆCH 128. Vì kết quả template được HA tự diễn giải
+  # thành SỐ, mà ID Zalo dài 19 chữ số nên bị làm tròn qua float64. `| string`
+  # KHÔNG cứu được: HA parse lại sau khi filter chạy.
+  #
+  # Hệ quả nặng hơn cái lỗi báo ra: `send_images_to_group` ném
+  # "expected str for dictionary value @ data['thread_id']" nên còn thấy được,
+  # nhưng `send_message` thì `cv.string` tự chuyển int → chuỗi và gửi ÊM vào một
+  # ID SAI. Tức tin chữ trước đây đã đi lạc mà không ai biết.
+  #
+  # Vì `!input` không chọn được bằng template, phải tách hẳn hai nhánh
+  # NHÓM / CÁ NHÂN — dài hơn nhưng là cách duy nhất giữ ID nguyên chuỗi.
   - choose:
-      - conditions:
+      - alias: "Zalo cá nhân — NHÓM"
+        conditions:
           - condition: template
             value_template: >
               {{ enable_zalo_custom
-                 and zalo_resolved_id | trim | length > 0
+                 and zalo_custom_receiver_type == '1'
+                 and zalo_custom_thread_id | length > 0
                  and zalo_custom_account | length > 0 }}
         sequence:
-          # ── NHIỀU ẢNH: phải dùng send_images_to_user/group ──────────────────
-          #
-          # Bản trước gửi chuỗi nhiều đường dẫn (nối bằng dấu phẩy) vào
-          # `zalo_bot.send_image` — service MỘT ảnh. Nó KHÔNG tách dấu phẩy:
-          # chat_features.py:151 gọi `os.path.isfile(image_path)` trên CẢ chuỗi,
-          # không thấy tệp nào nên bỏ qua và chỉ ghi log "Không tìm thấy tệp ảnh".
-          # Schema thì hợp lệ (cv.string) nên không có lỗi nào nổi lên, và
-          # continue_on_error: true khiến automation đi tiếp — thất bại IM LẶNG.
-          # Chỉ `send_images_to_user`/`send_images_to_group` mới `.split(",")`.
-          #
-          # Hai service đó chỉ nhận ĐÚNG BA trường (const.py:104-120):
-          # image_paths · thread_id · account_selection. vol.Schema mặc định
-          # PREVENT_EXTRA nên thêm `message`/`ttl`/`type` là bị từ chối CẢ lời
-          # gọi. Vì vậy chú thích đi bằng MỘT TIN CHỮ RIÊNG trước album.
-          - alias: "Zalo cá nhân — chú thích (tin chữ riêng, trước album)"
-            if:
+          # Chú thích đi TIN CHỮ RIÊNG: service gửi nhiều ảnh không có tham số
+          # caption (const.py:116-120 — chỉ image_paths/thread_id/account_selection,
+          # và vol.Schema mặc định PREVENT_EXTRA nên thêm trường là bị từ chối CẢ
+          # lời gọi).
+          - if:
               - condition: template
                 value_template: "{{ zalo_custom_send_all_images and zalo_custom_initial_caption | length > 0 }}"
             then:
-              - continue_on_error: true
+              - alias: "Nhóm — tin chữ chú thích"
+                continue_on_error: true
                 action: zalo_bot.send_message
                 data:
                   account_selection: !input zalo_custom_account
-                  thread_id: "{{ zalo_resolved_id | trim | string }}"
-                  type: !input zalo_custom_receiver_type
-                  message: "{{ zalo_custom_initial_caption }}"
+                  thread_id: !input zalo_custom_thread_id
+                  type: "1"
+                  message: !input zalo_custom_initial_caption
                   ttl: !input zalo_custom_ttl
 
-          - alias: "Zalo cá nhân — gửi ảnh"
-            if:
+          - if:
               - condition: template
                 value_template: "{{ zalo_custom_send_all_images }}"
             then:
-              - alias: "ALBUM nhiều ảnh (1 tin)"
+              # send_images_to_group là service DUY NHẤT tách chuỗi dấu phẩy.
+              # `send_image` gọi os.path.isfile() trên CẢ chuỗi (chat_features.py:151)
+              # nên nhiều đường dẫn không phải tệp nào — bỏ qua im lặng.
+              - alias: "Nhóm — ALBUM nhiều ảnh (1 tin)"
                 continue_on_error: true
-                action: >-
-                  {{ 'zalo_bot.send_images_to_group'
-                     if zalo_custom_receiver_type == '1'
-                     else 'zalo_bot.send_images_to_user' }}
+                action: zalo_bot.send_images_to_group
                 data:
                   account_selection: !input zalo_custom_account
-                  thread_id: "{{ zalo_resolved_id | trim | string }}"
+                  thread_id: !input zalo_custom_thread_id
                   image_paths: "{{ all_snapshot_paths_comma }}"
                 response_variable: zalo_custom_image_response
             else:
-              - alias: "Một ảnh kèm chú thích"
+              - alias: "Nhóm — một ảnh kèm chú thích"
                 continue_on_error: true
                 action: zalo_bot.send_image
                 data:
                   account_selection: !input zalo_custom_account
-                  thread_id: "{{ zalo_resolved_id | trim | string }}"
-                  type: !input zalo_custom_receiver_type
+                  thread_id: !input zalo_custom_thread_id
+                  type: "1"
                   image_path: "/media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg"
-                  message: "{{ zalo_custom_initial_caption }}"
+                  message: !input zalo_custom_initial_caption
+                  ttl: !input zalo_custom_ttl
+                response_variable: zalo_custom_image_response
+
+      - alias: "Zalo cá nhân — CÁ NHÂN"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom
+                 and zalo_custom_receiver_type != '1'
+                 and zalo_custom_user_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ zalo_custom_send_all_images and zalo_custom_initial_caption | length > 0 }}"
+            then:
+              - alias: "Cá nhân — tin chữ chú thích"
+                continue_on_error: true
+                action: zalo_bot.send_message
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_user_id
+                  type: "0"
+                  message: !input zalo_custom_initial_caption
+                  ttl: !input zalo_custom_ttl
+
+          - if:
+              - condition: template
+                value_template: "{{ zalo_custom_send_all_images }}"
+            then:
+              - alias: "Cá nhân — ALBUM nhiều ảnh (1 tin)"
+                continue_on_error: true
+                action: zalo_bot.send_images_to_user
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_user_id
+                  image_paths: "{{ all_snapshot_paths_comma }}"
+                response_variable: zalo_custom_image_response
+            else:
+              - alias: "Cá nhân — một ảnh kèm chú thích"
+                continue_on_error: true
+                action: zalo_bot.send_image
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_user_id
+                  type: "0"
+                  image_path: "/media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg"
+                  message: !input zalo_custom_initial_caption
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_custom_image_response
 
@@ -1646,24 +1699,48 @@ action:
                             response_variable: zalo_bot_message_response
 
                   # --- Zalo Custom Integration: gửi kết quả phân tích AI ---
+                  # thread_id bằng !input, KHÔNG qua template: ID Zalo 19 chữ số bị HA
+                  # diễn giải thành số rồi làm tròn qua float64 (đo thật …385728 → …385600).
+                  # `cv.string` ở đây tự chuyển nên KHÔNG có lỗi nào báo ra — tin đi êm vào
+                  # một ID SAI. Đó là kiểu sai tệ nhất: im lặng và không ai kiểm được.
                   - choose:
-                      - conditions:
+                      - alias: "Kết quả AI → NHÓM"
+                        conditions:
                           - condition: template
                             value_template: >
                               {{ enable_zalo_custom
-                                 and zalo_resolved_id | trim | length > 0
+                                 and zalo_custom_receiver_type == '1'
+                                 and zalo_custom_thread_id | length > 0
                                  and zalo_custom_account | length > 0 }}
                         sequence:
-                          - alias: "Gửi kết quả AI qua Zalo Custom"
-                            continue_on_error: true
+                          - continue_on_error: true
+                            alias: "Gửi kết quả AI qua Zalo Custom (nhóm)"
                             action: zalo_bot.send_message
                             data:
                               account_selection: !input zalo_custom_account
-                              thread_id: "{{ zalo_resolved_id | trim | string }}"
-                              type: !input zalo_custom_receiver_type
+                              thread_id: !input zalo_custom_thread_id
+                              type: "1"
                               message: "{{ ai_messages }}"
                               ttl: !input zalo_custom_ttl
-                            response_variable: zalo_custom_message_response
+
+                      - alias: "Kết quả AI → CÁ NHÂN"
+                        conditions:
+                          - condition: template
+                            value_template: >
+                              {{ enable_zalo_custom
+                                 and zalo_custom_receiver_type != '1'
+                                 and zalo_custom_user_id | length > 0
+                                 and zalo_custom_account | length > 0 }}
+                        sequence:
+                          - continue_on_error: true
+                            alias: "Gửi kết quả AI qua Zalo Custom (cá nhân)"
+                            action: zalo_bot.send_message
+                            data:
+                              account_selection: !input zalo_custom_account
+                              thread_id: !input zalo_custom_user_id
+                              type: "0"
+                              message: "{{ ai_messages }}"
+                              ttl: !input zalo_custom_ttl
 
                   # --- TTS ra loa ---
                   - if:
@@ -1779,20 +1856,44 @@ action:
                           chat_id: "{{ zalo_bot_chat_id }}"
                           message: "{{ error_message }}"
 
+              # thread_id bằng !input, KHÔNG qua template: ID Zalo 19 chữ số bị HA
+              # diễn giải thành số rồi làm tròn qua float64 (đo thật …385728 → …385600).
+              # `cv.string` ở đây tự chuyển nên KHÔNG có lỗi nào báo ra — tin đi êm vào
+              # một ID SAI. Đó là kiểu sai tệ nhất: im lặng và không ai kiểm được.
               - choose:
-                  - conditions:
+                  - alias: "Kết quả AI → NHÓM"
+                    conditions:
                       - condition: template
                         value_template: >
                           {{ enable_zalo_custom
-                             and zalo_resolved_id | trim | length > 0
+                             and zalo_custom_receiver_type == '1'
+                             and zalo_custom_thread_id | length > 0
                              and zalo_custom_account | length > 0 }}
                     sequence:
                       - continue_on_error: true
                         action: zalo_bot.send_message
                         data:
                           account_selection: !input zalo_custom_account
-                          thread_id: "{{ zalo_resolved_id | trim | string }}"
-                          type: !input zalo_custom_receiver_type
+                          thread_id: !input zalo_custom_thread_id
+                          type: "1"
+                          message: "{{ error_message }}"
+                          ttl: !input zalo_custom_ttl
+
+                  - alias: "Kết quả AI → CÁ NHÂN"
+                    conditions:
+                      - condition: template
+                        value_template: >
+                          {{ enable_zalo_custom
+                             and zalo_custom_receiver_type != '1'
+                             and zalo_custom_user_id | length > 0
+                             and zalo_custom_account | length > 0 }}
+                    sequence:
+                      - continue_on_error: true
+                        action: zalo_bot.send_message
+                        data:
+                          account_selection: !input zalo_custom_account
+                          thread_id: !input zalo_custom_user_id
+                          type: "0"
                           message: "{{ error_message }}"
                           ttl: !input zalo_custom_ttl
 
