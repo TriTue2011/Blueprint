@@ -10,7 +10,7 @@ blueprint:
     <details>
     <summary><b>Chi tiết:</b> - Nhấn để mở rộng</summary>
 
-      **Phiên bản: v.2025.10.22 - Full 6 Cases Edition (fix UndefinedError animals_detected)**
+      **Phiên bản: v.2025.10.23 - Full 6 Cases Edition + Multi-Image Send**
 
       **Tác giả gốc: TriTue2011**
 
@@ -32,7 +32,10 @@ blueprint:
 
         8- **continue_on_error** cho tất cả action gửi thông báo (HA 2026.3+).
 
+        9- **MỚI: Gửi tất cả ảnh chụp cùng lúc** (tùy chọn) — thay vì chỉ gửi ảnh đầu tiên, có thể bật để gửi toàn bộ chuỗi ảnh qua Mobile App, Telegram và Zalo.
+
       **Thay đổi so với phiên bản cũ:**
+        - **MỚI:** Thêm công tắc "Gửi tất cả ảnh chụp cùng lúc" trong mục Camera & Snapshot Settings. Mặc định TẮT để giữ nguyên hành vi cũ (chỉ gửi ảnh đầu tiên).
         - Prompt JSON: Tách riêng 3 nhánh humans/animals/both, mỗi nhánh có field_rules đầy đủ và chính xác.
         - Prompt Structured: Tách riên 3 nhánh, bổ sung hướng di chuyển (đi vào/đi ra/ngang), cảnh báo vật nguy hiểm, ghi chú phương tiện.
         - ai_structure_description_humans và animals đồng bộ hoàn toàn theo detect_subjects.
@@ -237,6 +240,17 @@ blueprint:
             ⚠️ Tắt sẽ lưu nhiều ảnh riêng biệt theo context.id — tốn dung lượng.
             ✅ Ảnh luôn được lưu vào /media/snapshots/ (Media Folder, bảo mật).
           default: true
+          selector:
+            boolean: {}
+
+        send_all_snapshots:
+          name: 🖼️ Gửi tất cả ảnh chụp cùng lúc (Optional)
+          description: |
+            👉 Bật để gửi TOÀN BỘ các ảnh đã chụp (thay vì chỉ ảnh đầu tiên) ngay ở bước gửi ảnh ban đầu.
+            ✅ Mobile App & Telegram & Zalo Bot (Pyscript): mỗi ảnh sẽ được gửi thành 1 thông báo/tin nhắn riêng biệt, đánh số thứ tự.
+            ✅ Zalo Custom Integration: tất cả ảnh sẽ được gộp gửi chung trong 1 tin nhắn (tích hợp tự động xử lý khi nhận nhiều đường dẫn ảnh).
+            ⚠️ Tắt (mặc định): chỉ gửi ảnh đầu tiên (snapshot1) như bình thường.
+          default: false
           selector:
             boolean: {}
 
@@ -649,6 +663,7 @@ variables:
   num_delay_before_snapshot: !input num_delay_before_snapshot
   num_delay: !input num_delay
   overwrite_image: !input overwrite_image
+  send_all_snapshots: !input send_all_snapshots
 
   # AI
   ai_powered: !input ai_powered
@@ -1021,7 +1036,7 @@ action:
                 seconds: "{{ num_delay }}"
 
   # ============================================================
-  # BƯỚC 5: BUILD DANH SÁCH URL SNAPSHOTS CHO AI
+  # BƯỚC 5: BUILD DANH SÁCH URL SNAPSHOTS CHO AI + DANH SÁCH ẢNH GỬI THÔNG BÁO
   # ============================================================
   - variables:
       snapshots_url: >
@@ -1036,6 +1051,26 @@ action:
         {%- endfor -%}
         {{ ns.images }}
       snapshot_first: /media/local/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
+      # Danh sách đường dẫn tuyệt đối (dùng cho Telegram, Zalo Bot Pyscript, Zalo Custom)
+      all_snapshot_paths: >
+        {% set snap_count = num_snapshots | int %}
+        {% set camera = file_path_dynamic %}
+        {% set ns = namespace(paths=[]) %}
+        {%- for i in range(1, snap_count + 1) -%}
+          {% set ns.paths = ns.paths + ['/media/snapshots/' ~ camera ~ '_snapshot' ~ i ~ '.jpg'] %}
+        {%- endfor -%}
+        {{ ns.paths }}
+      # Chuỗi các đường dẫn nối bằng dấu phẩy (dùng cho Zalo Custom Integration khi gộp nhiều ảnh)
+      all_snapshot_paths_comma: "{{ all_snapshot_paths | join(',') }}"
+      # Danh sách đường dẫn media (dùng cho Mobile App image/attachment)
+      all_snapshot_media_paths: >
+        {% set snap_count = num_snapshots | int %}
+        {% set camera = file_path_dynamic %}
+        {% set ns = namespace(paths=[]) %}
+        {%- for i in range(1, snap_count + 1) -%}
+          {% set ns.paths = ns.paths + ['/media/local/snapshots/' ~ camera ~ '_snapshot' ~ i ~ '.jpg'] %}
+        {%- endfor -%}
+        {{ ns.paths }}
 
   # ============================================================
   # BƯỚC 6: GỬI ẢNH NGAY LẬP TỨC (trước khi AI phân tích)
@@ -1043,9 +1078,10 @@ action:
 
   # --- Telegram: gửi ảnh + caption ban đầu ---
   - choose:
-      - conditions:
+      - alias: "Telegram - Gửi 1 ảnh (mặc định)"
+        conditions:
           - condition: template
-            value_template: "{{ include_telegram_notify }}"
+            value_template: "{{ include_telegram_notify and not send_all_snapshots }}"
         sequence:
           - alias: "Gửi ảnh qua Telegram"
             continue_on_error: true
@@ -1064,11 +1100,37 @@ action:
               {% endif %}
               {{ data }}
 
+      - alias: "Telegram - Gửi tất cả ảnh"
+        conditions:
+          - condition: template
+            value_template: "{{ include_telegram_notify and send_all_snapshots }}"
+        sequence:
+          - alias: "Gửi toàn bộ ảnh qua Telegram"
+            repeat:
+              for_each: "{{ all_snapshot_paths }}"
+              sequence:
+                - continue_on_error: true
+                  action: telegram_bot.send_photo
+                  data: >
+                    {% set data = {
+                      'config_entry_id': telegram_config_entry,
+                      'file': repeat.item,
+                      'caption': telegram_initial_caption if repeat.index == 1 else ''
+                    } %}
+                    {% if telegram_target != "" %}
+                      {% set data = dict(data, chat_id=telegram_target | int) %}
+                    {% endif %}
+                    {% if telegram_thread_id != "" %}
+                      {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+                    {% endif %}
+                    {{ data }}
+
   # --- Zalo Bot (Pyscript): gửi ảnh + caption ban đầu ---
   - choose:
-      - conditions:
+      - alias: "Zalo Bot Pyscript - Gửi 1 ảnh (mặc định)"
+        conditions:
           - condition: template
-            value_template: "{{ enable_zalo_bot }}"
+            value_template: "{{ enable_zalo_bot and not send_all_snapshots }}"
         sequence:
           - alias: "Gửi ảnh qua Zalo Bot (Pyscript)"
             continue_on_error: true
@@ -1078,6 +1140,23 @@ action:
               file_path: /media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
               caption: "{{ zalo_bot_initial_caption }}"
             response_variable: zalo_bot_photo_response
+
+      - alias: "Zalo Bot Pyscript - Gửi tất cả ảnh"
+        conditions:
+          - condition: template
+            value_template: "{{ enable_zalo_bot and send_all_snapshots }}"
+        sequence:
+          - alias: "Gửi toàn bộ ảnh qua Zalo Bot (Pyscript)"
+            repeat:
+              for_each: "{{ all_snapshot_paths }}"
+              sequence:
+                - continue_on_error: true
+                  action: pyscript.send_zalo_photo
+                  data:
+                    chat_id: "{{ zalo_bot_chat_id }}"
+                    file_path: "{{ repeat.item }}"
+                    caption: "{{ zalo_bot_initial_caption if repeat.index == 1 else '' }}"
+                  response_variable: zalo_bot_photo_response
 
   # --- Zalo Custom Integration: gửi ảnh + caption ban đầu ---
   - choose:
@@ -1095,7 +1174,11 @@ action:
               account_selection: !input zalo_custom_account
               thread_id: "{{ zalo_resolved_id | trim | string }}"
               type: !input zalo_custom_receiver_type
-              image_path: /media/snapshots/{{ file_path_dynamic }}_snapshot1.jpg
+              # Nếu bật "Gửi tất cả ảnh cùng lúc" → gộp toàn bộ đường dẫn (phân cách bằng dấu phẩy).
+              # Nếu tắt → chỉ gửi ảnh đầu tiên như trước.
+              image_path: >-
+                {{ all_snapshot_paths_comma if send_all_snapshots
+                   else '/media/snapshots/' + file_path_dynamic + '_snapshot1.jpg' }}
               message: "{{ zalo_custom_initial_caption }}"
               ttl: !input zalo_custom_ttl
             response_variable: zalo_custom_image_response
@@ -1113,20 +1196,44 @@ action:
               - repeat:
                   for_each: "{{ filtered_devices }}"
                   sequence:
-                    - continue_on_error: true
-                      action: >
-                        notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
-                      data:
-                        title: !input notify_title
-                        message: "📷 Ảnh chụp từ {{ camera_name }}"
-                        data:
-                          priority: high
-                          notification_icon: !input status_bar_icon
-                          color: "{{ notification_color_hex }}"
-                          image: "{{ snapshot_first }}"
-                          url: "{{ tap_navigate }}"
-                          clickAction: "{{ tap_navigate }}"
-                          tag: "{{ tag }}_image"
+                    - variables:
+                        current_device: "{{ repeat.item }}"
+                    - if:
+                        - condition: template
+                          value_template: "{{ not send_all_snapshots }}"
+                      then:
+                        - continue_on_error: true
+                          action: >
+                            notify.mobile_app_{{ device_attr(current_device, 'name') | slugify }}
+                          data:
+                            title: !input notify_title
+                            message: "📷 Ảnh chụp từ {{ camera_name }}"
+                            data:
+                              priority: high
+                              notification_icon: !input status_bar_icon
+                              color: "{{ notification_color_hex }}"
+                              image: "{{ snapshot_first }}"
+                              url: "{{ tap_navigate }}"
+                              clickAction: "{{ tap_navigate }}"
+                              tag: "{{ tag }}_image"
+                      else:
+                        - repeat:
+                            for_each: "{{ all_snapshot_media_paths }}"
+                            sequence:
+                              - continue_on_error: true
+                                action: >
+                                  notify.mobile_app_{{ device_attr(current_device, 'name') | slugify }}
+                                data:
+                                  title: !input notify_title
+                                  message: "📷 Ảnh {{ repeat.index }}/{{ all_snapshot_media_paths | length }} từ {{ camera_name }}"
+                                  data:
+                                    priority: high
+                                    notification_icon: !input status_bar_icon
+                                    color: "{{ notification_color_hex }}"
+                                    image: "{{ repeat.item }}"
+                                    url: "{{ tap_navigate }}"
+                                    clickAction: "{{ tap_navigate }}"
+                                    tag: "{{ tag }}_image_{{ repeat.index }}"
 
           - alias: iOS - Bước 1 gửi ảnh
             conditions:
@@ -1135,17 +1242,38 @@ action:
               - repeat:
                   for_each: "{{ filtered_devices }}"
                   sequence:
-                    - continue_on_error: true
-                      action: >
-                        notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
-                      data:
-                        title: !input notify_title
-                        message: "📷 Ảnh chụp từ {{ camera_name }}"
-                        data:
-                          attachment:
-                            url: "{{ snapshot_first }}"
-                            content_type: JPEG
-                          tag: "{{ tag }}_image"
+                    - variables:
+                        current_device: "{{ repeat.item }}"
+                    - if:
+                        - condition: template
+                          value_template: "{{ not send_all_snapshots }}"
+                      then:
+                        - continue_on_error: true
+                          action: >
+                            notify.mobile_app_{{ device_attr(current_device, 'name') | slugify }}
+                          data:
+                            title: !input notify_title
+                            message: "📷 Ảnh chụp từ {{ camera_name }}"
+                            data:
+                              attachment:
+                                url: "{{ snapshot_first }}"
+                                content_type: JPEG
+                              tag: "{{ tag }}_image"
+                      else:
+                        - repeat:
+                            for_each: "{{ all_snapshot_media_paths }}"
+                            sequence:
+                              - continue_on_error: true
+                                action: >
+                                  notify.mobile_app_{{ device_attr(current_device, 'name') | slugify }}
+                                data:
+                                  title: !input notify_title
+                                  message: "📷 Ảnh {{ repeat.index }}/{{ all_snapshot_media_paths | length }} từ {{ camera_name }}"
+                                  data:
+                                    attachment:
+                                      url: "{{ repeat.item }}"
+                                      content_type: JPEG
+                                    tag: "{{ tag }}_image_{{ repeat.index }}"
 
   # ============================================================
   # BƯỚC 7: PHÂN TÍCH AI
