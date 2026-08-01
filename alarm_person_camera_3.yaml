@@ -1128,10 +1128,16 @@ action:
 
   # --- Telegram: gửi ảnh + caption ban đầu ---
   - choose:
+      # Nhánh 1 ăn cả trường hợp "bật album nhưng chỉ có 1 ảnh": schema của
+      # send_media_group là vol.Length(min=2, max=10) (__init__.py:269) nên một
+      # ảnh là bị TỪ CHỐI cả lời gọi. Một ảnh phải đi bằng send_photo.
       - alias: "Telegram - Gửi 1 ảnh (mặc định)"
         conditions:
           - condition: template
-            value_template: "{{ include_telegram_notify and not telegram_send_all_images }}"
+            value_template: >
+              {{ include_telegram_notify
+                 and (not telegram_send_all_images
+                      or all_snapshot_paths | length < 2) }}
         sequence:
           - alias: "Gửi ảnh qua Telegram"
             continue_on_error: true
@@ -1153,11 +1159,21 @@ action:
       - alias: "Telegram - Gửi tất cả ảnh (ALBUM)"
         conditions:
           - condition: template
-            value_template: "{{ include_telegram_notify and telegram_send_all_images }}"
+            value_template: >
+              {{ include_telegram_notify
+                 and telegram_send_all_images
+                 and all_snapshot_paths | length > 1 }}
         sequence:
           # send_media_group = MỘT album, thay vì lặp send_photo thành N tin rời.
           # `[:10]` là trần của Telegram cho media group — quá 10 là cả lời gọi
           # bị từ chối, nên cắt ở đây chứ không để nền tảng đánh trượt cả lô.
+          #
+          # Tên khoá mỗi phần tử phải theo HA, KHÔNG theo Telegram Bot API gốc.
+          # Schema thật (__init__.py:246-269): media_type là vol.Required, ảnh
+          # trên đĩa đi bằng `file`, ảnh trên web đi bằng `url`. Dùng 'type' và
+          # 'media' kiểu API gốc thì vol.Schema mặc định PREVENT_EXTRA đá cả lời
+          # gọi, mà dòng này có continue_on_error nên lỗi bị nuốt: không ảnh nào
+          # tới Telegram và cũng không thấy báo lỗi ở đâu.
           - alias: "Gửi ALBUM qua Telegram"
             continue_on_error: true
             action: telegram_bot.send_media_group
@@ -1165,9 +1181,9 @@ action:
               {% set ns = namespace(media=[]) %}
               {%- for p in all_snapshot_paths[:10] -%}
                 {% if loop.first %}
-                  {% set ns.media = ns.media + [{'type':'photo','media':p,'caption':telegram_initial_caption}] %}
+                  {% set ns.media = ns.media + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
                 {% else %}
-                  {% set ns.media = ns.media + [{'type':'photo','media':p}] %}
+                  {% set ns.media = ns.media + [{'media_type':'photo','file':p}] %}
                 {% endif %}
               {%- endfor -%}
               {% set data = {
