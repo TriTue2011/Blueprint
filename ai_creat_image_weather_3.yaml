@@ -875,16 +875,14 @@ action:
           'A breathtaking ultra-photorealistic cinematic aerial DSLR photograph '
           ~ 'shot on a Hasselblad medium format camera with a 24mm wide-angle lens. '
           ~ g_parts
-          ~ '. Wide panoramic composition with dramatic foreground-to-horizon depth. '
-          ~ 'Extraordinary depth of field bringing the entire vast landscape into razor-sharp focus. '
-          ~ 'Professional HDR cinematic colour grading with rich shadows and luminous highlights. '
-          ~ 'Ultra-high resolution 8K detail capturing every texture from individual leaves to distant mountains. '
+          ~ '. Wide panoramic composition with strong foreground-to-horizon depth, deep depth of field. '
           ~ 'Award-winning National Geographic photography quality. '
-          ~ 'Masterful natural lighting with perfect exposure across the entire frame. '
+          ~ ('Low-light night exposure, most of the frame in darkness, deep black shadows kept dark, restrained muted colour, no artificial brightening and no glow added. '
+             if ('tối' in tp or 'đêm' in tp or 'chạng' in tp)
+             else 'Professional HDR cinematic colour grading, natural daylight with balanced exposure across the frame. ')
           ~ ('Empty scene with no human figures, only the landscape and its atmosphere. '
-             if ('tối' in tp or 'đêm' in tp or 'night' in tp or 'evening' in tp)
-             else '')
-          ~ 'Absolutely no text, no watermarks, no logos, no borders, no artificial elements, no modern intrusions.'
+             if ('tối' in tp or 'đêm' in tp or 'chạng' in tp) else '')
+          ~ 'Absolutely no text, no watermarks, no logos, no borders, no modern intrusions.'
           ) | regex_replace('\\s+', ' ') | trim }}
 
       task_name: "Weather {{ states(time_phase_sensor) }} - {{ states(weather_entity) }} - Scene {{ scene_index }}"
@@ -1110,10 +1108,12 @@ action:
         ] | select('ne', '') | list | join(', ') }}
 
       nvidia_prompt: >-
-        {{ ('Photorealistic aerial DSLR photograph, ' ~ n_parts ~ ', wide-angle panoramic composition, deep depth of field, HDR cinematic colour grade, ultra sharp details, 8K resolution, no text, no watermark, no faces')
-           | regex_replace('\\s+', ' ')
-           | trim
-           | truncate(750, True, '') }}
+        {{ ('Photorealistic aerial DSLR photograph, ' ~ n_parts
+            ~ (', low-light night exposure, deep dark shadows, no artificial brightening'
+               if ('tối' in tp or 'đêm' in tp or 'chạng' in tp)
+               else ', HDR cinematic colour grade, balanced natural exposure')
+            ~ ', wide-angle panoramic composition, deep depth of field, ultra sharp details, no text, no watermark, no faces')
+           | regex_replace('\\s+', ' ') | trim | truncate(750, True, '') }}
 
   # ── BƯỚC 4: GỌI AI THEO ENGINE ĐƯỢC CHỌN ─────────────────────────────────
   - choose:
