@@ -770,81 +770,35 @@ action:
         {% set si = now().timetuple().tm_yday % (scenes | length) %}
         {{ scenes[si] }}
       g_weather_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
         {% if 'rain' in w or 'mưa' in w %}
-          Dramatic heavy tropical rain falling in thick silver curtains across the entire scene,
-          every surface transformed into a dark wet mirror perfectly reflecting surrounding lights,
-          countless puddles forming and rippling with overlapping circular waves,
-          fat water droplets hanging from every leaf tip and eave,
-          rain streaks visible as silver diagonal lines against darker backgrounds,
-          the air thick with rain and moisture reducing distant visibility
+          Dramatic heavy rain falling in thick silver curtains, every surface a dark wet mirror reflecting surrounding lights, puddles rippling in overlapping circles, droplets hanging from every leaf tip, the far distance softened by the water
         {% elif 'thunder' in w or 'bão' in w %}
-          Epic violent tropical thunderstorm unleashing its full fury on the landscape,
-          towering apocalyptic cumulonimbus storm clouds boiling up into the stratosphere,
-          a dramatic bright lightning bolt striking in the middle distance
-          illuminating the entire scene in a split second of brilliant white light,
-          powerful destructive wind bending trees sideways,
-          leaves and debris spinning through the turbulent air,
-          the sky an ominous mixture of black purple and sickly green storm colours
+          Epic violent thunderstorm, towering cumulonimbus boiling into the sky, a bright lightning bolt striking in the middle distance illuminating everything for a split second, wind bending trees sideways, debris spinning through turbulent air
         {% elif 'cloud' in w or 'mây' in w %}
-          A dramatic sky filled with layers of thick voluminous overcast clouds,
-          rich varied cloud formations from flat stratus to billowing cumulus,
-          beautiful soft diffused light filtering through the cloud cover
-          casting no harsh shadows and illuminating everything evenly,
-          subtle variations in cloud darkness and tone creating visual depth in the sky
+          {% if dark %}Thick overcast cloud from flat stratus to billowing cumulus, the cloud base faintly lit from below by moonlight and distant lights, the stars hidden behind it{% else %}A dramatic sky of thick overcast cloud, rich formations from flat stratus to billowing cumulus, soft diffused light filtering through casting no harsh shadows{% endif %}
         {% elif 'fog' in w or 'sương' in w %}
-          Thick atmospheric fog and mist rolling in dense waves across the landscape,
-          nearby objects crisp and clear while mid-distance elements dissolve into soft grey,
-          distant features completely swallowed by the enveloping mist,
-          the fog transforming the scene into something ethereal and dreamlike,
-          soft diffused light scattered beautifully through the moisture particles,
-          an atmosphere of mystery and tranquil isolation
+          Thick fog and mist rolling in dense waves, nearby objects crisp while the mid-distance dissolves and the far distance is swallowed, {% if dark %}every light source becoming a soft glowing halo inside the mist{% else %}soft diffused light scattered through the moisture particles{% endif %}, an atmosphere of mystery and tranquil isolation
         {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
-          Flawlessly clear sky of the most brilliant deep blue from horizon to horizon,
-          intense brilliant sunshine flooding every surface with pure direct light,
-          vivid oversaturated colours brought to maximum richness by the strong light,
-          crisp sharp high-contrast shadows with perfectly defined edges,
-          the air completely clean and transparent offering unlimited visibility
+          {% if dark %}A flawlessly clear sky with no cloud, the stars unobscured and brilliant from horizon to horizon, the air completely transparent, crisp cool moonlit shadows{% else %}A flawlessly clear sky of brilliant deep blue from horizon to horizon, intense sunshine flooding every surface, vivid saturated colours, crisp high-contrast shadows{% endif %}
         {% elif 'snow' in w %}
-          Magical snowfall with large soft snowflakes drifting gently through still air,
-          a thick pristine white blanket of snow covering every rooftop path and surface,
-          tree branches laden with heavy white snow in perfect silence,
-          each snowflake individually visible catching the available light,
-          breath condensing into delicate clouds in the freezing air
+          Magical snowfall, large soft flakes drifting through still air, a thick pristine white blanket over every surface, branches laden with snow, each flake catching the available light, breath condensing into delicate clouds
         {% else %}
-          A beautiful sky with scattered white fluffy cumulus clouds
-          drifting lazily across a blue background,
-          pleasant natural light with gentle soft shadows,
-          the clouds casting moving shadow patches across the landscape below,
-          an atmosphere of comfortable peaceful pleasant weather
+          {% if dark %}A calm sky with a few scattered clouds drifting across the stars, gentle moonlight and soft shadows, a peaceful still night{% else %}A beautiful sky with scattered white cumulus drifting across the blue, pleasant natural light with soft shadows, clouds casting moving shadow patches below{% endif %}
         {% endif %}
-
       g_temp_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
         {% if temp > 35 %}
-          Oppressive scorching heat of {{ temp | round }}°C baking the landscape,
-          dramatic heat shimmer waves rising and distorting the air above hot surfaces,
-          plants visibly wilting and drooping under the brutal heat,
-          every creature and person seeking any available patch of shade,
-          the air itself appearing to vibrate with thermal energy
+          Oppressive scorching heat of {{ temp | round }}°C{% if dark %} that has not let go after dark, the night air still stifling, heat radiating from stone and earth{% else %} baking the landscape, heat shimmer rising above hot surfaces, plants visibly wilting, every creature seeking shade{% endif %}
         {% elif temp > 30 %}
-          Intense summer heat of {{ temp | round }}°C creating a heavy tropical atmosphere,
-          a soft golden heat haze hanging in the middle distance,
-          people and animals moving slowly conserving energy and seeking shade,
-          the lush vegetation radiating visible warmth
+          Intense heat of {{ temp | round }}°C{% if dark %}, the day's warmth still radiating from the ground long after sunset, the air heavy and motionless{% else %} creating a heavy tropical atmosphere, a soft heat haze in the middle distance, people and animals moving slowly and seeking shade{% endif %}
         {% elif temp > 25 %}
-          Beautifully warm and comfortable {{ temp | round }}°C bathing the scene in gentle heat,
-          everything thriving and growing with vigour in the perfect temperature,
-          lush healthy deep green vegetation at its most vibrant and full
+          A warm {{ temp | round }}°C{% if dark %}, a mild still evening, the warmth lingering comfortably into the night{% else %} bathing the scene in gentle heat, everything thriving in the perfect temperature, lush deep green vegetation vibrant and full{% endif %}
         {% elif temp > 18 %}
-          Pleasantly cool and invigorating {{ temp | round }}°C filling the air with freshness,
-          a refreshing crispness to every breath,
-          light jackets and layers appearing on people going about their day
+          A cool {{ temp | round }}°C with a crispness to the air{% if dark %}, a chill settling in now the sun has gone{% else %}, light jackets on people going about their day{% endif %}
         {% else %}
-          Biting cold of {{ temp | round }}°C gripping the entire scene,
-          people bundled in thick padded jackets scarves and warm hats,
-          white frost crystals coating every surface and blade of grass,
-          breath condensing into small clouds of white vapour in the freezing air
+          Biting cold of {{ temp | round }}°C, white frost crystals coating every surface, breath condensing into white vapour{% if dark %}, the frost glittering wherever moonlight and lamplight reach{% else %}, people bundled in thick jackets, scarves and hats{% endif %}
         {% endif %}
-
       g_wind_fx: >-
         {% if wind > 30 %}
           Ferocious gale-force wind of {{ wind | round }} km/h tearing through the scene,
@@ -868,47 +822,27 @@ action:
         {% endif %}
 
       g_hum_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
         {% if hum > 85 %}
-          Oppressive tropical humidity of {{ hum }}% making the air feel thick and heavy,
-          a visible haze of moisture hanging throughout the atmosphere,
-          every surface shining and glistening with dampness,
-          vegetation at its most impossibly lush and intensely green
+          Oppressive humidity of {{ hum }}% making the air thick and heavy, {% if dark %}every surface beaded with condensation, a damp haze around each light{% else %}a visible haze of moisture, every surface glistening, vegetation impossibly lush and intensely green{% endif %}
         {% elif hum > 60 %}
-          Noticeable moderate humidity of {{ hum }}%
-          keeping all vegetation lush and deeply green,
-          leaves and surfaces carrying a healthy moist sheen
+          Humidity of {{ hum }}%, {% if dark %}a damp sheen on leaves and stone, dew already settling{% else %}keeping all vegetation lush and deeply green, leaves and surfaces with a healthy moist sheen{% endif %}
         {% elif hum < 30 %}
-          Extremely dry parched air at only {{ hum }}% humidity,
-          fine red-brown dust particles floating visibly in shafts of sunlight,
-          the earth cracked and split into geometric patterns from extreme dryness,
-          vegetation appearing desiccated and dusty
+          Extremely dry parched air at only {{ hum }}% humidity, {% if dark %}fine dust hanging in the still air, the earth cracked into geometric plates{% else %}fine dust particles floating in shafts of sunlight, the earth cracked and split, vegetation desiccated and dusty{% endif %}
         {% else %}
-          Comfortable balanced humidity of {{ hum }}% creating ideal clear fresh air,
-          perfect visibility with no moisture haze
+          Comfortable balanced humidity of {{ hum }}%, the air fresh and free of moisture haze
         {% endif %}
-
       g_aqi_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
         {% if aqi > 150 %}
-          Dangerous heavy toxic smog with AQI of {{ aqi }},
-          the air choked with a thick acrid orange-brown chemical haze,
-          visibility reduced to a few hundred metres,
-          the sun visible only as a faint pale disc through the murk,
-          the entire scene desaturated and washed out by the pollution
+          Dangerous heavy toxic smog with AQI of {{ aqi }}, a thick acrid orange-brown chemical haze, {% if dark %}every light swollen into a dirty halo, no stars visible, the scene murky{% else %}visibility reduced to a few hundred metres, the sun a faint pale disc, the scene desaturated{% endif %}
         {% elif aqi > 100 %}
-          Significant unhealthy air pollution with AQI of {{ aqi }},
-          a noticeable greyish-brown haze softening all distant objects,
-          colours appearing washed out and faded in the middle distance,
-          the sky taking on an unhealthy yellowish-grey tint overall
+          Significant unhealthy air pollution with AQI of {{ aqi }}, {% if dark %}distant lights dimmed and yellowed, only the brightest stars pushing through{% else %}a greyish-brown haze softening distant objects, colours washed out, the sky an unhealthy yellowish-grey tint{% endif %}
         {% elif aqi > 50 %}
-          Mild haze on the distant horizon from AQI of {{ aqi }},
-          a subtle softening of colours and contrast in the far distance,
-          nearby objects still crisp and clear with full colour saturation
+          Mild haze from AQI of {{ aqi }}, {% if dark %}whatever sits low on the horizon dimmed while objects overhead stay clear{% else %}a subtle softening of colour and contrast in the far distance, nearby objects still crisp{% endif %}
         {% else %}
-          Absolutely pristine crystal clear air with perfect unlimited visibility,
-          every distant detail sharp and vivid,
-          colours fully saturated and true from foreground to horizon
+          {% if dark %}Perfectly clean air at AQI {{ aqi }}, so transparent the stars stay sharp right down to the horizon and the Milky Way is plainly structured{% else %}Absolutely pristine crystal-clear air at AQI {{ aqi }} with unlimited visibility, every distant detail sharp and vivid, colours true from foreground to horizon{% endif %}
         {% endif %}
-
       g_style_fx: >-
         {% if image_style == 'artistic' %}
           Painterly artistic interpretation with creative expressive colour grading,
@@ -1102,6 +1036,79 @@ action:
         {% endif %}
         {% set si = now().timetuple().tm_yday % (scenes | length) %}
         {{ scenes[si] }}
+      n_weather_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
+        {% if 'rain' in w or 'mưa' in w %}
+          heavy rain, wet reflective ground, puddles, droplets on leaves
+        {% elif 'thunder' in w or 'bão' in w %}
+          violent thunderstorm, dark cumulonimbus, distant lightning, strong wind
+        {% elif 'cloud' in w or 'mây' in w %}
+          {% if dark %}thick overcast, cloud base lit faintly from below, stars hidden{% else %}thick overcast clouds, diffused soft flat light, no harsh shadows{% endif %}
+        {% elif 'fog' in w or 'sương' in w %}
+          dense rolling fog, low visibility, {% if dark %}lights as glowing halos{% else %}soft ethereal mood{% endif %}
+        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
+          {% if dark %}clear sky, stars from horizon to horizon, crisp moonlit shadows{% else %}clear sky, vivid saturated colours, sharp defined shadows{% endif %}
+        {% elif 'snow' in w %}
+          light snowfall, white snow-covered ground, frosted branches, cold breath
+        {% else %}
+          {% if dark %}calm night, few clouds across the stars, soft moonlight{% else %}partly cloudy, scattered white cumulus, pleasant natural light{% endif %}
+        {% endif %}
+      n_temp_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
+        {% if temp > 35 %}
+          scorching {{ temp | round }}°C{% if dark %}, heat radiating after dark{% else %}, heat shimmer, wilting leaves{% endif %}
+        {% elif temp > 30 %}
+          hot {{ temp | round }}°C{% if dark %}, warmth lingering into the night{% else %}, summer haze, seeking shade{% endif %}
+        {% elif temp > 25 %}
+          warm {{ temp | round }}°C{% if dark %}, mild still night{% else %}, comfortable, lush green vegetation{% endif %}
+        {% elif temp > 18 %}
+          cool {{ temp | round }}°C, crisp fresh air
+        {% else %}
+          cold {{ temp | round }}°C, frost on surfaces, breath visible
+        {% endif %}
+      n_wind_fx: >-
+        {% if wind > 30 %}
+          powerful gale wind, trees bending violently, debris flying, rippling turbulent water
+        {% elif wind > 15 %}
+          moderate wind, leaves and branches swaying rhythmically, rippled puddle surfaces
+        {% elif wind > 5 %}
+          gentle breeze, soft subtle movement of grass tips and leaves
+        {% else %}
+          perfectly calm still air, glassy mirror-like water reflections
+        {% endif %}
+
+      n_hum_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
+        {% if hum > 85 %}
+          humid {{ hum }}%, damp glistening surfaces, condensation
+        {% elif hum > 60 %}
+          humid {{ hum }}%, {% if dark %}damp sheen and settling dew{% else %}lush vegetation glistening{% endif %}
+        {% elif hum < 30 %}
+          dry air {{ hum }}%, dust particles, cracked earth
+        {% else %}
+        {% endif %}
+      n_aqi_fx: >-
+        {% set dark = 'tối' in tp or 'đêm' in tp or 'chạng' in tp %}
+        {% if aqi > 150 %}
+          heavy smog AQI {{ aqi }}, thick haze, poor visibility
+        {% elif aqi > 100 %}
+          hazy air AQI {{ aqi }}, washed-out distance, grey tint
+        {% elif aqi > 50 %}
+          slight haze AQI {{ aqi }}, muted distant colours
+        {% else %}
+          {% if dark %}clean air AQI {{ aqi }}, stars sharp to the horizon{% else %}clean clear air AQI {{ aqi }}, sharp vivid distant detail{% endif %}
+        {% endif %}
+      n_parts: >-
+        {{ [
+          n_lighting | trim,
+          n_scene | trim,
+          n_weather_fx | trim,
+          n_temp_fx | trim,
+          n_wind_fx | trim,
+          n_hum_fx | trim,
+          n_aqi_fx | trim
+        ] | select('ne', '') | list | join(', ') }}
+
       nvidia_prompt: >-
         {{ ('Photorealistic aerial DSLR photograph, ' ~ n_parts ~ ', wide-angle panoramic composition, deep depth of field, HDR cinematic colour grade, ultra sharp details, 8K resolution, no text, no watermark, no faces')
            | regex_replace('\\s+', ' ')
@@ -1272,4 +1279,3 @@ action:
 
 mode: single
 max_exceeded: silent
-
