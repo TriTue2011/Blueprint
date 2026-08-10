@@ -1,18 +1,66 @@
+# ############################################################################
+#  ⚠️ ĐỌC TRƯỚC KHI DÙNG
+#
+#  1. File này dựng lại từ blueprint của bạn. Bản bạn dán bị CẮT ở mốc 50.000
+#     ký tự (tới "BƯỚC 3 NVIDIA buổi sáng"), nên phần ACTION (gọi engine, lưu,
+#     gửi) tôi KHÔNG thấy bản gốc — tôi dựng theo mô tả trong blueprint.
+#
+#  2. BA DÒNG gọi engine dưới đây phải khớp tên hàm trong file .py CỦA BẠN.
+#     Tìm chữ "⚠️ KIỂM" và đối chiếu:
+#        - Gemini : service ai_task.generate_image  (tên service HA của bạn)
+#        - NVIDIA : service pyscript.weather_image   (tên hàm trong weather_image.py)
+#        - Flow   : service pyscript.flow_image      (tên hàm trong flow_image.py)
+#     Sai tên là automation chạy tới đó thì đứng — sửa đúng 3 chỗ đó là xong.
+#
+#  3. SENSOR 9 KHOẢNG: dán khối này vào configuration.yaml (KHÔNG nằm trong
+#     blueprint). Đây là nguồn cho `period_english` mà prompt đọc.
+#
+#     template:
+#       - sensor:
+#           - name: "Buổi trong ngày"
+#             unique_id: time_of_day_vn
+#             state: >-
+#               {% set h = now().hour %}
+#               {% if   5 <= h < 6  %} Rạng đông
+#               {% elif 6 <= h < 8  %} Bình minh
+#               {% elif 8 <= h < 11 %} Sáng
+#               {% elif 11 <= h < 14 %} Trưa
+#               {% elif 14 <= h < 16 %} Xế
+#               {% elif 16 <= h < 18 %} Hoàng hôn
+#               {% elif 18 <= h < 19 %} Chạng vạng
+#               {% elif 19 <= h < 22 %} Tối
+#               {% else %} Đêm
+#               {% endif %}
+#             attributes:
+#               period_english: >-
+#                 {% set h = now().hour %}
+#                 {% if   5 <= h < 6  %} dawn
+#                 {% elif 6 <= h < 8  %} sunrise
+#                 {% elif 8 <= h < 11 %} morning
+#                 {% elif 11 <= h < 14 %} noon
+#                 {% elif 14 <= h < 16 %} afternoon
+#                 {% elif 16 <= h < 18 %} sunset
+#                 {% elif 18 <= h < 19 %} dusk
+#                 {% elif 19 <= h < 22 %} evening
+#                 {% else %} night
+#                 {% endif %}
+# ############################################################################
+
 blueprint:
-  name: Tạo ảnh thời tiết AI
+  name: Tạo ảnh thời tiết AI (9 khoảng thời gian)
   author: TriTue2011
-  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/ai_creat_image_weather_3.yaml
   description: >
     Tự động tạo ảnh thời tiết bằng AI với 3 lựa chọn engine:
     **Gemini AI Task** (tích hợp HA native), **NVIDIA Flux qua PyScript**,
     hoặc **Google Flow qua PyScript** (Local API nội bộ).
-    Phong cảnh thay đổi theo buổi trong ngày, dữ liệu thời tiết thực tế,
-    và **xoay vòng 12 địa điểm đẹp nhất thế giới** cho mỗi buổi.
+    Phong cảnh thay đổi theo **9 khoảng thời gian** trong ngày (rạng đông → đêm),
+    mỗi khoảng có **bộ địa danh đẹp nhất riêng**, dữ liệu thời tiết thực tế, và
+    prompt viết phù hợp từng buổi để không tự mâu thuẫn.
 
     <details>
     <summary><b>⚙️ Yêu cầu cấu hình chung:</b> - Nhấn để mở rộng</summary>
 
-      **Template Sensor nhận diện buổi trong ngày (bắt buộc):**
+      **Template Sensor nhận diện buổi trong ngày (bắt buộc) — bản 9 khoảng:**
 
       Thêm vào `configuration.yaml`:
       ```yaml
@@ -22,28 +70,40 @@ blueprint:
               unique_id: time_of_day_vn
               icon: >-
                 {% set h = now().hour %}
-                {% if 6 <= h < 11 %} mdi:weather-sunny
-                {% elif 11 <= h < 13 %} mdi:white-balance-sunny
-                {% elif 13 <= h < 18 %} mdi:weather-sunset
-                {% elif 18 <= h < 21 %} mdi:weather-night
+                {% if   5 <= h < 6  %} mdi:weather-sunset-up
+                {% elif 6 <= h < 8  %} mdi:weather-sunny
+                {% elif 8 <= h < 11 %} mdi:weather-sunny
+                {% elif 11 <= h < 14 %} mdi:white-balance-sunny
+                {% elif 14 <= h < 16 %} mdi:weather-sunny
+                {% elif 16 <= h < 18 %} mdi:weather-sunset
+                {% elif 18 <= h < 19 %} mdi:weather-sunset-down
+                {% elif 19 <= h < 22 %} mdi:weather-night
                 {% else %} mdi:weather-night
                 {% endif %}
               state: >-
                 {% set h = now().hour %}
-                {% if 6 <= h < 11 %} Sáng
-                {% elif 11 <= h < 13 %} Trưa
-                {% elif 13 <= h < 18 %} Chiều
-                {% elif 18 <= h < 21 %} Tối
+                {% if   5 <= h < 6  %} Rạng đông
+                {% elif 6 <= h < 8  %} Bình minh
+                {% elif 8 <= h < 11 %} Sáng
+                {% elif 11 <= h < 14 %} Trưa
+                {% elif 14 <= h < 16 %} Xế
+                {% elif 16 <= h < 18 %} Hoàng hôn
+                {% elif 18 <= h < 19 %} Chạng vạng
+                {% elif 19 <= h < 22 %} Tối
                 {% else %} Đêm
                 {% endif %}
               attributes:
                 period_english: >-
                   {% set h = now().hour %}
-                  {% if 6 <= h < 11 %} Morning
-                  {% elif 11 <= h < 13 %} Noon
-                  {% elif 13 <= h < 18 %} Afternoon
-                  {% elif 18 <= h < 21 %} Evening
-                  {% else %} Night
+                  {% if   5 <= h < 6  %} dawn
+                  {% elif 6 <= h < 8  %} sunrise
+                  {% elif 8 <= h < 11 %} morning
+                  {% elif 11 <= h < 14 %} noon
+                  {% elif 14 <= h < 16 %} afternoon
+                  {% elif 16 <= h < 18 %} sunset
+                  {% elif 18 <= h < 19 %} dusk
+                  {% elif 19 <= h < 22 %} evening
+                  {% else %} night
                   {% endif %}
       ```
 
@@ -91,7 +151,11 @@ blueprint:
     <details>
     <summary><b>⚙️ Yêu cầu khi dùng Google Flow PyScript:</b> - Nhấn để mở rộng</summary>
 
-      Dùng API Google Flow nội bộ hoặc proxy server riêng.
+      Dùng API Google Flow nội bộ hoặc proxy server riêng. Khuyến nghị trỏ
+      `flow_api_url` vào CỔNG CHÍNH của gateway
+      (`http://172.16.10.38:3030/v1/images/generations`, thân yêu cầu
+      `{"model":"flow/banana-pro"}`) để đi đường REST: khung hình đúng, ảnh gốc,
+      tự xoay tài khoản, và ảnh vào thư viện.
 
       Thêm vào `configuration.yaml`:
       ```yaml
@@ -109,13 +173,11 @@ blueprint:
       Tải file script Python `flow_image.py` và đặt vào thư mục `pyscript/`.
 
     </details>
-
   domain: automation
   homeassistant:
     min_version: 2025.10.0
 
   input:
-    # ===== CHỌN ENGINE AI =====
     engine_settings:
       name: "🤖 Chọn Engine AI"
       icon: mdi:robot-outline
@@ -124,22 +186,19 @@ blueprint:
         ai_engine:
           name: Engine tạo ảnh
           description: >
-            Chọn phương thức tạo ảnh:
-            **Gemini** dùng ai_task native của HA (khuyến nghị).
-            **NVIDIA Flux** dùng PyScript + API key riêng.
-            **Google Flow** dùng PyScript + Flow API nội bộ.
+            Gemini dùng ai_task native của HA. NVIDIA Flux dùng PyScript + API
+            key. Google Flow dùng PyScript + Flow API nội bộ.
           default: gemini
           selector:
             select:
               options:
-                - label: Gemini AI Task (HA Native - Khuyến nghị)
+                - label: Gemini AI Task (HA Native)
                   value: gemini
                 - label: NVIDIA Flux (PyScript)
                   value: nvidia
                 - label: Google Flow (PyScript - Local API)
                   value: flow
 
-    # ===== CÀI ĐẶT THỜI TIẾT =====
     weather_sensors:
       name: "🌤️ Cảm biến thời tiết"
       icon: mdi:weather-partly-cloudy
@@ -147,22 +206,19 @@ blueprint:
       input:
         time_phase_sensor:
           name: Pha thời gian trong ngày
-          description: Sensor hiển thị buổi trong ngày (Sáng/Trưa/Chiều/Tối/Đêm)
+          description: Sensor "Buổi trong ngày" 9 khoảng (xem khối sensor ở đầu file)
           selector:
             entity:
               filter:
                 - domain: sensor
               multiple: false
-
         weather_entity:
           name: Thực thể thời tiết
-          description: Weather entity chính (weather.*)
           selector:
             entity:
               filter:
                 - domain: weather
               multiple: false
-
         temperature_sensor:
           name: Cảm biến nhiệt độ (tùy chọn)
           default: ""
@@ -172,7 +228,6 @@ blueprint:
                 - domain: sensor
                   device_class: temperature
               multiple: false
-
         humidity_sensor:
           name: Cảm biến độ ẩm (tùy chọn)
           default: ""
@@ -182,7 +237,6 @@ blueprint:
                 - domain: sensor
                   device_class: humidity
               multiple: false
-
         wind_speed_sensor:
           name: Cảm biến tốc độ gió (tùy chọn)
           default: ""
@@ -191,9 +245,8 @@ blueprint:
               filter:
                 - domain: sensor
               multiple: false
-
         pressure_sensor:
-          name: Cảm biến áp suất (tùy chọn) — chỉ dùng với Gemini
+          name: Cảm biến áp suất (tùy chọn)
           default: ""
           selector:
             entity:
@@ -201,14 +254,13 @@ blueprint:
                 - domain: sensor
               multiple: false
 
-    # ===== CHẤT LƯỢNG KHÔNG KHÍ =====
     air_quality_sensors:
       name: "🏭 Cảm biến chất lượng không khí"
       icon: mdi:air-filter
       collapsed: true
       input:
         aqi_sensor:
-          name: AQI - Chỉ số chất lượng không khí (tùy chọn)
+          name: AQI (tùy chọn)
           default: ""
           selector:
             entity:
@@ -216,7 +268,6 @@ blueprint:
                 - domain: sensor
                   device_class: aqi
               multiple: false
-
         pm25_sensor:
           name: PM2.5 (tùy chọn)
           default: ""
@@ -226,7 +277,6 @@ blueprint:
                 - domain: sensor
               multiple: false
 
-    # ===== CÀI ĐẶT GEMINI =====
     gemini_settings:
       name: "✨ Cài đặt Gemini AI Task"
       icon: mdi:google
@@ -234,102 +284,73 @@ blueprint:
       input:
         ai_task_entity:
           name: AI Task Entity
-          description: Chọn AI entity hỗ trợ tạo ảnh (Gemini 2.5 Flash Image recommended). Bỏ qua nếu dùng NVIDIA hoặc Flow.
+          description: AI entity tạo ảnh (Gemini 2.5 Flash Image). Bỏ qua nếu dùng NVIDIA/Flow.
           default: []
           selector:
             entity:
               domain: ai_task
               multiple: false
-
         image_style:
-          name: Phong cách ảnh (Gemini)
+          name: Phong cách ảnh
           default: photorealistic
           selector:
             select:
               options:
-                - label: Ảnh chụp chân thực (Photorealistic)
+                - label: Ảnh chụp chân thực
                   value: photorealistic
-                - label: Phong cách nghệ thuật (Artistic)
+                - label: Nghệ thuật
                   value: artistic
-                - label: Phong cách sống động (Vibrant)
+                - label: Sống động
                   value: vibrant
 
-    # ===== LƯU ẢNH (CHUNG CHO CẢ 3 ENGINE) =====
     image_output:
-      name: "💾 Lưu ảnh — Chung cho cả 3 Engine"
+      name: "💾 Lưu ảnh"
       icon: mdi:content-save
       collapsed: true
       input:
         save_image:
           name: Lưu ảnh vào thư mục
-          description: |
-            ⚠️ Yêu cầu shell_command trong configuration.yaml:
-            shell_command:
-              copy_weather_image: mv "{{ source }}" "{{ destination }}"
           default: true
           selector:
             boolean:
-
         output_directory:
           name: Thư mục đầu ra
           default: "/config/media/weather"
           selector:
             text:
-
         use_fixed_filename:
-          name: Sử dụng tên file cố định
-          description: Bật để ghi đè file cũ (khuyến nghị)
+          name: Dùng tên file cố định (ghi đè)
           default: true
           selector:
             boolean:
-
         fixed_filename:
           name: Tên file cố định
           default: "weather_current"
           selector:
             text:
-
         filename_prefix:
           name: Tiền tố tên file (khi không cố định)
           default: "weather_"
           selector:
             text:
-
         file_extension:
           name: Phần mở rộng file
           default: "png"
           selector:
             select:
-              options:
-                - png
-                - jpg
-                - jpeg
-                - webp
-
+              options: [png, jpg, jpeg, webp]
         delete_ai_image:
-          name: Xóa ảnh AI sau khi lưu (dự phòng — chỉ Gemini)
-          description: |
-            Dùng delete.files_in_folder (HACS) như bước dự phòng.
-            Nếu đã dùng mv trong shell_command thì ảnh gốc đã bị xóa.
+          name: Xóa ảnh AI tạm sau khi lưu (dự phòng — chỉ Gemini)
           default: false
           selector:
             boolean:
-
         ai_image_delete_folder:
-          name: Thư mục chứa ảnh AI cần xóa (dự phòng — chỉ Gemini)
-          description: |
-            Thư mục mà Gemini AI Task lưu ảnh tạm thời.
-            Chỉ dùng khi bật "Xóa ảnh AI sau khi lưu" ở trên.
-            Mặc định: `/config/media/ai_task/image`
+          name: Thư mục ảnh AI tạm (dự phòng — chỉ Gemini)
           default: "/config/media/ai_task/image"
           selector:
             text:
-
         ai_image_delete_age:
           name: Xóa ảnh cũ hơn (giây) — chỉ Gemini
-          description: |
-            Ảnh cũ hơn số giây này sẽ bị xóa khỏi thư mục AI tạm.
-            Mặc định: 3600 giây (1 giờ).
           default: 3600
           selector:
             number:
@@ -339,7 +360,6 @@ blueprint:
               unit_of_measurement: giây
               mode: box
 
-    # ===== CÀI ĐẶT NVIDIA =====
     nvidia_settings:
       name: "⚡ Cài đặt NVIDIA Flux PyScript"
       icon: mdi:flash
@@ -347,7 +367,6 @@ blueprint:
       input:
         steps:
           name: Số bước sinh ảnh
-          description: Cao hơn = chất lượng tốt hơn, chậm hơn (khuyến nghị 6–8)
           default: 6
           selector:
             number:
@@ -355,7 +374,6 @@ blueprint:
               max: 20
               step: 1
               mode: slider
-
         width:
           name: Chiều rộng (px)
           default: 1344
@@ -365,7 +383,6 @@ blueprint:
               max: 1920
               step: 64
               mode: slider
-
         height:
           name: Chiều cao (px)
           default: 768
@@ -376,7 +393,6 @@ blueprint:
               step: 64
               mode: slider
 
-    # ===== CÀI ĐẶT GOOGLE FLOW =====
     flow_settings:
       name: "🌊 Cài đặt Google Flow PyScript"
       icon: mdi:google-cloud
@@ -384,34 +400,30 @@ blueprint:
       input:
         flow_api_url:
           name: Flow API URL
-          description: URL của Flow API server nội bộ
-          default: "http://172.16.10.38:8010/v1/google/flow/generate-image"
+          description: >
+            Khuyến nghị dùng CỔNG CHÍNH của gateway (đường REST, khung hình đúng,
+            ảnh gốc, tự xoay tài khoản, vào thư viện):
+            http://172.16.10.38:3030/v1/images/generations
+            — thân yêu cầu dùng {"model":"flow/banana-pro"} (xem BƯỚC 4C).
+          default: "http://172.16.10.38:3030/v1/images/generations"
           selector:
             text:
-
         flow_project_id:
           name: Project ID
-          description: Google Cloud Project ID dùng cho Flow API
           default: "54468d77-02ff-4a06-bb81-05a7d1111544"
           selector:
             text:
-
         flow_prompt_style:
           name: Phong cách prompt gửi cho Flow
-          description: >
-            **Chi tiết** dùng prompt dài như Gemini (mô tả cảnh rất đầy đủ).
-            **Ngắn gọn** dùng prompt súc tích như NVIDIA.
-            Flow hoạt động tốt với cả hai; khuyến nghị Chi tiết.
           default: detailed
           selector:
             select:
               options:
-                - label: Chi tiết (Gemini style - khuyến nghị)
+                - label: Chi tiết (như Gemini)
                   value: detailed
-                - label: Ngắn gọn (NVIDIA style)
+                - label: Ngắn gọn (như NVIDIA)
                   value: compact
 
-    # ===== GỬI ẢNH =====
     notify_image_section:
       name: "📤 Gửi ảnh sau khi tạo"
       icon: mdi:image-send
@@ -422,63 +434,52 @@ blueprint:
           default: false
           selector:
             boolean: {}
-
         telegram_config_entry:
           name: 🤖 Telegram Bot
           default: ""
           selector:
             config_entry:
               integration: telegram_bot
-
         telegram_target:
           name: 🧑‍💻 Target Chat ID
-          description: Bỏ trống để dùng mặc định của bot.
           default: ""
           selector:
             text: {}
-
         telegram_thread_id:
-          name: 🧵 Thread ID (tuỳ chọn)
+          name: 🧵 Thread ID
           default: ""
           selector:
             text: {}
-
         enable_zalo_bot:
           name: ✅ Gửi qua Zalo Bot (Pyscript)
           default: false
           selector:
             boolean: {}
-
         zalo_bot_chat_id:
           name: 🧑‍💻 Zalo Bot Chat ID
           default: ""
           selector:
             text: {}
-
         enable_zalo_custom:
           name: ✅ Gửi qua Zalo Custom Integration
           default: false
           selector:
             boolean: {}
-
         zalo_custom_account:
           name: 📱 Tài khoản Zalo
           default: ""
           selector:
             text: {}
-
         zalo_custom_thread_id:
           name: 💬 Thread ID (Nhóm)
           default: ""
           selector:
             text: {}
-
         zalo_custom_user_id:
           name: 👤 User ID (Cá nhân)
           default: ""
           selector:
             text: {}
-
         zalo_custom_receiver_type:
           name: 👥 Receiver Type
           default: "0"
@@ -489,7 +490,6 @@ blueprint:
                   value: "0"
                 - label: Group (Nhóm)
                   value: "1"
-
         zalo_custom_ttl:
           name: ⏳ TTL (ms)
           default: 0
@@ -500,35 +500,21 @@ blueprint:
               step: 1000
               mode: box
 
-# ===== TRIGGER =====
+# ===== TRIGGER: sensor đổi trạng thái ở mỗi ranh giới khoảng (9 lần/ngày) ====
 trigger:
-  - platform: time
-    at: "05:00:00"
-  - platform: time
-    at: "11:00:00"
-  - platform: time
-    at: "13:00:00"
-  - platform: time
-    at: "18:00:00"
-  - platform: time
-    at: "22:00:00"
   - platform: state
     entity_id: !input time_phase_sensor
-    not_from:
-      - unknown
-      - unavailable
-    not_to:
-      - unknown
-      - unavailable
+    not_from: [unknown, unavailable]
+    not_to: [unknown, unavailable]
+  - platform: time
+    at: "00:05:00"
 
-# ===== CONDITIONS =====
 condition:
   - condition: template
     value_template: >
       {{ trigger.platform == 'time'
          or trigger.from_state.state != trigger.to_state.state }}
 
-# ===== ACTIONS =====
 action:
   # ── BƯỚC 1: THU THẬP DỮ LIỆU THỜI TIẾT ───────────────────────────────────
   - variables:
@@ -537,9 +523,7 @@ action:
       tp: "{{ states(time_phase_sensor) | lower }}"
       weather_entity: !input weather_entity
       w: "{{ states(weather_entity) | lower }}"
-
       scene_index: "{{ now().timetuple().tm_yday % 12 }}"
-
       temperature_sensor: !input temperature_sensor
       temp: >-
         {% if temperature_sensor and temperature_sensor != '' and states(temperature_sensor) not in ['unknown','unavailable',''] %}
@@ -547,7 +531,6 @@ action:
         {% else %}
           {{ state_attr(weather_entity, 'temperature') | float(30) | round(1) }}
         {% endif %}
-
       humidity_sensor: !input humidity_sensor
       hum: >-
         {% if humidity_sensor and humidity_sensor != '' and states(humidity_sensor) not in ['unknown','unavailable',''] %}
@@ -555,7 +538,6 @@ action:
         {% else %}
           {{ state_attr(weather_entity, 'humidity') | int(70) }}
         {% endif %}
-
       wind_speed_sensor: !input wind_speed_sensor
       wind: >-
         {% if wind_speed_sensor and wind_speed_sensor != '' and states(wind_speed_sensor) not in ['unknown','unavailable',''] %}
@@ -563,7 +545,6 @@ action:
         {% else %}
           {{ state_attr(weather_entity, 'wind_speed') | float(5) | round(1) }}
         {% endif %}
-
       pressure_sensor: !input pressure_sensor
       pressure: >-
         {% if pressure_sensor and pressure_sensor != '' and states(pressure_sensor) not in ['unknown','unavailable',''] %}
@@ -571,7 +552,6 @@ action:
         {% else %}
           {{ state_attr(weather_entity, 'pressure') | float(0) | round(0) }}
         {% endif %}
-
       aqi_sensor: !input aqi_sensor
       aqi: >-
         {% if aqi_sensor and aqi_sensor != '' and states(aqi_sensor) not in ['unknown','unavailable',''] %}
@@ -579,7 +559,6 @@ action:
         {% else %}
           0
         {% endif %}
-
       pm25_sensor: !input pm25_sensor
       pm25: >-
         {% if pm25_sensor and pm25_sensor != '' and states(pm25_sensor) not in ['unknown','unavailable',''] %}
@@ -588,687 +567,394 @@ action:
           0
         {% endif %}
 
-  # ── BƯỚC 1B: TÍNH ĐƯỜNG DẪN ẢNH ──────────────────────────────────────────
+  # ── BƯỚC 1B: ĐƯỜNG DẪN ẢNH ───────────────────────────────────────────────
   - variables:
       use_fixed_filename: !input use_fixed_filename
       fixed_filename: !input fixed_filename
       output_directory: !input output_directory
       filename_prefix: !input filename_prefix
       file_extension: !input file_extension
+      save_image: !input save_image
       delete_ai_image: !input delete_ai_image
       ai_image_delete_folder: !input ai_image_delete_folder
       ai_image_delete_age: !input ai_image_delete_age
-      timestamp: "{{ now().strftime('%Y%m%d_%H%M%S') }}"
-      filename: >-
-        {% if use_fixed_filename %}
-          {{ fixed_filename }}.{{ file_extension }}
-        {% else %}
-          {{ filename_prefix }}{{ now().strftime('%Y%m%d_%H%M%S') }}.{{ file_extension }}
-        {% endif %}
       final_image_path: >-
         {{ output_directory }}/{% if use_fixed_filename %}{{ fixed_filename }}.{{ file_extension }}{% else %}{{ filename_prefix }}{{ now().strftime('%Y%m%d_%H%M%S') }}.{{ file_extension }}{% endif %}
 
-  # ── BƯỚC 2: BUILD PROMPT GEMINI ───────────────────────────────────────────
+  # ── BƯỚC 2: KHOẢNG THỜI GIAN + NGUYÊN LIỆU THEO BUỔI ─────────────────────
   - variables:
       image_style: !input image_style
+      period: >-
+        {{ (state_attr(time_phase_sensor, 'period_english') | default('') | trim | lower)
+           or (
+             'dawn'      if 'rạng' in tp else
+             'sunrise'   if ('bình minh' in tp or 'sunrise' in tp) else
+             'morning'   if ('sáng' in tp or 'morning' in tp) else
+             'noon'      if ('trưa' in tp or 'noon' in tp) else
+             'afternoon' if ('xế' in tp or 'afternoon' in tp) else
+             'sunset'    if ('hoàng hôn' in tp or 'sunset' in tp) else
+             'dusk'      if ('chạng' in tp or 'dusk' in tp) else
+             'evening'   if ('tối' in tp or 'evening' in tp) else
+             'night'
+           ) }}
+      troi_toi: "{{ period in ['dusk', 'evening', 'night'] }}"
+      tam_nhin_bi_che: >-
+        {{ 'fog' in w or 'sương' in w or 'mist' in w or 'rain' in w or 'mưa' in w
+           or 'thunder' in w or 'bão' in w or 'snow' in w or 'tuyết' in w }}
+      at_nguon: >-
+        {%- if period == 'dawn' -%}the cold pre-dawn glow
+        {%- elif period == 'sunrise' -%}the low warm sunrise
+        {%- elif period == 'morning' -%}the clear morning sun
+        {%- elif period == 'noon' -%}the overhead sun
+        {%- elif period == 'afternoon' -%}the strong angled afternoon sun
+        {%- elif period == 'sunset' -%}the low western sun
+        {%- elif period == 'dusk' -%}the afterglow and the first lights
+        {%- elif period == 'evening' -%}the lanterns and lit windows
+        {%- else -%}the moon and stars
+        {%- endif -%}
+      at_trong: >-
+        {%- if period == 'dawn' -%}the fading stars still pinpoint-sharp, ridgelines emerging crisp from the blue dark
+        {%- elif period == 'sunrise' -%}distant ridgelines crisp in the low warm light, colours true to the horizon
+        {%- elif period == 'morning' -%}every distant detail sharp, colours clean all the way to the horizon
+        {%- elif period == 'noon' -%}unlimited visibility, colours at full saturation under the strong light
+        {%- elif period == 'afternoon' -%}the far horizon sharp, warm colours holding true into the distance
+        {%- elif period == 'sunset' -%}the horizon clean and sharply defined behind the setting sun
+        {%- elif period == 'dusk' -%}the afterglow gradient clean and unmuddied, first stars already sharp points
+        {%- elif period == 'evening' -%}distant lights crisp and distinct, the sky clear enough to show stars
+        {%- else -%}so transparent that stars stay sharp down to the horizon and the Milky Way is plainly structured
+        {%- endif -%}
+      at_am: >-
+        {%- if period in ['dawn', 'sunrise'] -%}heavy dew beaded on every leaf and blade of grass
+        {%- elif period in ['morning', 'noon', 'afternoon'] -%}a moist sheen on foliage catching {{ at_nguon }}
+        {%- elif period == 'sunset' -%}leaves holding wet highlights of the low sun
+        {%- elif period in ['dusk', 'evening'] -%}moisture settling back as dew, a damp sheen on leaves and stone
+        {%- else -%}heavy dew and condensation on every surface, a damp haze around each light
+        {%- endif -%}
+      at_nhiet: >-
+        {%- if period in ['dawn', 'sunrise'] -%}the day's heat only beginning to build
+        {%- elif period == 'morning' -%}the heat climbing steadily through the morning
+        {%- elif period in ['noon', 'afternoon'] -%}the heat at its full peak, shimmer distorting the air above hot surfaces
+        {%- elif period == 'sunset' -%}the accumulated heat of the whole day still hanging over the land
+        {%- else -%}stone and earth still radiating the day's heat long after sunset, the air motionless
+        {%- endif -%}
 
+  # ── BƯỚC 3: CÁC KHỐI MÔ TẢ (dùng chung cho Gemini/NVIDIA/Flow) ───────────
+  - variables:
       g_lighting: >-
-        {% if 'sáng' in tp or 'morning' in tp %}
-          Golden-hour sunrise photography, warm pink-orange-gold sky painting the horizon,
-          long soft diffused morning shadows stretching across the land,
-          delicate silver dew drops glistening on every blade of grass and leaf,
-          thin wisps of morning mist floating low over the fields,
-          fresh luminous daylight just beginning to fill the world with warmth
-        {% elif 'trưa' in tp or 'noon' in tp %}
-          Harsh dramatic overhead noon sun blazing from directly above,
-          brilliant deep cobalt blue sky without a trace of cloud,
-          extremely short sharp high-contrast shadows directly beneath objects,
-          intense full midday daylight saturating every colour to maximum vibrancy,
-          heat haze shimmering faintly on distant surfaces
-        {% elif 'chiều' in tp or 'afternoon' in tp %}
-          Breathtaking warm amber golden sunset light flooding the scene from the west,
-          long dramatic horizontal shadows stretching far across the ground,
-          glowing fiery orange-red horizon melting into deep purple sky above,
-          everything bathed in rich cinematic warm golden tones,
-          the magical last hour of daylight painting the world in honey and amber
-        {% elif 'tối' in tp or 'evening' in tp %}
-          Enchanting blue-hour twilight with absolutely NO remaining daylight,
-          sky transitioning in a stunning gradient from deep burnt orange at horizon
-          fading through violet and indigo to near-black overhead,
-          first stars timidly appearing in the darkening sky above,
-          warm glowing village lights and handmade paper lanterns casting
-          soft pools of orange light in the growing darkness,
-          the quiet magical moment between day and night
-        {% else %}
-          Deep immersive night scene with absolutely NO sun and NO daylight whatsoever,
-          complete velvety darkness enveloping everything,
-          brilliant full moon casting crisp cool silver-blue shadows across the landscape,
-          the entire Milky Way galaxy sweeping dramatically across the sky
-          in a breathtaking river of stars and cosmic dust,
-          thousands of individual stars of varying brightness filling every corner of the sky,
-          warm glowing orange lanterns providing the only earthly light source
+        {% if period == 'dawn' %}Pre-dawn blue hour before sunrise, the sky a deep cool blue brightening faintly at the eastern horizon, no sun yet, the last stars still overhead, cold soft shadowless light, muted blue tones, low-light exposure
+        {% elif period == 'sunrise' %}Golden-hour sunrise, warm pink-orange sun low on the horizon, long soft golden shadows stretching across the land, the first direct warm light of the day
+        {% elif period == 'morning' %}Clear bright mid-morning daylight, a clean blue sky, medium-length shadows, fresh even natural light
+        {% elif period == 'noon' %}Harsh overhead noon sun, deep cobalt sky, very short hard-edged shadows directly beneath objects, full intense midday light
+        {% elif period == 'afternoon' %}Strong angled mid-afternoon sun, the light beginning to warm, shadows lengthening and leaning, colours rich and clear
+        {% elif period == 'sunset' %}Golden-hour sunset, warm amber sun low in the west, long horizontal shadows, a glowing orange horizon melting up into deeper blue
+        {% elif period == 'dusk' %}Blue-hour twilight just after sunset with no direct sun left, sky graded from burnt orange at the horizon through violet to deep blue overhead, first stars appearing, only faint afterglow and the earliest lights on the ground, deep shadows, low-light exposure
+        {% elif period == 'evening' %}Full evening after twilight, the sky dark blue to black with stars out, the landscape lit by warm lantern and window light and the last trace of glow at the horizon, deep shadows retained, long low-light exposure
+        {% else %}Deep night with no sun and no daylight at all, the landscape lit only by a bright full moon casting cool silver-blue shadows, the Milky Way arcing overhead, warm lantern glow the only earthly light, black shadows retained, long-exposure night photography
         {% endif %}
-
       g_scene: >-
-        {% set si = scene_index | int %}
-
-        {% if 'sáng' in tp or 'morning' in tp %}
+        {% if period == 'dawn' %}
           {% set scenes = [
-            'Mu Cang Chai terraced rice paddies Vietnam, flooded terraces cascading down steep mountains reflecting pink sunrise sky, thin morning mist filling valleys between ridges, H\'Mong farmers beginning work in traditional dress, water buffalo wading through paddies',
-            'Jatiluwih rice terraces Bali Indonesia, sweeping UNESCO-listed curved terraces glowing emerald in dawn light, traditional Balinese water temples surrounded by lush tropical jungle, sacred Mount Batukaru emerging dramatically from clouds behind',
-            'Banaue rice terraces Philippines, 2000-year-old Ifugao hand-carved terraces called the eighth wonder of the world, misty mountain amphitheatre, wooden stilt houses of indigenous villages clinging to the steep slopes above flooded paddies',
-            'Yuanyang rice terraces Yunnan China, thousands of mirror-like flooded terraces built by Hani people over 1300 years, extraordinary geometric patterns covering entire mountain range, dramatic golden sunrise light flooding the valley from the east',
-            'Tegallalang rice terrace Ubud Bali, intricate stepped terraces descending into a deep jungle ravine, tall graceful coconut palms swaying along the ridgeline, river glinting far below in shadow, morning mist rising from the gorge floor',
-            'Longji Dragon\'s Backbone terraces Guilin China, impossibly steep mountain completely encased in perfectly carved rice terraces from base to summit, Zhuang minority wooden village perched dramatically at the very top in morning cloud and mist',
-            'Pu Luong nature reserve Vietnam, pristine untouched terraced valley with no tourist infrastructure, traditional White Thai stilt house villages reflected in still flooded paddies, water buffalo wading through the rice fields, absolute authentic silence',
-            'Hoang Su Phi terraced fields Ha Giang Vietnam, ancient Dao and La Chi ethnic minority terraces hundreds of years old, flooded paddies reflecting pink dawn sky, remote mountain landscape with no roads visible, mist pouring between ridgelines',
-            'Douro Valley Portugal terraced vineyards, dramatic steep granite hillsides entirely covered with meticulously maintained old-vine vineyards and olive groves, terraces plunging to the blue Douro river winding far below in morning haze',
-            'Cinque Terre terraced cliffs Italy, ancient impossibly steep terraced vineyards and lemon groves cascading down dramatic cliffsides to the turquoise Ligurian sea below, colourful fishing village clusters glowing in warm early morning light',
-            'Moray Inca circular terraces Peru, mysterious circular Inca terraces carved into natural depressions in the Andean plateau creating concentric rings, each ring a different microclimate, Andes peaks surrounding, dawn mist rising from each ring',
-            'Baliem Valley Papua Indonesia, one of the most isolated highland valleys on Earth, Dani tribe traditional grass-roofed compound villages scattered across a vast fertile mountain valley floor, waterfalls on surrounding jungle cliffs catching first light'
+            'Bagan Myanmar, thousands of ancient brick temples emerging from thick dawn river mist, hot-air balloons just beginning to rise against the brightening blue sky',
+            'Ha Long Bay Vietnam, hundreds of limestone karst towers rising from glass-calm emerald water wrapped in dawn mist, junk boats as dark silhouettes',
+            'Angkor Wat Cambodia, the five temple towers a perfect black silhouette mirrored in the still lotus pond, the sky graded deep blue to faint pink before sunrise',
+            'Trang An Ninh Binh Vietnam, jagged karst peaks rising from a winding river through flooded valleys, dense dawn mist pouring between the towers, sampan boats gliding',
+            'Li River Guilin China, rounded karst peaks receding into layers of dawn mist, a lone fisherman on a bamboo raft with cormorants, the river a flat pale mirror',
+            'Mount Bromo Indonesia, the smoking caldera seen from the high viewpoint above an endless sea of clouds, the first cold blue light touching distant peaks',
+            'Sa Pa Vietnam, terraced rice valleys filled with a slow river of dawn cloud, black ridgelines of the Hoang Lien mountains floating above the mist',
+            'Inle Lake Myanmar, Intha leg-rowing fishermen poised motionless on flat calm water in heavy dawn mist, distant stilt villages barely visible',
+            'Zhangjiajie Hunan China, vertical sandstone pillars rising out of a deep sea of pre-dawn cloud, only the tallest columns catching the first cold light'
           ] %}
-          {{ scenes[si] }}
-
-        {% elif 'trưa' in tp or 'noon' in tp %}
+        {% elif period == 'sunrise' %}
           {% set scenes = [
-            'Anse Source d\'Argent beach La Digue Seychelles, world\'s most photographed beach, extraordinary smooth rose-pink granite boulders sculpted by millennia into surreal organic forms, powder-white sand, impossibly clear warm turquoise lagoon, palm trees overhead',
-            'Navagio Shipwreck Beach Zakynthos Greece, only accessible by sea, dramatic vertical white limestone cliffs hundreds of metres tall encircling a hidden cove, electric blue water, the famous rusted shipwreck half-buried in blinding white sand',
-            'Whitehaven Beach Whitsundays Australia, seven kilometres of silica sand so pure it never gets hot, swirling tidal patterns of turquoise and green in Hill Inlet estuary seen from above like an abstract impressionist painting',
-            'Matira Beach Bora Bora French Polynesia, overwater bungalows on stilts dotting the impossibly blue lagoon, sacred volcanic Mount Otemanu rising dramatically from the island centre, crystal clear warm lagoon revealing coral gardens beneath the surface',
-            'El Nido Palawan Philippines, dramatic jagged limestone karst islands rising vertically from the sea, hidden lagoons accessible only through narrow gaps in the cliffs, finest white coral sand beaches inside each island, water in every shade of blue and green',
-            'Pink Sand Beach Harbour Island Bahamas, three kilometres of naturally pink sand caused by foraminifera shells mixed with white coral, calm crystal clear blue Atlantic water, colourful colonial Dunmore Town buildings through the tropical tree line',
-            'Maldives North Male Atoll, infinite expanse of warm Indian Ocean, reef islands barely above sea level fringed with perfect white sand, overwater villas on stilts, the water so clear every coral head and tropical fish visible from directly above',
-            'Grace Bay Beach Turks and Caicos, twelve kilometres of powdery white sand and perfectly calm clear water, the entire shallow bank visible from above in gradients from pure white through aquamarine to deep navy blue at the reef edge',
-            'Playa Paraiso Cayo Largo Cuba, completely undeveloped remote island beach accessible only by boat, fine white sand curving around a perfect shallow bay, warm translucent Caribbean water without a single tourist building or human footprint',
-            'Anse Lazio Beach Praslin Seychelles, sheltered bay of perfectly clear warm water, large smooth weathered granite boulders framing the beach naturally, lush tropical forest reaching the sand, tall Coco de Mer palms casting gentle dappled shade',
-            'Radhanagar Beach Havelock Island Andaman India, seven kilometres of pristine beach barely visited, lush tropical rainforest pressing right to the sand edge, water so clear you can see coral in six metres depth, perfect waves for swimming',
-            'Komodo Island volcanic black sand beach Indonesia, otherworldly black volcanic sand fringed with tropical forest, Komodo dragon tracks visible in the dark sand, crystal clear turquoise water above spectacular coral reef, dramatic volcanic peaks behind'
+            'Mu Cang Chai Vietnam, flooded terraced rice paddies cascading down mountains reflecting the pink-gold sunrise sky, thin mist in the valley folds, H\'Mong farmers beginning work',
+            'Serengeti Tanzania, a lone flat-topped acacia silhouetted against a blazing orange sunrise, herds of wildebeest and zebra crossing the golden savanna',
+            'Uluru Australia, the vast sacred sandstone monolith glowing deep fiery red as the first sun strikes it, the flat desert still in cool shadow',
+            'Taj Mahal India, white marble turning warm gold and rose in the first sunlight, mirrored in the long reflecting pool, faint river mist behind',
+            'Grand Canyon USA, first golden light spilling across the layered red buttes while the deep gorges stay in cool blue shadow, immense scale',
+            'Cappadocia Turkey, hundreds of hot-air balloons rising into the golden sunrise above the fairy-chimney valleys, warm light raking the tufa',
+            'Mount Fuji Japan, the snow-capped cone catching pink alpenglow, the Chureito pagoda and cherry blossoms in warm light in the foreground',
+            'Jinshanling Great Wall China, the ancient wall snaking along golden ridgelines, low warm sun raking across the watchtowers and hills',
+            'Bromo Tengger Indonesia, warm first light flooding across the volcanic sand sea to the smoking cone, long golden shadows from every ridge'
           ] %}
-          {{ scenes[si] }}
-
-        {% elif 'chiều' in tp or 'afternoon' in tp %}
+        {% elif period == 'morning' %}
           {% set scenes = [
-            'Hoi An ancient town Vietnam golden hour, narrow lantern-filled alleyways of 15th-century trading port glowing amber, centuries-old Japanese covered bridge, yellow-plastered merchant houses, Thu Bon river reflecting orange sky, silk lanterns swaying',
-            'Santorini Oia village Greece sunset, iconic white cubic Cycladic architecture cascading down caldera cliffs, famous blue-domed churches luminous in last light, infinite Aegean Sea horizon blazing orange and crimson, tourists watching from terrace edges',
-            'Prague old town Czech Republic golden hour, Gothic Tyn Church spires piercing the golden sky above red-roofed medieval buildings, Charles Bridge glowing warm over the Vltava river, hilltop castle silhouetted against amber clouds',
-            'Kyoto Gion district Japan late afternoon, perfectly preserved Edo-period machiya wooden merchant houses lining narrow cobblestone streets, willow trees trailing over a stone-edged canal, a geisha in full kimono slipping between the old buildings in golden light',
-            'Dubrovnik old city Croatia golden hour, intact medieval limestone city walls glowing honey-gold in late light, terracotta rooftops of the entire walled city, the Adriatic Sea glittering electric blue beyond the ancient fortifications',
-            'Luang Prabang Laos afternoon, UNESCO-listed ancient royal capital at the confluence of Mekong and Nam Khan rivers, golden spires of dozens of Buddhist temples rising above a town of wooden French colonial shophouses, monks in saffron robes',
-            'Colmar Alsace France golden hour, fairy-tale town of half-timbered medieval houses painted in pastels reflected in the Lauch river in the famous Petite Venise quarter, geraniums overflowing from every window box and balcony in warm light',
-            'Valletta Malta afternoon, one of Europe\'s smallest capitals, grand Baroque limestone palaces and churches glowing golden in late Mediterranean sun, Grand Harbour with ancient fortifications on both sides, fishing boats in the creeks below',
-            'Chefchaouen Morocco afternoon, the legendary Blue City in the Rif Mountains, every street building staircase and flowerpot painted in a different shade of blue and white, cats sleeping in the afternoon sun, artisan weavers at their looms in doorways',
-            'Cartagena Colombia golden hour, perfectly preserved walled colonial Spanish city, pastel-coloured plaster buildings draped with bougainvillea, balconies overflowing with tropical flowers, cathedral towers above the colonial heart, Caribbean sea beyond the walls',
-            'Tbilisi Georgia afternoon, dramatically situated on cliffs and gorges, distinctive carved wooden balconies overhanging narrow streets, Persian bathhouse domed roofs steaming, medieval Narikala fortress ruin on a clifftop above all, Mtkvari river below',
-            'Plovdiv Bulgaria old town afternoon, one of Europe\'s oldest cities, pastel-coloured National Revival period mansions perched on dramatic hills above a Roman amphitheatre still in use, cobblestone streets, art galleries, and rose gardens in golden light'
+            'Moraine Lake Banff Canada, the vivid turquoise glacial lake perfectly still under clean morning light, the sharp Valley of the Ten Peaks behind, pine forest all around',
+            'Plitvice Lakes Croatia, terraced turquoise and emerald lakes linked by countless waterfalls seen from above, wooden walkways between them, vivid clear light',
+            'Jiuzhaigou China, impossibly coloured turquoise and cobalt lakes with submerged logs perfectly visible, autumn forest reflected, bright clean daylight',
+            'Lake Bled Slovenia, the island church on the emerald alpine lake, a castle on the cliff above, the Julian Alps behind, crisp clear morning light',
+            'Iguazu Falls Argentina Brazil, the vast horseshoe of hundreds of waterfalls thundering into mist, bright rainbows in the spray under strong clear sun',
+            'Neuschwanstein Germany, the fairy-tale white castle on its forested crag with the Alps behind, deep green summer hills and a clear blue sky',
+            'Faroe Islands Saksun, an emerald turf-roofed hamlet above a tidal lagoon ringed by sheer green cliffs and waterfalls, dramatic clean northern light',
+            'Cinque Terre Italy, stacked pastel houses of a cliff village above the sparkling blue Ligurian Sea, terraced vineyards, colours vivid in clear light',
+            'Milford Sound New Zealand, sheer forested fjord walls plunging into deep still water, Mitre Peak rising vertically, dozens of waterfalls, crisp under clear morning light'
           ] %}
-          {{ scenes[si] }}
-
-        {% elif 'tối' in tp or 'evening' in tp %}
+        {% elif period == 'noon' %}
           {% set scenes = [
-            'Dolomites Tre Cime di Lavaredo Italy blue hour, the three iconic vertical rock spires turning from molten gold to deep violet as the last light dies, alpenglow lingering on the highest pale limestone peaks, mountain huts glowing warmly in gathering darkness below',
-            'Torres del Paine Patagonia Chile twilight, the extraordinary granite towers glowing in famous Patagonian alpenglow of pink and gold, perfectly mirrored in the still waters of Lago Nordenskjöld, guanaco silhouettes motionless on the dark shore',
-            'Aoraki Mount Cook New Zealand at dusk, the highest peak reflected in Lake Pukaki turning from turquoise to deep violet as the sky darkens, lupine flower fields in purple and pink stretching across the entire foreground to the water edge',
-            'Lofoten Islands Norway blue hour, dramatic jagged mountain peaks plunging directly into the Arctic fjord, red and yellow traditional fishermen\'s rorbuer cabins on stilts over the dark still water, last orange glow on the horizon reflected perfectly below',
-            'Karakoram K2 Pakistan twilight, the second highest mountain on Earth turning deep crimson then violet in alpenglow, the savage rocky ridges of the Karakoram range extending in every direction, ancient glaciers catching the absolute last light below the summit',
-            'Yosemite Valley California USA golden hour, El Capitan and Half Dome simultaneously glowing in warm amber light, the Merced River reflecting the entire spectacle in its still water, Jeffrey pines in silhouette, waterfalls catching the last light',
-            'Zhangjiajie pillar mountains Hunan China dusk, the other-worldly vertical sandstone columns that inspired Avatar rising from cloud, hundreds of pillar-shaped mountains disappearing into low mist, ancient suspended walkways between them lit with lanterns',
-            'Bryce Canyon Utah USA sunset, thousands of orange-red hoodoo rock spires glowing impossibly vivid in last direct sunlight, the canyon amphitheatre a sea of fire and shadow, snow still lodged in north-facing crevices, purple and indigo sky above',
-            'Himalaya Everest base camp Nepal evening, the world\'s highest mountain glowing pink then deep purple in alpenglow above a sea of glaciers and high altitude rocky moraines, prayer flags strung between boulders snapping in the thin cold wind',
-            'Faroe Islands Slattaratindur sea cliffs evening, extraordinary vertical cliffs 700 metres tall dropping directly into the North Atlantic, grass-topped with sheep grazing at the very edge, gannet seabirds wheeling far below, sea turning pewter and violet',
-            'Mont Blanc Chamonix France blue hour, Europe\'s highest peak above a sea of ice and cloud, the Aiguilles Rouges glowing deep red against violet sky, cable car lights moving up to the Aiguille du Midi observatory, valley lights twinkling far below',
-            'Virunga volcanoes Rwanda DRC Uganda twilight, chain of active shield volcanoes with Nyiragongo visible as a faint red glow against darkening sky, mountain gorilla habitat rainforest clothing the lower slopes, African savanna glowing far below'
+            'Maldives North Male Atoll, an infinite expanse of warm Indian Ocean in every shade of blue, ring-shaped reef islands and overwater villas, every coral head visible from above at midday',
+            'Bora Bora French Polynesia, the electric-blue lagoon around the green peak of Mount Otemanu, overwater bungalows on stilts, coral gardens through the clear water',
+            'El Nido Palawan Philippines, jagged limestone karst islands rising from blazing turquoise water, hidden lagoons, white coral beaches, vivid under the overhead sun',
+            'Whitehaven Beach Whitsundays Australia, swirling tidal patterns of pure white silica sand and turquoise water in Hill Inlet seen from above, dazzling at noon',
+            'Navagio Zakynthos Greece, the hidden cove of blinding white pebble sand and the famous shipwreck ringed by sheer cliffs, the water electric blue under vertical sun',
+            'Maya Bay Thailand, a sheltered emerald bay enclosed by towering jungle-topped limestone cliffs, powder-white sand and glass-clear shallows brilliant at midday',
+            'Great Barrier Reef Australia, aerial of the Heart Reef and coral ribbons, endless gradients of turquoise against deep blue ocean, vivid under the noon sun',
+            'Anse Source d\'Argent Seychelles, sculpted rose-pink granite boulders on powder-white sand and a shallow turquoise lagoon, palms overhead, colours at maximum',
+            'Grace Bay Turks and Caicos, twelve kilometres of powder-white sand and a shallow bank grading from pure white through aquamarine to deep navy, dazzling at midday'
           ] %}
-          {{ scenes[si] }}
-
+        {% elif period == 'afternoon' %}
+          {% set scenes = [
+            'Monument Valley USA, vast red sandstone buttes and mesas rising from the flat desert, long leaning shadows in the strong warm afternoon light, deep blue sky',
+            'Zhangye Danxia China, rainbow-striped sandstone hills in vivid bands of red, orange and yellow, colours saturated under strong angled afternoon sun',
+            'Wadi Rum Jordan, immense red sandstone mountains rising from orange desert sand, long dramatic shadows raking across the dunes in warm light',
+            'Namib Desert Sossusvlei Namibia, towering rust-red dunes with knife-edge crests, one face in warm light one in deep shadow, a white salt pan at the base',
+            'Petra Jordan, the rose-red rock-cut Treasury glowing warm where the angled sun reaches into the narrow canyon, dramatic light and shadow on carved stone',
+            'Grand Prismatic Yellowstone USA, the enormous hot spring ringed in vivid orange, yellow and green around deep blue water, steam drifting, vivid in strong light',
+            'Salar de Uyuni Bolivia dry season, the endless white hexagonal salt crust to the horizon under a deep blue sky, distant volcanoes shimmering in the heat',
+            'Cappadocia valleys Turkey, the pale fairy-chimney rock formations casting long warm shadows across the valleys in the strong afternoon sun',
+            'Antelope Canyon USA, smooth sculpted orange sandstone walls glowing where the high afternoon sun filters into the narrow slot, warm reflected light'
+          ] %}
+        {% elif period == 'sunset' %}
+          {% set scenes = [
+            'Santorini Oia Greece, white cubic houses and blue-domed churches cascading down the caldera cliff, the whole village and the Aegean blazing orange as the sun sinks into the sea',
+            'Hoi An Vietnam, the lantern-filled ancient town glowing amber, the Japanese covered bridge and yellow merchant houses reflected in the Thu Bon river, silk lanterns swaying',
+            'Venice Italy, the Grand Canal and the domes of Santa Maria della Salute in warm gold light, gondolas silhouetted, the water ablaze with the sunset',
+            'Mont Saint-Michel France, the island abbey rising from tidal flats mirrored in wet sand, spire and ramparts glowing amber against a fiery sky',
+            'Positano Amalfi Italy, pastel houses tumbling down the steep cliff to the sea, warm golden light on the facades and the Tyrrhenian horizon burning orange',
+            'Dubrovnik Croatia, the honey-gold medieval walls and terracotta rooftops of the walled city glowing in the last sun, the Adriatic blazing beyond',
+            'Budapest Hungary, the Parliament on the Danube lit gold by the setting sun, the river reflecting the warm facade and the Chain Bridge',
+            'Sydney Australia, the Opera House sails and Harbour Bridge glowing warm against a fiery orange sky, the harbour reflecting the sunset',
+            'Prague Czech Republic, the Gothic spires and red rooftops of the old town glowing gold, Charles Bridge and the castle silhouetted against an amber sky'
+          ] %}
+        {% elif period == 'dusk' %}
+          {% set scenes = [
+            'Shanghai China, the Bund and the Pudong towers lighting up against a deep blue-violet twilight, the Huangpu river a mirror of coloured light',
+            'Hong Kong, Victoria Harbour at blue hour, the wall of skyscrapers glowing against the darkening sky, lights reflected in the water, the Peak behind',
+            'Paris France, the Eiffel Tower and Haussmann rooftops at blue hour, warm street lights coming on while the sky holds deep blue',
+            'Tre Cime di Lavaredo Dolomites Italy, the three vertical spires glowing pink and violet in alpenglow as the sky darkens, mountain huts warm below',
+            'Singapore, Marina Bay at blue hour, the Gardens by the Bay Supertrees and the skyline glowing against a violet sky, reflections across the still bay',
+            'Manhattan New York, the skyline at blue hour from across the water, thousands of windows lighting up against the twilight graded orange to indigo',
+            'Torres del Paine Chile, the granite towers glowing famous pink-gold Patagonian alpenglow, mirrored in a still lake as the land falls dark',
+            'Matterhorn Zermatt Switzerland, the iconic peak glowing pink against a deep blue dusk, village lights coming on in the dark valley below',
+            'Dubai UAE, the Marina and Burj Khalifa skyline blazing with light against a burnt-orange to indigo twilight gradient, reflections in the water'
+          ] %}
+        {% elif period == 'evening' %}
+          {% set scenes = [
+            'Kyoto Japan, the wooden Kiyomizu-dera and the Gion lanes glowing with warm lantern light in full darkness, stone lanterns and paper windows lit, a still canal reflecting the glow',
+            'Marrakech Morocco, the Jemaa el-Fnaa square at night alive with food-stall smoke and warm lamplight, the lit Koutoubia minaret rising against the black sky',
+            'Varanasi India, the Ganges ghats at night during the Ganga Aarti, hundreds of oil lamps and floating candles on the dark river, temples lit behind',
+            'Tokyo Japan, the Shibuya crossing and neon-drenched streets at night, brilliant signage reflected in wet pavement, crowds under a black sky',
+            'Venice Italy at night, warm lamplight along the dark canals, gondolas moored, the lit facade of a palazzo mirrored in the black water',
+            'Bruges Belgium, medieval stepped-gable houses along the canals lit warm at night, the Belfry floodlit above the square, still black water mirroring the golden reflections',
+            'Kuala Lumpur Malaysia, the Petronas Twin Towers blazing with light against the night sky, the surrounding city lit, reflecting pool below',
+            'Istanbul Turkey, the Blue Mosque and Hagia Sophia floodlit warm against the black sky, minarets rising, the plaza between them softly lit',
+            'Luang Prabang Laos, the night market and gilded temple roofs glowing under warm lantern strings in full darkness, monks\' quarters lit softly behind'
+          ] %}
         {% else %}
           {% set scenes = [
-            'Mont Blanc massif Alps France Italy midnight, Europe\'s highest peak silvered by full moon above a vast sea of glaciers and seracs, the entire Milky Way galaxy blazing overhead with extraordinary clarity above 4800 metres, absolute zero light pollution in any direction',
-            'Lofoten Islands Norway winter midnight, the full fury of the Northern Lights aurora borealis in magnificent curtains of green white and violet dancing and rippling above jagged black mountain peaks reflected perfectly in the glass-flat Arctic fjord below',
-            'Torres del Paine Patagonia Chile at night, the jagged granite towers standing in complete darkness save for cold moonlight, the Milky Way core rising dramatically behind the tallest tower over the perfectly still reflecting lake below, Southern Cross constellation high overhead',
-            'Atacama Desert Chile high plateau at night, the driest place on Earth at 5000 metres altitude, zero humidity and zero light pollution, the most extraordinary dark sky on Earth, entire nebulae and star clusters visible to the naked eye, giant cacti as dark silhouettes',
-            'Mauna Kea Hawaii volcano summit at night, the dormant shield volcano at 4200 metres above the Pacific Ocean rising above 40 percent of Earth\'s atmosphere, cluster of astronomical observatories domed in cold moonlight, the entire Milky Way reflected in a crater lake below',
-            'Dolomites Seceda ridge Italy at night, the extraordinary ancient sawtooth rocky ridgeline standing against a sky blazing with stars, the Milky Way core casting faint silver light on pale limestone, a single remote mountain hut glowing with warm orange lamplight far below',
-            'Aoraki Mount Cook New Zealand midnight, the highest peak in New Zealand under the most spectacular Southern Hemisphere night sky, the Milky Way core visible from horizon to complete horizon, Lake Pukaki a perfect black mirror reflecting every star below the mountain',
-            'Namib Desert Sossusvlei Namibia at night, the world\'s oldest desert, the enormous ancient red sand dunes of Deadvlei standing in brilliant moonlight, skeletal camel thorn trees dead for centuries casting silver shadows, Milky Way and Magellanic Clouds blazing overhead',
-            'Cappadocia Turkey midnight, extraordinary surreal landscape of ancient volcanic tufa fairy chimney rock formations stretching to the horizon under a blazing Milky Way, hundreds of hot air balloons moored in lines on the dark valley floor waiting for dawn launch',
-            'Tromsø Norway Arctic winter at night, deep inside the Arctic Circle at 70 degrees north, the full fury of the Northern Lights aurora borealis in green white and violet dancing above a snow-covered Arctic mountain landscape, frozen fjord below reflecting the lights',
-            'Everest high camp Nepal at night, above 7000 metres elevation the thin freezing air perfectly transparent, the entire Himalayan range stretching from horizon to horizon in moonlight, the jet stream forming a visible ice crystal plume blowing off the Everest summit in darkness',
-            'Andes altiplano Bolivia at night, 4500 metres high plateau near the Chilean border, extraordinary darkness of the high altitude wilderness, flamingos roosting on a frozen volcanic salt lake that perfectly reflects the entire Milky Way, snow-capped volcanoes as black silhouettes'
+            'Atacama Desert Chile, the darkest sky on Earth at high altitude, the entire Milky Way and nebulae blazing overhead, giant cardon cacti as black silhouettes on the pale floor',
+            'Mauna Kea Hawaii, the volcano summit above the clouds, the Milky Way arcing over the silhouetted observatory domes, thousands of stars in the cold clear air',
+            'Deadvlei Namibia at night, the ancient black skeletal camel-thorn trees on the white clay pan under brilliant moonlight, the Milky Way blazing above the red dunes',
+            'Aoraki Mount Cook New Zealand, the highest peak under a spectacular southern night sky, the Milky Way horizon to horizon reflected in the black mirror of Lake Pukaki',
+            'Sahara Merzouga Morocco, immense moonlit orange dunes rolling to the horizon under a sky thick with stars, a single line of camel tracks, absolute silence',
+            'Salar de Uyuni Bolivia wet season, a thin layer of water turning the salt flat into a perfect mirror of the entire star-filled sky, the horizon dissolving',
+            'Lofoten Islands Norway, the Northern Lights in curtains of green and violet dancing above jagged black peaks, mirrored in the still Arctic fjord, red cabins on the shore',
+            'Tromso Norway, the aurora borealis rippling over a snow-covered Arctic landscape, the frozen fjord reflecting the green light, silhouetted pines',
+            'Wadi Rum Jordan at night, the red desert and sandstone mountains under brilliant moonlight and a dense field of stars, a few tent lights glowing warm on the valley floor'
           ] %}
-          {{ scenes[si] }}
-
         {% endif %}
-
+        {% set si = now().timetuple().tm_yday % (scenes | length) %}
+        {{ scenes[si] }}
       g_weather_fx: >-
-        {% if 'rain' in w or 'mưa' in w %}
-          Dramatic heavy tropical rain falling in thick silver curtains across the entire scene,
-          every surface transformed into a dark wet mirror perfectly reflecting surrounding lights,
-          countless puddles forming and rippling with overlapping circular waves,
-          fat water droplets hanging from every leaf tip and eave,
-          rain streaks visible as silver diagonal lines against darker backgrounds,
-          the air thick with rain and moisture reducing distant visibility
-        {% elif 'thunder' in w or 'bão' in w %}
-          Epic violent tropical thunderstorm unleashing its full fury on the landscape,
-          towering apocalyptic cumulonimbus storm clouds boiling up into the stratosphere,
-          a dramatic bright lightning bolt striking in the middle distance
-          illuminating the entire scene in a split second of brilliant white light,
-          powerful destructive wind bending trees sideways,
-          leaves and debris spinning through the turbulent air,
-          the sky an ominous mixture of black purple and sickly green storm colours
-        {% elif 'cloud' in w or 'mây' in w %}
-          A dramatic sky filled with layers of thick voluminous overcast clouds,
-          rich varied cloud formations from flat stratus to billowing cumulus,
-          beautiful soft diffused light filtering through the cloud cover
-          casting no harsh shadows and illuminating everything evenly,
-          subtle variations in cloud darkness and tone creating visual depth in the sky
-        {% elif 'fog' in w or 'sương' in w %}
-          Thick atmospheric fog and mist rolling in dense waves across the landscape,
-          nearby objects crisp and clear while mid-distance elements dissolve into soft grey,
-          distant features completely swallowed by the enveloping mist,
-          the fog transforming the scene into something ethereal and dreamlike,
-          soft diffused light scattered beautifully through the moisture particles,
-          an atmosphere of mystery and tranquil isolation
-        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
-          Flawlessly clear sky of the most brilliant deep blue from horizon to horizon,
-          intense brilliant sunshine flooding every surface with pure direct light,
-          vivid oversaturated colours brought to maximum richness by the strong light,
-          crisp sharp high-contrast shadows with perfectly defined edges,
-          the air completely clean and transparent offering unlimited visibility
-        {% elif 'snow' in w %}
-          Magical snowfall with large soft snowflakes drifting gently through still air,
-          a thick pristine white blanket of snow covering every rooftop path and surface,
-          tree branches laden with heavy white snow in perfect silence,
-          each snowflake individually visible catching the available light,
-          breath condensing into delicate clouds in the freezing air
-        {% else %}
-          A beautiful sky with scattered white fluffy cumulus clouds
-          drifting lazily across a blue background,
-          pleasant natural light with gentle soft shadows,
-          the clouds casting moving shadow patches across the landscape below,
-          an atmosphere of comfortable peaceful pleasant weather
+        {% if 'thunder' in w or 'bão' in w %}A violent thunderstorm overhead, towering cumulonimbus boiling upward, a lightning bolt striking in the middle distance{% if troi_toi %} and lighting the whole landscape white for a split second out of the dark{% else %} beneath a sky of black, purple and sickly green storm colour{% endif %}, wind bending trees sideways, debris spinning through turbulent air
+        {% elif 'rain' in w or 'mưa' in w %}Heavy rain falling in thick curtains, every surface a wet mirror, puddles rippling in overlapping circles, droplets hanging from every leaf tip, rain streaks catching {{ at_nguon }}, the far distance softened by the water
+        {% elif 'snow' in w or 'tuyết' in w %}Large snowflakes drifting through still air, a thick untouched blanket of snow over every surface, branches laden and bowed, the snow catching {{ at_nguon }}, distant shapes softened by the falling snow
+        {% elif 'fog' in w or 'sương' in w or 'mist' in w %}Dense fog rolling across the landscape, near objects crisp while the mid-distance dissolves and the far distance disappears entirely,{% if troi_toi %} every light source becoming a soft glowing halo inside the mist{% else %} light scattering softly through the moisture with no hard shadows{% endif %}, an atmosphere of mystery and isolation
+        {% elif 'cloud' in w or 'mây' in w %}Layers of thick overcast cloud from flat stratus to billowing cumulus,{% if period in ['dusk', 'sunset'] %} the cloud base still holding the last warm light from below{% elif period == 'evening' %} the cloud base faintly lit by distant town lights{% elif period == 'night' %} the cloud hiding the stars, a faint glow where the moon sits behind it{% else %} light arriving soft and directionless with no hard shadows anywhere{% endif %}
+        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}A completely cloudless sky{% if period in ['dusk', 'evening'] %}, the twilight gradient unbroken by any cloud{% elif period == 'night' %}, the stars unobscured from horizon to horizon{% elif period == 'dawn' %}, the last stars fading in a clean brightening blue{% else %} of the deepest blue, hard-edged shadows with sharply defined borders{% endif %}
+        {% else %}Scattered white cumulus drifting across the sky,{% if period == 'night' %} passing in front of the moon and briefly dimming the land below{% elif period in ['dusk', 'sunset'] %} their undersides lit warm by the low sun{% else %} their shadows moving in patches over the land below{% endif %}
         {% endif %}
-
+      g_air: >-
+        {% if aqi | int > 150 %}Heavy toxic smog at AQI {{ aqi }}{% if pm25 | float > 0 %} with PM2.5 at {{ pm25 }} µg/m³{% endif %}, a thick acrid brown haze,{% if troi_toi %} every light swollen into a dirty orange halo, no stars visible at all{% else %} visibility cut to a few hundred metres, the sun only a pale disc, the whole scene desaturated{% endif %}
+        {% elif aqi | int > 100 %}Unhealthy air at AQI {{ aqi }}{% if pm25 | float > 0 %}, PM2.5 {{ pm25 }} µg/m³{% endif %},{% if troi_toi %} distant lights dimmed and yellowed, only the brightest stars pushing through{% else %} a grey-brown haze softening everything beyond the middle distance{% endif %}
+        {% elif aqi | int > 50 %}Mild haze from AQI {{ aqi }}{% if troi_toi %} dimming whatever sits low on the horizon while things overhead stay clear{% else %} softening the far horizon only, nearer objects unaffected{% endif %}
+        {% else %}{% if tam_nhin_bi_che %}The air itself clean at AQI {{ aqi }} — what hangs in it is pure water vapour, not pollution{% else %}Clean air at AQI {{ aqi }}, {{ at_trong }}{% endif %}
+        {% endif %}
       g_temp_fx: >-
-        {% if temp > 35 %}
-          Oppressive scorching heat of {{ temp | round }}°C baking the landscape,
-          dramatic heat shimmer waves rising and distorting the air above hot surfaces,
-          plants visibly wilting and drooping under the brutal heat,
-          every creature and person seeking any available patch of shade,
-          the air itself appearing to vibrate with thermal energy
-        {% elif temp > 30 %}
-          Intense summer heat of {{ temp | round }}°C creating a heavy tropical atmosphere,
-          a soft golden heat haze hanging in the middle distance,
-          people and animals moving slowly conserving energy and seeking shade,
-          the lush vegetation radiating visible warmth
-        {% elif temp > 25 %}
-          Beautifully warm and comfortable {{ temp | round }}°C bathing the scene in gentle heat,
-          everything thriving and growing with vigour in the perfect temperature,
-          lush healthy deep green vegetation at its most vibrant and full
-        {% elif temp > 18 %}
-          Pleasantly cool and invigorating {{ temp | round }}°C filling the air with freshness,
-          a refreshing crispness to every breath,
-          light jackets and layers appearing on people going about their day
-        {% else %}
-          Biting cold of {{ temp | round }}°C gripping the entire scene,
-          people bundled in thick padded jackets scarves and warm hats,
-          white frost crystals coating every surface and blade of grass,
-          breath condensing into small clouds of white vapour in the freezing air
+        {% if temp | float > 35 %}Scorching {{ temp | round }}°C, {{ at_nhiet }}, plants visibly drooping, every creature seeking shelter
+        {% elif temp | float > 30 %}Heavy tropical heat of {{ temp | round }}°C, {{ at_nhiet }}
+        {% elif temp | float > 25 %}A warm {{ temp | round }}°C,{% if troi_toi %} a mild still evening, comfortable enough to sit outside{% else %} vegetation full and thriving in the gentle heat{% endif %}
+        {% elif temp | float > 18 %}A cool {{ temp | round }}°C with a crispness to the air{% if troi_toi %}, a chill settling in now the sun has gone{% endif %}
+        {% else %}Biting cold of {{ temp | round }}°C, frost crystals coating every surface, breath condensing into white vapour, the frost glittering wherever {{ at_nguon }} reaches it
         {% endif %}
-
       g_wind_fx: >-
-        {% if wind > 30 %}
-          Ferocious gale-force wind of {{ wind | round }} km/h tearing through the scene,
-          mature trees bending dramatically to a 45-degree angle straining against the force,
-          leaves branches and debris spiralling through the air in chaotic patterns,
-          any water surface whipped into white-capped turbulent waves
-        {% elif wind > 15 %}
-          Steady moderate wind of {{ wind | round }} km/h bringing constant movement to the scene,
-          all leaves and branches engaged in continuous rhythmic swaying,
-          grass rippling in visible waves across open ground,
-          water surfaces showing clear wind-driven ripples catching the light
-        {% elif wind > 5 %}
-          A gentle pleasant breeze of {{ wind | round }} km/h barely stirring the air,
-          only the most delicate elements responding with subtle slow movement,
-          grass tips and leaf edges swaying in lazy unhurried motion
-        {% else %}
-          Absolute perfect stillness with not a breath of wind anywhere,
-          every leaf hanging motionless in complete calm,
-          any water surface transformed into a flawless mirror
-          perfectly reflecting the sky and surroundings in photographic detail
+        {% if wind | float > 30 %}Gale-force wind of {{ wind | round }} km/h, mature trees bent to 45 degrees, branches and debris spiralling through the air, any water surface whipped into white-capped waves
+        {% elif wind | float > 15 %}Steady wind of {{ wind | round }} km/h, all foliage in continuous motion, grass rippling in waves, clear ripples across every water surface
+        {% elif wind | float > 5 %}A light breeze of {{ wind | round }} km/h, only the finest leaf edges and grass tips stirring
+        {% else %}Not a breath of wind at {{ wind | round }} km/h, every leaf motionless, every water surface a flawless mirror reflecting {{ at_nguon }} in perfect detail
         {% endif %}
-
       g_hum_fx: >-
-        {% if hum > 85 %}
-          Oppressive tropical humidity of {{ hum }}% making the air feel thick and heavy,
-          a visible haze of moisture hanging throughout the atmosphere,
-          every surface shining and glistening with dampness,
-          vegetation at its most impossibly lush and intensely green
-        {% elif hum > 60 %}
-          Noticeable moderate humidity of {{ hum }}%
-          keeping all vegetation lush and deeply green,
-          leaves and surfaces carrying a healthy moist sheen
-        {% elif hum < 30 %}
-          Extremely dry parched air at only {{ hum }}% humidity,
-          fine red-brown dust particles floating visibly in shafts of sunlight,
-          the earth cracked and split into geometric patterns from extreme dryness,
-          vegetation appearing desiccated and dusty
-        {% else %}
-          Comfortable balanced humidity of {{ hum }}% creating ideal clear fresh air,
-          perfect visibility with no moisture haze
+        {% if hum | int > 85 %}Oppressive humidity of {{ hum }}%, the air thick and heavy, {{ at_am }}
+        {% elif hum | int > 60 %}Humidity of {{ hum }}%, {{ at_am }}
+        {% elif hum | int < 30 %}Parched air at only {{ hum }}% humidity, fine dust suspended in the air, the earth cracked into geometric plates
+        {% else %}Balanced humidity of {{ hum }}%, the air fresh and free of moisture haze
         {% endif %}
-
-      g_aqi_fx: >-
-        {% if aqi > 150 %}
-          Dangerous heavy toxic smog with AQI of {{ aqi }},
-          the air choked with a thick acrid orange-brown chemical haze,
-          visibility reduced to a few hundred metres,
-          the sun visible only as a faint pale disc through the murk,
-          the entire scene desaturated and washed out by the pollution
-        {% elif aqi > 100 %}
-          Significant unhealthy air pollution with AQI of {{ aqi }},
-          a noticeable greyish-brown haze softening all distant objects,
-          colours appearing washed out and faded in the middle distance,
-          the sky taking on an unhealthy yellowish-grey tint overall
-        {% elif aqi > 50 %}
-          Mild haze on the distant horizon from AQI of {{ aqi }},
-          a subtle softening of colours and contrast in the far distance,
-          nearby objects still crisp and clear with full colour saturation
-        {% else %}
-          Absolutely pristine crystal clear air with perfect unlimited visibility,
-          every distant detail sharp and vivid,
-          colours fully saturated and true from foreground to horizon
-        {% endif %}
-
       g_style_fx: >-
-        {% if image_style == 'artistic' %}
-          Painterly artistic interpretation with creative expressive colour grading,
-          bold deliberate brushstroke-like textures, impressionistic atmospheric mood,
-          colours pushed beyond realism into emotional artistic expression
-        {% elif image_style == 'vibrant' %}
-          Maximum vibrant oversaturated colours exploding with visual energy,
-          ultra-high contrast with deep blacks and blazing highlights,
-          every hue pushed to its most vivid and eye-catching extreme
-        {% else %}
-          True-to-life photorealistic natural rendering faithful to real-world colours,
-          accurate natural lighting with no artificial enhancement,
-          the scene appearing exactly as a master photographer would capture it
+        {% if image_style == 'artistic' %}Painterly interpretation, expressive brushstroke-like texture, impressionistic mood
+        {% elif image_style == 'vibrant' %}Bold high-contrast rendering, colours pushed to their most vivid
+        {% else %}Photorealistic rendering faithful to real-world colour and material
         {% endif %}
 
+  # ── BƯỚC 3B: GHÉP PROMPT (chi tiết cho Gemini/Flow, gọn cho NVIDIA) ───────
+  - variables:
       g_parts: >-
-        {{ [
-          g_lighting | trim,
-          g_scene | trim,
-          g_weather_fx | trim,
-          g_temp_fx | trim,
-          g_wind_fx | trim,
-          g_hum_fx | trim,
-          g_aqi_fx | trim,
-          g_style_fx | trim
-        ] | select('ne', '') | list | join('. ') }}
-
-      gemini_prompt: >-
-        {{ (
-          'A breathtaking ultra-photorealistic cinematic aerial DSLR photograph '
-          ~ 'shot on a Hasselblad medium format camera with a 24mm wide-angle lens. '
-          ~ g_parts
-          ~ '. Wide panoramic composition with dramatic foreground-to-horizon depth. '
-          ~ 'Extraordinary depth of field bringing the entire vast landscape into razor-sharp focus. '
-          ~ 'Professional HDR cinematic colour grading with rich shadows and luminous highlights. '
-          ~ 'Ultra-high resolution 8K detail capturing every texture from individual leaves to distant mountains. '
-          ~ 'Award-winning National Geographic photography quality. '
-          ~ 'Masterful natural lighting with perfect exposure across the entire frame. '
-          ~ ('Empty scene with no human figures, only the landscape and its atmosphere. '
-             if ('tối' in tp or 'đêm' in tp or 'night' in tp or 'evening' in tp)
-             else '')
-          ~ 'Absolutely no text, no watermarks, no logos, no borders, no artificial elements, no modern intrusions.'
-          ) | regex_replace('\\s+', ' ') | trim }}
-
+        {{ [ g_scene | trim, g_lighting | trim, g_weather_fx | trim, g_air | trim,
+             g_temp_fx | trim, g_wind_fx | trim, g_hum_fx | trim, g_style_fx | trim ]
+           | select('ne', '') | list | join('. ') }}
+      # Prompt CHI TIẾT — dùng cho Gemini và Flow (style=detailed)
+      detailed_prompt: >-
+        {{ ('Ultra-photorealistic cinematic aerial photograph, Hasselblad medium format, 24mm wide-angle lens. '
+            ~ g_parts
+            ~ '. Wide panoramic composition with strong foreground-to-horizon depth. '
+            ~ 'Award-winning National Geographic reportage quality. '
+            ~ ('No people in frame, only the landscape. ' if troi_toi else '')
+            ~ 'No text, no captions, no borders, no modern intrusions.'
+           ) | regex_replace('\\s+', ' ') | trim }}
+      # Prompt NGẮN GỌN — dùng cho NVIDIA và Flow (style=compact). Chỉ 4 khối
+      # cốt lõi: chủ đề + ánh sáng + thời tiết + nhiệt. Flux đọc ngắn hợp hơn.
+      compact_prompt: >-
+        {{ ([ g_scene | trim, g_lighting | trim, g_weather_fx | trim, g_temp_fx | trim ]
+            | select('ne', '') | list | join('. ')
+            ~ '. Cinematic aerial landscape photo, photorealistic, no text.'
+           ) | regex_replace('\\s+', ' ') | trim }}
+      flow_prompt_style: !input flow_prompt_style
+      # Prompt cuối theo từng engine
+      gemini_prompt: "{{ detailed_prompt }}"
+      nvidia_prompt: "{{ compact_prompt }}"
+      flow_prompt: "{{ detailed_prompt if flow_prompt_style == 'detailed' else compact_prompt }}"
       task_name: "Weather {{ states(time_phase_sensor) }} - {{ states(weather_entity) }} - Scene {{ scene_index }}"
 
-  # ── BƯỚC 3: BUILD PROMPT NVIDIA ───────────────────────────────────────────
-  - variables:
-      n_lighting: >-
-        {% if 'sáng' in tp or 'morning' in tp %}
-          golden-hour sunrise, warm pink-orange sky, long soft morning shadows, dew on grass, bright daylight beginning
-        {% elif 'trưa' in tp or 'noon' in tp %}
-          harsh bright overhead noon sun, deep blue sky, vivid colours, short shadows, full daylight
-        {% elif 'chiều' in tp or 'afternoon' in tp %}
-          warm amber sunset light, long golden shadows, glowing orange horizon, late afternoon daylight
-        {% elif 'tối' in tp or 'evening' in tp %}
-          blue-hour twilight, NO daylight, dark sky gradient deep orange fading to indigo, first stars appearing, village lights and lanterns glowing
-        {% else %}
-          deep night scene, NO sun, NO daylight, full darkness, bright moonlight casting silver shadows, Milky Way overhead, stars filling sky
-        {% endif %}
-
-      n_scene: >-
-        {% set si = scene_index | int %}
-
-        {% if 'sáng' in tp or 'morning' in tp %}
-          {% set scenes = [
-            'Vietnam Mu Cang Chai rice terraces, flooded paddies reflecting pink sunrise sky, morning mist filling valleys, H\'Mong farmers, water buffalo',
-            'Jatiluwih rice terraces Bali Indonesia, UNESCO curved emerald terraces at dawn, Balinese water temples, tropical jungle, Mount Batukaru in cloud',
-            'Banaue rice terraces Philippines, 2000-year-old Ifugao terraces, misty mountain amphitheatre, wooden stilt houses on steep slopes, flooded paddies',
-            'Yuanyang rice terraces Yunnan China, thousands of mirror-like flooded terraces, geometric patterns covering mountains, golden sunrise light flooding valley',
-            'Tegallalang rice terrace Ubud Bali, stepped terraces descending into jungle ravine, tall coconut palms on ridgeline, river glinting far below, morning mist',
-            'Longji Dragon\'s Backbone terraces Guilin China, steep mountain covered in carved terraces base to summit, Zhuang village at very top in morning cloud',
-            'Pu Luong nature reserve Vietnam, pristine untouched terraced valley, White Thai stilt house villages in still flooded paddies, no tourists, silence',
-            'Hoang Su Phi Ha Giang Vietnam, ancient ethnic minority terraces, flooded paddies reflecting pink dawn, remote landscape, mist pouring between ridgelines',
-            'Douro Valley Portugal, steep granite hillsides covered in old-vine vineyards and olive groves, terraces plunging to blue river in morning haze',
-            'Cinque Terre Italy, ancient terraced vineyards and lemon groves on dramatic cliffsides above turquoise Ligurian sea, colourful villages in morning light',
-            'Moray Inca circular terraces Peru, mysterious concentric circular terraces in Andean plateau, each ring different microclimate, dawn mist rising from rings',
-            'Baliem Valley Papua Indonesia, most isolated highland valley on Earth, Dani tribe grass-roofed villages, waterfalls on jungle cliffs catching first light'
-          ] %}
-          {{ scenes[si] }}
-
-        {% elif 'trưa' in tp or 'noon' in tp %}
-          {% set scenes = [
-            'Anse Source d\'Argent beach Seychelles, pink granite boulders, powder-white sand, clear turquoise lagoon, palm trees, world\'s most beautiful beach',
-            'Navagio Shipwreck Beach Zakynthos Greece, vertical white limestone cliffs encircling hidden cove, electric blue water, rusted shipwreck in white sand',
-            'Whitehaven Beach Whitsundays Australia, silica sand, swirling tidal turquoise and green patterns in Hill Inlet seen from above, pristine coastline',
-            'Matira Beach Bora Bora French Polynesia, overwater bungalows on stilts, impossibly blue lagoon, Mount Otemanu volcano, crystal clear coral-filled water',
-            'El Nido Palawan Philippines, jagged limestone karst islands rising from sea, hidden lagoons inside cliffs, white coral sand beaches, vivid blue-green water',
-            'Pink Sand Beach Harbour Island Bahamas, three kilometres of natural pink sand, calm clear Atlantic water, colourful colonial buildings through tropical trees',
-            'Maldives North Male Atoll, warm Indian Ocean, reef islands fringed with white sand, overwater villas, crystal clear water showing every coral head below',
-            'Grace Bay Beach Turks and Caicos, twelve kilometres powdery white sand, perfectly calm clear water, gradients from white through aquamarine to deep navy',
-            'Playa Paraiso Cayo Largo Cuba, undeveloped remote beach only by boat, fine white sand, perfect shallow Caribbean bay, no buildings no footprints anywhere',
-            'Anse Lazio Beach Praslin Seychelles, clear warm water, large smooth granite boulders framing bay, lush tropical forest to sand edge, Coco de Mer palms',
-            'Radhanagar Beach Havelock Andaman India, pristine seven kilometres barely visited, rainforest to sand edge, crystal clear water revealing coral at depth',
-            'Komodo Island black sand beach Indonesia, otherworldly volcanic black sand, Komodo dragon tracks, clear turquoise water above coral reef, volcanic peaks behind'
-          ] %}
-          {{ scenes[si] }}
-
-        {% elif 'chiều' in tp or 'afternoon' in tp %}
-          {% set scenes = [
-            'Hoi An ancient town Vietnam golden hour, narrow lantern-filled alleys, 15th-century trading port glowing amber, Japanese covered bridge, silk lanterns swaying',
-            'Santorini Oia Greece sunset, white cubic Cycladic architecture on caldera cliffs, blue-domed churches in last light, Aegean Sea horizon blazing orange crimson',
-            'Prague old town golden hour, Gothic Tyn Church spires, red-roofed medieval buildings, Charles Bridge over Vltava glowing warm, hilltop castle silhouetted',
-            'Kyoto Gion district Japan late afternoon, Edo-period machiya wooden houses, cobblestone streets, willow trees over canal, geisha in kimono in golden light',
-            'Dubrovnik old city Croatia golden hour, medieval limestone city walls glowing honey-gold, terracotta rooftops, Adriatic Sea glittering electric blue beyond walls',
-            'Luang Prabang Laos afternoon, ancient royal capital, Mekong river confluence, golden temple spires, French colonial shophouses, monks in saffron robes',
-            'Colmar Alsace France golden hour, half-timbered medieval houses in pastels, Petite Venise quarter reflected in canal, geraniums from every window box',
-            'Valletta Malta afternoon, Baroque limestone palaces glowing golden, Grand Harbour, ancient fortifications on both sides, fishing boats in coloured creeks below',
-            'Chefchaouen Morocco afternoon, legendary Blue City in Rif Mountains, every street and building in shades of blue and white, cats sleeping in sun',
-            'Cartagena Colombia golden hour, walled colonial Spanish city, pastel buildings draped with bougainvillea, flower-filled balconies, Caribbean sea beyond walls',
-            'Tbilisi Georgia afternoon, cliffs and gorges, carved wooden balconies, Persian bathhouse domed roofs, medieval Narikala fortress on clifftop, river below',
-            'Plovdiv Bulgaria old town afternoon, ancient city, pastel National Revival mansions on hills above Roman amphitheatre, cobblestone streets, rose gardens'
-          ] %}
-          {{ scenes[si] }}
-
-        {% elif 'tối' in tp or 'evening' in tp %}
-          {% set scenes = [
-            'Dolomites Tre Cime di Lavaredo Italy blue hour, three iconic rock spires from gold to violet in alpenglow, mountain huts glowing warmly in gathering darkness',
-            'Torres del Paine Patagonia Chile twilight, granite towers in pink and gold alpenglow, perfectly mirrored in still Lago Nordenskjöld, guanaco silhouettes on shore',
-            'Aoraki Mount Cook New Zealand dusk, highest peak reflected in Lake Pukaki from turquoise to violet, lupine flower fields purple and pink in foreground',
-            'Lofoten Islands Norway blue hour, jagged mountains plunging into Arctic fjord, red and yellow rorbuer fishing cabins on stilts, last orange glow on horizon',
-            'K2 Karakoram Pakistan twilight, second highest mountain on Earth turning crimson then violet in alpenglow, glaciers catching absolute last light below summit',
-            'Yosemite Valley USA golden hour, El Capitan and Half Dome glowing amber simultaneously, Merced River reflecting spectacle, Jeffrey pines silhouetted',
-            'Zhangjiajie pillar mountains China dusk, vertical sandstone columns rising from cloud, hundreds of Avatar-like pillars in mist, suspended walkways lit with lanterns',
-            'Bryce Canyon Utah USA sunset, thousands of orange-red hoodoo spires blazing in last sunlight, canyon amphitheatre in fire and shadow, purple sky above',
-            'Everest base camp Nepal evening, world\'s highest mountain glowing pink then purple in alpenglow, glaciers and moraines, prayer flags snapping in thin cold wind',
-            'Faroe Islands sea cliffs evening, vertical 700-metre cliffs dropping into North Atlantic, sheep at grass edge, gannets wheeling below, sea turning pewter violet',
-            'Mont Blanc Chamonix France blue hour, Europe\'s highest peak above sea of ice and cloud, Aiguilles Rouges glowing red against violet sky, valley lights below',
-            'Virunga volcanoes Rwanda DRC twilight, chain of volcanoes, Nyiragongo faint red glow against darkening sky, gorilla habitat rainforest, African savanna far below'
-          ] %}
-          {{ scenes[si] }}
-
-        {% else %}
-          {% set scenes = [
-            'Mont Blanc Alps midnight, Europe\'s highest peak silvered by full moon above glaciers, entire Milky Way blazing overhead at 4800 metres, zero light pollution',
-            'Lofoten Islands Norway winter, Northern Lights aurora borealis in green white violet curtains above black jagged mountains, reflected in glass-flat Arctic fjord',
-            'Torres del Paine Patagonia Chile night, jagged granite towers in moonlight, Milky Way core rising behind tallest tower, perfect reflecting lake, Southern Cross',
-            'Atacama Desert Chile high plateau night, 5000 metres altitude, zero humidity zero light pollution, nebulae visible to naked eye, giant cacti as dark silhouettes',
-            'Mauna Kea Hawaii volcano summit night, 4200 metres above Pacific, observatories domed in moonlight, entire Milky Way reflected in crater lake below the summit',
-            'Dolomites Seceda ridge Italy night, ancient sawtooth rocky ridgeline against blazing star-filled sky, Milky Way casting faint light on limestone, one hut glowing below',
-            'Aoraki Mount Cook New Zealand midnight, highest peak under Southern Hemisphere Milky Way, Lake Pukaki a perfect black mirror reflecting every star below',
-            'Namib Desert Namibia night, world\'s oldest desert, enormous red sand dunes and dead camel thorn trees in moonlight, Milky Way and Magellanic Clouds blazing overhead',
-            'Cappadocia Turkey midnight, volcanic tufa fairy chimney rock formations under blazing Milky Way, hundreds of hot air balloons moored on dark valley floor waiting for dawn',
-            'Tromsø Norway Arctic winter, deep inside Arctic Circle, Northern Lights aurora borealis in green and violet above snow-covered mountains, frozen fjord reflecting lights',
-            'Everest high camp Nepal night, above 7000 metres, entire Himalayan range in moonlight, jet stream ice crystal plume blowing off Everest summit in darkness',
-            'Andes altiplano Bolivia night, 4500 metres plateau, flamingos on frozen volcanic salt lake reflecting the entire Milky Way, snow-capped volcanoes as black silhouettes'
-          ] %}
-          {{ scenes[si] }}
-
-        {% endif %}
-
-      n_weather_fx: >-
-        {% if 'rain' in w or 'mưa' in w %}
-          heavy rain falling, wet reflective ground, puddles everywhere, water droplets on leaves, grey overcast sky
-        {% elif 'thunder' in w or 'bão' in w %}
-          violent thunderstorm, dramatic dark cumulonimbus clouds, distant lightning strike, powerful wind gusts
-        {% elif 'cloud' in w or 'mây' in w %}
-          thick overcast clouds, diffused soft light, flat even lighting, no harsh shadows
-        {% elif 'fog' in w or 'sương' in w %}
-          dense rolling fog, misty dreamy atmosphere, very low visibility, soft ethereal mood
-        {% elif 'clear' in w or 'nắng' in w or 'sunny' in w %}
-          clear sky, vivid saturated colours, sharp defined shadows
-        {% elif 'snow' in w %}
-          light snowfall, white snow-covered ground, frosted tree branches, cold breath visible in air
-        {% else %}
-          partly cloudy, scattered white cumulus clouds, pleasant natural light
-        {% endif %}
-
-      n_temp_fx: >-
-        {% if temp > 35 %}
-          scorching heat {{ temp | round }}°C, heat shimmer rising from ground, wilting leaves
-        {% elif temp > 30 %}
-          hot {{ temp | round }}°C, summer haze, people seeking shade
-        {% elif temp > 25 %}
-          warm {{ temp | round }}°C, comfortable outdoor weather, lush green vegetation
-        {% elif temp > 18 %}
-          cool {{ temp | round }}°C, refreshing fresh crisp air feeling
-        {% else %}
-          cold {{ temp | round }}°C, people wearing jackets, frost on surfaces, breath visible
-        {% endif %}
-
-      n_wind_fx: >-
-        {% if wind > 30 %}
-          powerful gale wind, trees bending violently, debris flying, rippling turbulent water
-        {% elif wind > 15 %}
-          moderate wind, leaves and branches swaying rhythmically, rippled puddle surfaces
-        {% elif wind > 5 %}
-          gentle breeze, soft subtle movement of grass tips and leaves
-        {% else %}
-          perfectly calm still air, glassy mirror-like water reflections
-        {% endif %}
-
-      n_hum_fx: >-
-        {% if hum > 85 %}
-          oppressively humid {{ hum }}%, heavy tropical haze, damp glistening surfaces, condensation visible
-        {% elif hum > 60 %}
-          moderately humid {{ hum }}%, lush vegetation glistening with moisture
-        {% elif hum < 30 %}
-          very dry crisp air {{ hum }}%, dust particles floating, cracked dry earth
-        {% else %}
-          {% endif %}
-
-      n_aqi_fx: >-
-        {% if aqi > 150 %}
-          heavy toxic smog AQI {{ aqi }}, thick orange-brown haze, very poor visibility, sun barely a disc
-        {% elif aqi > 100 %}
-          significant hazy air AQI {{ aqi }}, washed-out distant objects, greyish sky tint
-        {% elif aqi > 50 %}
-          slight haze on horizon AQI {{ aqi }}, mildly muted distant colours
-        {% else %}
-          {% endif %}
-
-      n_parts: >-
-        {{ [
-          n_lighting | trim,
-          n_scene | trim,
-          n_weather_fx | trim,
-          n_temp_fx | trim,
-          n_wind_fx | trim,
-          n_hum_fx | trim,
-          n_aqi_fx | trim
-        ] | select('ne', '') | list | join(', ') }}
-
-      nvidia_prompt: >-
-        {{ ('Photorealistic aerial DSLR photograph, ' ~ n_parts ~ ', wide-angle panoramic composition, deep depth of field, HDR cinematic colour grade, ultra sharp details, 8K resolution, no text, no watermark, no faces')
-           | regex_replace('\\s+', ' ')
-           | trim
-           | truncate(750, True, '') }}
-
-  # ── BƯỚC 4: GỌI AI THEO ENGINE ĐƯỢC CHỌN ─────────────────────────────────
+  # ── BƯỚC 4: GỌI ENGINE THEO LỰA CHỌN ─────────────────────────────────────
+  #  ⚠️ Ba nhánh dưới đây là phần tôi KHÔNG thấy bản gốc của bạn (paste bị cắt).
+  #     Đối chiếu tên service với file .py / cấu hình ai_task của bạn rồi sửa.
   - choose:
 
-      # ── NHÁNH GEMINI ────────────────────────────────────────────────────
+      # ── 4A · GEMINI ────────────────────────────────────────────────────
       - conditions:
-          - condition: template
-            value_template: "{{ ai_engine == 'gemini' }}"
+          - "{{ ai_engine == 'gemini' }}"
         sequence:
-          - continue_on_error: false
-            action: ai_task.generate_image
+          - variables:
+              ai_task_entity: !input ai_task_entity
+          # ⚠️ KIỂM: service tạo ảnh của ai_task trên HA của bạn. Tùy phiên bản
+          #    có thể là ai_task.generate_image hoặc ai_task.generate_data.
+          #    `response_variable` giữ kết quả để lấy đường dẫn ảnh sinh ra.
+          - service: ai_task.generate_image
             data:
-              entity_id: !input ai_task_entity
               task_name: "{{ task_name }}"
+              entity_id: "{{ ai_task_entity }}"
               instructions: "{{ gemini_prompt }}"
             response_variable: ai_result
-
+          # ⚠️ KIỂM: khóa chứa đường dẫn ảnh trong ai_result (có bản trả
+          #    'image_path', có bản 'path' hoặc 'media_path'). In ra log 1 lần
+          #    để biết đúng khóa rồi sửa dòng dưới.
+          - variables:
+              nguon_anh: "{{ ai_result.image_path | default(ai_result.path | default('')) }}"
+          # Lưu: mv ảnh AI tạm → đường dẫn cuối (shell_command trong config).
           - if:
-              - condition: template
-                value_template: >
-                  {{ ai_result is defined
-                     and (ai_result.url is defined or ai_result.media_source_id is defined) }}
+              - "{{ save_image and nguon_anh not in ['', none] }}"
             then:
-              - variables:
-                  ai_image_source_id: "{{ ai_result.media_source_id | default('') }}"
-                  image_path: >-
-                    {% set sid = ai_result.media_source_id | default('') %}
-                    {% if sid.startswith('media-source://ai_task/image/') %}
-                      /config/media/ai_task/image/{{ sid.split('/')[-1] }}
-                    {% elif sid.startswith('media-source://') %}
-                      /config/media/{{ sid.replace('media-source://', '') }}
-                    {% else %}
-                      {{ sid }}
-                    {% endif %}
-
-              - continue_on_error: true
-                action: shell_command.copy_weather_image
+              - service: shell_command.copy_weather_image
                 data:
-                  source: "{{ image_path }}"
+                  source: "{{ nguon_anh }}"
                   destination: "{{ final_image_path }}"
-                response_variable: copy_result
+          # Dọn ảnh AI tạm còn sót (dự phòng — chỉ Gemini).
+          - if:
+              - "{{ delete_ai_image }}"
+            then:
+              - service: delete.files_in_folder
+                data:
+                  folder: "{{ ai_image_delete_folder }}"
+                  age_in_seconds: "{{ ai_image_delete_age }}"
 
-              - if:
-                  - condition: template
-                    value_template: "{{ delete_ai_image and ai_image_delete_folder != '' }}"
-                then:
-                  - continue_on_error: true
-                    action: delete.files_in_folder
-                    data:
-                      folder: "{{ ai_image_delete_folder }}"
-                      time: "{{ ai_image_delete_age | int(3600) }}"
-
-      # ── NHÁNH NVIDIA FLUX ───────────────────────────────────────────────
+      # ── 4B · NVIDIA FLUX (PyScript) ────────────────────────────────────
       - conditions:
-          - condition: template
-            value_template: "{{ ai_engine == 'nvidia' }}"
+          - "{{ ai_engine == 'nvidia' }}"
         sequence:
-          - action: pyscript.generate_weather_image
+          # ⚠️ KIỂM: tên hàm @service trong weather_image.py và tên tham số.
+          #    Script này TỰ ghi ra `output_path`, nên không cần shell_command.
+          - service: pyscript.weather_image
             data:
               prompt: "{{ nvidia_prompt }}"
-              output_path: "{{ final_image_path }}"
               steps: !input steps
               width: !input width
               height: !input height
+              output_path: "{{ final_image_path }}"
 
-          - action: system_log.write
-            data:
-              level: info
-              message: >-
-                [WeatherImage/NVIDIA] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
-                | wind={{ wind }} | aqi={{ aqi }} | scene={{ scene_index }}
-                | chars={{ nvidia_prompt | length }}
-                | prompt={{ nvidia_prompt | truncate(120) }}
-
-      # ── NHÁNH GOOGLE FLOW ───────────────────────────────────────────────
+      # ── 4C · GOOGLE FLOW (PyScript hoặc gateway REST) ──────────────────
       - conditions:
-          - condition: template
-            value_template: "{{ ai_engine == 'flow' }}"
+          - "{{ ai_engine == 'flow' }}"
         sequence:
-          - variables:
-              flow_project_id: !input flow_project_id
-              flow_api_url: !input flow_api_url
-              flow_prompt_style: !input flow_prompt_style
-              flow_prompt: >-
-                {% if flow_prompt_style == 'compact' %}
-                  {{ nvidia_prompt }}
-                {% else %}
-                  {{ gemini_prompt }}
-                {% endif %}
-
-          - action: pyscript.generate_flow_image
+          # ⚠️ KIỂM: tên hàm @service trong flow_image.py và tên tham số.
+          #    NÊN trỏ flow_api_url vào CỔNG CHÍNH .../v1/images/generations và
+          #    để flow_image.py gửi thân {"model":"flow/banana-pro","prompt":...,
+          #    "size":"<width>x<height>"} — khi đó Flow đi đường REST đã sửa:
+          #    khung hình đúng, ảnh gốc, tự xoay tài khoản, vào thư viện.
+          - service: pyscript.flow_image
             data:
               prompt: "{{ flow_prompt }}"
+              api_url: !input flow_api_url
+              project_id: !input flow_project_id
               output_path: "{{ final_image_path }}"
-              project_id: "{{ flow_project_id }}"
-              api_url: "{{ flow_api_url }}"
-
-          - action: system_log.write
-            data:
-              level: info
-              message: >-
-                [WeatherImage/Flow] ✅ {{ tp }} | {{ w }} | {{ temp }}°C | hum={{ hum }}%
-                | wind={{ wind }} | aqi={{ aqi }} | scene={{ scene_index }}
-                | style={{ flow_prompt_style }}
-                | chars={{ flow_prompt | length }}
-                | prompt={{ flow_prompt | truncate(120) }}
 
   # ── BƯỚC 5: GỬI ẢNH ──────────────────────────────────────────────────────
   - variables:
-      _tg:             !input include_telegram_notify
-      _tg_cfg:         !input telegram_config_entry
-      _tg_target:      !input telegram_target
-      _tg_thread:      !input telegram_thread_id
-      _zb:             !input enable_zalo_bot
-      _zb_id:          !input zalo_bot_chat_id
-      _zc:             !input enable_zalo_custom
-      _zc_acc:         !input zalo_custom_account
-      _zc_tid:         !input zalo_custom_thread_id
-      _zc_uid:         !input zalo_custom_user_id
-      _zc_type:        !input zalo_custom_receiver_type
-      _zc_ttl:         !input zalo_custom_ttl
-      _zc_resolved: >-
-        {{ _zc_tid if _zc_type == '1' else _zc_uid }}
+      include_telegram_notify: !input include_telegram_notify
+      telegram_target: !input telegram_target
+      telegram_thread_id: !input telegram_thread_id
+      enable_zalo_bot: !input enable_zalo_bot
+      zalo_bot_chat_id: !input zalo_bot_chat_id
+      enable_zalo_custom: !input enable_zalo_custom
+      zalo_custom_account: !input zalo_custom_account
+      zalo_custom_thread_id: !input zalo_custom_thread_id
+      zalo_custom_user_id: !input zalo_custom_user_id
+      zalo_custom_receiver_type: !input zalo_custom_receiver_type
+      zalo_custom_ttl: !input zalo_custom_ttl
+      caption: >-
+        {{ states(time_phase_sensor) }} · {{ states(weather_entity) }} ·
+        {{ temp | round }}°C · ẩm {{ hum }}% · gió {{ wind | round }}km/h
 
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ _tg }}"
-        sequence:
-          - continue_on_error: true
-            action: telegram_bot.send_photo
-            data: >
-              {% set d = {'config_entry_id': _tg_cfg, 'file': final_image_path} %}
-              {% if _tg_target != '' %}{% set d = dict(d, chat_id=_tg_target | int) %}{% endif %}
-              {% if _tg_thread != '' %}{% set d = dict(d, message_thread_id=_tg_thread | int) %}{% endif %}
-              {{ d }}
+  # Telegram
+  - if:
+      - "{{ include_telegram_notify }}"
+    then:
+      # ⚠️ KIỂM: khớp cách bạn vốn gửi Telegram (config_entry hay notify.*).
+      - service: telegram_bot.send_photo
+        data:
+          file: "{{ final_image_path }}"
+          caption: "{{ caption }}"
+          target: "{{ telegram_target if telegram_target != '' else omit }}"
+          message_thread_id: "{{ telegram_thread_id if telegram_thread_id != '' else omit }}"
 
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ _zb }}"
-        sequence:
-          - continue_on_error: true
-            action: pyscript.send_zalo_photo
-            data:
-              chat_id: "{{ _zb_id }}"
-              file_path: "{{ final_image_path }}"
+  # Zalo Bot (PyScript)
+  - if:
+      - "{{ enable_zalo_bot and zalo_bot_chat_id != '' }}"
+    then:
+      # ⚠️ KIỂM: tên hàm @service Zalo Bot của bạn.
+      - service: pyscript.zalo_bot_send_photo
+        data:
+          chat_id: "{{ zalo_bot_chat_id }}"
+          photo_path: "{{ final_image_path }}"
+          caption: "{{ caption }}"
 
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: >
-              {{ _zc and _zc_resolved | trim | length > 0 and _zc_acc | length > 0 }}
-        sequence:
-          - continue_on_error: true
-            action: zalo_bot.send_image
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: "{{ _zc_resolved | trim | string }}"
-              type: "{{ _zc_type }}"
-              image_path: "{{ final_image_path }}"
-              ttl: "{{ _zc_ttl }}"
-
-mode: single
-max_exceeded: silent
+  # Zalo Custom Integration
+  - if:
+      - "{{ enable_zalo_custom }}"
+    then:
+      # ⚠️ KIỂM: tên service tích hợp Zalo custom của bạn và tên tham số.
+      - service: zalo.send_image
+        data:
+          account: "{{ zalo_custom_account }}"
+          thread_id: "{{ zalo_custom_thread_id }}"
+          user_id: "{{ zalo_custom_user_id }}"
+          receiver_type: "{{ zalo_custom_receiver_type }}"
+          image_path: "{{ final_image_path }}"
+          message: "{{ caption }}"
+          ttl: "{{ zalo_custom_ttl }}"
