@@ -2,7 +2,7 @@ blueprint:
   name: Cảnh báo camera AI
   author: TriTue2011
   homeassistant:
-    min_version: 2025.7.0
+    min_version: 2026.3.0
   description: >
     Phân tích sự kiện camera bằng AI Task (Structured Output) HOẶC JSON (OpenAI/raw).
     Gửi thông báo với ảnh và phân tích AI qua điện thoại, Telegram, Zalo và TTS ra loa.
@@ -10,7 +10,7 @@ blueprint:
     <details>
     <summary><b>Chi tiết:</b> - Nhấn để mở rộng</summary>
 
-      **Phiên bản: v.2025.10.23 - Full 6 Cases Edition + Multi-Image Send**
+      **Phiên bản: v.2026.08.18 - Security Mode + Trigger Confirmation + Multi-Image Send**
 
       **Tác giả gốc: TriTue2011**
 
@@ -18,7 +18,7 @@ blueprint:
 
         1- **Hai chế độ AI:** Structured Output (HA native ai_task) hoặc JSON (OpenAI/raw JSON response).
 
-        2- **6 trường hợp prompt đầy đủ:** JSON×3 (humans / animals / both) + Structured×3 (humans / animals / both).
+        2- **8 trường hợp prompt đầy đủ:** JSON×4 + Structured×4 (humans / animals / both / security).
 
         3- **Gửi thông báo ngay lập tức** với ảnh, sau đó cập nhật kết quả phân tích AI (2 bước).
 
@@ -32,11 +32,15 @@ blueprint:
 
         8- **continue_on_error** cho tất cả action gửi thông báo (HA 2026.3+).
 
-        9- **MỚI: Gửi tất cả ảnh chụp cùng lúc** (tùy chọn) — thay vì chỉ gửi ảnh đầu tiên, có thể bật để gửi toàn bộ chuỗi ảnh qua Mobile App, Telegram và Zalo.
+        9- **Gửi nhiều ảnh theo từng kênh** — Mobile App, Telegram, Zalo Bot và Zalo Custom.
+
+        10- **MỚI: Trigger Confirmation** — tùy chọn chờ một khoảng thời gian rồi kiểm tra lại sensor đã kích hoạt và toàn bộ Run Conditions trước khi chụp ảnh.
+
+        11- **MỚI: Security AI mode** — đếm người, mô tả hành động và đánh giá hành vi có khả nghi về an ninh hay không; tối ưu cho hành lang/cửa căn hộ chung cư và cổng/sân/hiên nhà riêng.
 
       **Thay đổi so với phiên bản cũ:**
         - **MỚI:** Thêm công tắc "Gửi tất cả ảnh chụp cùng lúc" trong mục Camera & Snapshot Settings. Mặc định TẮT để giữ nguyên hành vi cũ (chỉ gửi ảnh đầu tiên).
-        - Prompt JSON: Tách riêng 3 nhánh humans/animals/both, mỗi nhánh có field_rules đầy đủ và chính xác.
+        - Prompt JSON/Structured: chuyển toàn bộ prompt sang tiếng Anh, tối ưu cho chuỗi ảnh và thêm nhánh security; nội dung thông báo AI vẫn trả về tiếng Việt có dấu.
         - Prompt Structured: Tách riên 3 nhánh, bổ sung hướng di chuyển (đi vào/đi ra/ngang), cảnh báo vật nguy hiểm, ghi chú phương tiện.
         - ai_structure_description_humans và animals đồng bộ hoàn toàn theo detect_subjects.
         - Chuỗi fallback khớp chính xác với bộ lọc filter phrases.
@@ -101,6 +105,31 @@ blueprint:
               options: ["on", "off"]
               custom_value: true
               multiple: false
+
+        enable_trigger_confirmation:
+          name: ✅ Trigger Confirmation (Optional)
+          description: |
+            👉 Bật để chờ một khoảng thời gian sau khi Trigger + Run Conditions ban đầu đã đạt.
+            ✅ Hết thời gian chờ, blueprint kiểm tra lại sensor VỪA kích hoạt và toàn bộ Run Conditions.
+            ⚠️ Nếu sensor không còn ở Trigger To State hoặc Run Conditions không còn đúng, lần chạy sẽ dừng.
+          default: false
+          selector:
+            boolean: {}
+
+        trigger_confirmation_time:
+          name: ⏱️ Trigger Confirmation Time
+          description: |
+            👉 Số giây chờ trước khi kiểm tra lại Trigger + Run Conditions.
+            ✅ Hữu ích để lọc trigger chớp nhanh / rung / motion thoáng qua.
+            ⚠️ 0 giây = kiểm tra lại ngay.
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: box
 
         person_occupancy_sensor:
           name: 🧍 Person Occupancy Sensor (Optional)
@@ -298,11 +327,12 @@ blueprint:
         detect_subjects:
           name: 🔍 Phát hiện đối tượng
           description: |
-            👉 Chọn loại đối tượng muốn AI phân tích và gửi cảnh báo.
-            ✅ Chỉ người: cảnh báo khi phát hiện con người trong ảnh.
-            ✅ Chỉ động vật: cảnh báo khi phát hiện chó, mèo hoặc chim trong ảnh.
-            ✅ Cả hai: cảnh báo khi phát hiện người HOẶC động vật.
-            ⚠️ Lựa chọn này ảnh hưởng trực tiếp đến prompt gửi cho AI và điều kiện lọc thông báo.
+            👉 Chọn loại đối tượng / mục tiêu AI muốn phân tích.
+            ✅ Chỉ người: đếm và mô tả người.
+            ✅ Chỉ động vật: đếm và mô tả động vật.
+            ✅ Cả hai: phân tích người và động vật.
+            ✅ An ninh: chỉ cần số người, hành động đang làm và có khả nghi về an ninh hay không.
+            ⚠️ Chế độ An ninh được tối ưu cho cả chung cư và nhà riêng.
           default: humans
           selector:
             select:
@@ -313,6 +343,8 @@ blueprint:
                   value: animals
                 - label: 👤🐾 Phát hiện cả người và động vật
                   value: both
+                - label: 🛡️ Phân tích an ninh
+                  value: security
               multiple: false
 
         ai_provider:
@@ -691,6 +723,9 @@ blueprint:
 # ============================================================
 variables:
   trigger_sensor: !input trigger_sensor
+  trigger_to_state: !input trigger_to_state
+  enable_trigger_confirmation: !input enable_trigger_confirmation
+  trigger_confirmation_time: !input trigger_confirmation_time
   person_sensor: !input person_occupancy_sensor
   person_detected_state: !input person_detected_state
   wait_for_person: !input wait_for_person
@@ -723,216 +758,194 @@ variables:
   detect_subjects: !input detect_subjects
 
   # ============================================================
-  # PROMPT ĐẦY ĐỦ 6 TRƯỜNG HỢP
+  # AI PROMPTS - 8 CASES, ENGLISH INSTRUCTIONS / VIETNAMESE OUTPUT
   # ============================================================
-  #
-  # Trường hợp 1: JSON + humans
-  # Trường hợp 2: JSON + animals
-  # Trường hợp 3: JSON + both
-  # Trường hợp 4: Structured + humans
-  # Trường hợp 5: Structured + animals
-  # Trường hợp 6: Structured + both
+  # JSON: humans / animals / both / security
+  # Structured: humans / animals / both / security
+  # Prompts are written in English for consistency, while all user-facing
+  # descriptions are explicitly requested in Vietnamese with full diacritics.
   # ============================================================
   ai_task_instructions: >
     {% if ai_mode == 'json' %}
 
       {# ============================================================ #}
-      {# TRƯỜNG HỢP 1: JSON — Chỉ người (humans)                      #}
+      {# CASE 1: JSON — HUMANS ONLY                                  #}
       {# ============================================================ #}
       {% if detect_subjects == 'humans' %}
-    Đây là chuỗi hình ảnh từ máy ảnh của tôi.
-    Hãy phân tích chuỗi ảnh này.
-    Chỉ trả về JSON thuần, không giải thích thêm, theo đúng mẫu sau:
+    You are analyzing a chronological sequence of images from a home security camera.
+    Analyze HUMANS ONLY. Ignore animals unless needed to understand a person's action.
+    Use the scene context only when useful: the camera may face an apartment/condominium hallway, lobby or unit entrance, or a detached-house porch, gate, driveway, yard or doorway.
+
+    Return raw JSON only, with exactly this shape:
     {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":""}
 
-    Quy tắc từng trường:
-    humans_detected: (số nguyên) đếm tổng số người trong chuỗi ảnh. Điền 0 nếu không có người.
-    humans_detected_summary: tóm tắt số lượng người theo loại, ví dụ "1 phụ nữ, 2 trẻ em" hoặc "2 đàn ông, 1 phụ nữ". Trả về chuỗi rỗng nếu không có người.
-    humans_detected_description: mô tả chi tiết từng người bao gồm:
-      - Người lớn hay trẻ em, giới tính.
-      - Trang phục và màu sắc cụ thể.
-      - Hành động đang làm, tay đang cầm gì (NẾU CẦM VẬT NGUY HIỂM NHƯ DAO, SÚNG HÃY CẢNH BÁO RÕ RÀNG).
-      - Hướng di chuyển: dựa vào sự thay đổi kích thước và vị trí giữa đầu và cuối chuỗi ảnh để kết luận "đang đi vào" (tiến gần camera, kích thước lớn dần), "đang đi ra" (đi xa camera, kích thước nhỏ dần) hoặc "di chuyển ngang".
-      - Ví dụ: "Một phụ nữ mặc đồ bộ hồng cam tay cầm điện thoại đang đi vào, bên cạnh là một bé trai áo vàng cam đang đứng chơi."
-      - Nếu humans_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+    Field rules:
+    humans_detected: integer. Count DISTINCT people visible across the sequence. Do not count the same person again in multiple frames. Return 0 if no person is visible.
+    humans_detected_summary: concise Vietnamese summary of the people, for example "1 phụ nữ, 2 trẻ em". Use apparent adult/child and apparent gender only when visually clear. Return an empty string if no person is visible.
+    humans_detected_description: concise but informative Vietnamese description of each person's observable appearance and behavior:
+      - adult or child, and apparent gender only when visually clear;
+      - clothing type and prominent colors;
+      - current action and any clearly visible object being carried or held;
+      - if a clearly visible dangerous object such as a knife, firearm or club is being held, state this clearly without guessing intent;
+      - movement across the sequence: approaching the camera/entry area, moving away, moving laterally, standing still, or turning back. Only say a person is entering or leaving a home when an actual doorway/gate crossing is visually supported.
+    If humans_detected = 0, humans_detected_description MUST be exactly: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
 
-    QUAN TRỌNG:
-    - BẮT BUỘC viết tiếng Việt có đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-    - TUYỆT ĐỐI KHÔNG bọc kết quả trong markdown code block.
-    - Chỉ trả về raw JSON thuần, bắt đầu bằng { và kết thúc bằng }.
-    - LOẠI BỎ ```json và ```.
-    - TẤT CẢ NỘI DUNG TRÊN MỘT DÒNG DUY NHẤT, TUYỆT ĐỐI KHÔNG NGẮT DÒNG.
-    - Giọng văn: Trẻ trung, hóm hỉnh, đi thẳng vào trọng tâm, không rườm rà thưa gửi.
+    Output rules:
+    - All user-facing text values MUST be natural Vietnamese with full diacritics.
+    - Base claims only on visible evidence from the image sequence. Do not identify people or infer occupation, relationship, ethnicity, health, criminal intent, or other unsupported attributes.
+    - Return raw JSON only. No markdown, no code fences, no extra text.
+    - The JSON must be on one line.
 
       {# ============================================================ #}
-      {# TRƯỜNG HỢP 2: JSON — Chỉ động vật (animals)                  #}
+      {# CASE 2: JSON — ANIMALS ONLY                                 #}
       {# ============================================================ #}
       {% elif detect_subjects == 'animals' %}
-    Đây là chuỗi hình ảnh từ máy ảnh của tôi.
-    Hãy phân tích chuỗi ảnh này.
-    Chỉ trả về JSON thuần, không giải thích thêm, theo đúng mẫu sau:
+    You are analyzing a chronological sequence of images from a home security camera.
+    Analyze ANIMALS ONLY. The camera may face a shared apartment corridor/lobby or a detached-house porch, gate, driveway, yard or doorway.
+
+    Return raw JSON only, with exactly this shape:
     {"animals_detected":0,"animals_detected_summary":"","animals_detected_description":""}
 
-    Quy tắc từng trường:
-    animals_detected: (số nguyên) đếm tổng số động vật (chó, mèo, chim, chuột, thằn lằn, v.v.) trong chuỗi ảnh. Điền 0 nếu không có động vật.
-    animals_detected_summary: tóm tắt số lượng động vật theo loài, ví dụ "1 con chó vàng, 2 con mèo đen". Trả về chuỗi rỗng nếu không có động vật.
-    animals_detected_description: mô tả chi tiết từng con vật bao gồm:
-      - Loài động vật, màu sắc lông/vũ cụ thể, kích thước tương đối.
-      - Hành động đang làm.
-      - Hướng di chuyển dựa vào sự thay đổi kích thước và vị trí giữa các khung hình: "đang tiến vào" (kích thước lớn dần), "đang đi ra" (kích thước nhỏ dần) hoặc "di chuyển ngang".
-      - Ví dụ: "Một con chó lông vàng cỡ vừa đang chạy vào, phía sau là một con mèo đen trắng đang ngồi liếm chân."
-      - Nếu animals_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
+    Field rules:
+    animals_detected: integer. Count DISTINCT animals visible across the sequence. Do not count the same animal again in multiple frames. Return 0 if none are visible.
+    animals_detected_summary: concise Vietnamese summary by species and visible color, for example "1 con chó vàng, 2 con mèo đen". Return an empty string if none are visible.
+    animals_detected_description: concise Vietnamese description of each animal: species, visible color/markings, relative size, observable action, and movement across the sequence (approaching, moving away, moving laterally, standing/sitting/lying still).
+    If animals_detected = 0, animals_detected_description MUST be exactly: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
 
-    QUAN TRỌNG:
-    - BẮT BUỘC viết tiếng Việt có đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-    - TUYỆT ĐỐI KHÔNG bọc kết quả trong markdown code block.
-    - Chỉ trả về raw JSON thuần, bắt đầu bằng { và kết thúc bằng }.
-    - LOẠI BỎ ```json và ```.
-    - TẤT CẢ NỘI DUNG TRÊN MỘT DÒNG DUY NHẤT, TUYỆT ĐỐI KHÔNG NGẮT DÒNG.
-    - Giọng văn: Trẻ trung, hóm hỉnh, đi thẳng vào trọng tâm, không rườm rà thưa gửi.
+    Output rules:
+    - All user-facing text values MUST be natural Vietnamese with full diacritics.
+    - Use only visible evidence. Do not invent species/breed details that are not clear.
+    - Return raw JSON only. No markdown, no code fences, no extra text.
+    - The JSON must be on one line.
 
       {# ============================================================ #}
-      {# TRƯỜNG HỢP 3: JSON — Cả người, động vật và phương tiện (both) #}
+      {# CASE 3: JSON — HUMANS + ANIMALS                             #}
       {# ============================================================ #}
-      {% else %}
-    Đây là chuỗi hình ảnh từ máy ảnh của tôi.
-    Hãy phân tích chuỗi ảnh này.
-    Chỉ trả về JSON thuần, không giải thích thêm, theo đúng mẫu sau:
+      {% elif detect_subjects == 'both' %}
+    You are analyzing a chronological sequence of images from a home security camera.
+    Analyze HUMANS and ANIMALS. Use scene context only when useful: an apartment/condominium hallway, lobby or unit entrance, or a detached-house porch, gate, driveway, yard or doorway.
+
+    Return raw JSON only, with exactly this shape:
     {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":"","animals_detected":0,"animals_detected_summary":"","animals_detected_description":""}
 
-    Quy tắc từng trường:
-    humans_detected: (số nguyên) đếm tổng số người trong chuỗi ảnh. Điền 0 nếu không có người.
-    humans_detected_summary: tóm tắt số lượng người theo loại, ví dụ "1 phụ nữ, 2 trẻ em". Trả về chuỗi rỗng nếu không có người.
-    humans_detected_description: mô tả chi tiết từng người bao gồm người lớn hay trẻ em, giới tính, trang phục màu sắc cụ thể, hành động, tay đang cầm gì (NẾU CẦM VẬT NGUY HIỂM NHƯ DAO, SÚNG HÃY CẢNH BÁO RÕ RÀNG). Dựa vào sự thay đổi kích thước và vị trí giữa đầu và cuối chuỗi ảnh để kết luận hướng di chuyển: "đang đi vào", "đang đi ra" hoặc "di chuyển ngang". Nếu humans_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
-    animals_detected: (số nguyên) đếm tổng số động vật (chó, mèo, chim, chuột, thằn lằn, v.v.) trong chuỗi ảnh. Điền 0 nếu không có động vật.
-    animals_detected_summary: tóm tắt số lượng động vật theo loài, ví dụ "1 con chó vàng, 2 con mèo đen". Trả về chuỗi rỗng nếu không có động vật.
-    animals_detected_description: mô tả chi tiết từng con vật bao gồm loài, màu sắc lông/vũ, kích thước, hành động và hướng di chuyển. Nếu animals_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
+    Count DISTINCT people and DISTINCT animals across the sequence; do not count the same subject again in repeated frames.
 
-    Lưu ý thêm: Nếu phát hiện phương tiện (xe máy, ô tô, xe đạp), hãy ghi chú màu sắc và loại xe vào trường mô tả của đối tượng gần nhất hoặc humans_detected_description nếu có người đi kèm.
+    humans_detected_summary: concise Vietnamese count summary.
+    humans_detected_description: concise Vietnamese description of people, clothing, observable action, clearly visible held objects, and movement across frames. Clearly mention a visible dangerous object without guessing intent. Only describe entering/leaving a residence if a doorway/gate crossing is visually supported.
+    If humans_detected = 0, humans_detected_description MUST be exactly: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
 
-    QUAN TRỌNG:
-    - BẮT BUỘC viết tiếng Việt có đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-    - TUYỆT ĐỐI KHÔNG bọc kết quả trong markdown code block.
-    - Chỉ trả về raw JSON thuần, bắt đầu bằng { và kết thúc bằng }.
-    - LOẠI BỎ ```json và ```.
-    - TẤT CẢ NỘI DUNG TRÊN MỘT DÒNG DUY NHẤT, TUYỆT ĐỐI KHÔNG NGẮT DÒNG.
-    - Giọng văn: Trẻ trung, hóm hỉnh, đi thẳng vào trọng tâm, không rườm rà thưa gửi.
+    animals_detected_summary: concise Vietnamese count summary by species/color.
+    animals_detected_description: concise Vietnamese description of species, color/markings, relative size, action and movement across frames.
+    If animals_detected = 0, animals_detected_description MUST be exactly: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
+
+    If a vehicle is visibly involved with a person, you may briefly mention its type and visible color in humans_detected_description. If a vehicle appears without a person, mention it only if it materially explains the observed movement; do not treat it as a counted animal or human.
+
+    Output rules:
+    - All user-facing text values MUST be natural Vietnamese with full diacritics.
+    - Use only visible evidence and avoid unsupported identity or intent claims.
+    - Return raw JSON only. No markdown, no code fences, no extra text.
+    - The JSON must be on one line.
+
+      {# ============================================================ #}
+      {# CASE 4: JSON — SECURITY                                     #}
+      {# ============================================================ #}
+      {% else %}
+    You are a computer-vision assistant for a residential security camera. Analyze the ENTIRE chronological image sequence, focusing only on: HOW MANY PEOPLE are present, WHAT THEY ARE DOING, and WHETHER THE OBSERVED BEHAVIOR IS SECURITY-SUSPICIOUS.
+
+    Return raw JSON only, with exactly this shape:
+    {"humans_detected":0,"human_action":"","security_suspicious":false}
+
+    Field rules:
+    humans_detected: integer. Count DISTINCT people visible across the sequence. Do not count the same person again across frames. Return 0 if no person is visible.
+    human_action: one concise Vietnamese description of the observable actions and movement of the people across the sequence. Describe what they actually do, such as passing by, approaching, leaving, waiting, returning, pacing, looking around repeatedly, looking toward a door/window, delivering or collecting an item, touching/testing a door or gate, manipulating a lock, handling property, climbing, or carrying a clearly visible dangerous object.
+    security_suspicious: boolean. Set true ONLY when the sequence contains observable behavior that reasonably warrants security attention; otherwise false.
+
+    CONTEXT-AWARE SECURITY RULES:
+    - Apartment/condominium: shared corridors, elevator lobbies and common entrances naturally contain neighbors, visitors, delivery activity and ordinary pass-through traffic. Passing, briefly waiting, looking at a unit number/door, using the elevator, or making a normal delivery is NOT suspicious by itself.
+    - Detached/private house: sidewalks and streets outside the property naturally contain passersby. Briefly approaching a gate/door, waiting, calling at the door, delivering an item, or normally entering/leaving is NOT suspicious by itself.
+    - Suspicion should come from observable behavior and progression across frames, especially repeated or combined actions: prolonged/repeated loitering near the same entrance; repeatedly returning; repeatedly inspecting a specific door, window, lock or interior; deliberately testing/pulling/pushing a door/gate/handle; manipulating a lock; reaching through an opening; entering/climbing into a clearly private or restricted area in an unusual manner; tampering with or taking property; deliberate concealment/evasion combined with other concerning actions; threatening behavior; or a dangerous object used/carried in a clearly concerning context.
+    - A single glance around, looking at the camera, ordinary clothing, a helmet/mask by itself, standing briefly, or simply being near an entrance is NOT enough for security_suspicious=true.
+    - Do not infer criminal intent, identity, occupation, relationship, or motive. Do not mark someone suspicious based on appearance or demographic characteristics.
+    - If evidence is unclear, the sequence is too short, or the behavior has a reasonable ordinary explanation supported by the images, set security_suspicious=false.
+    - Evaluate the sequence as a whole. Prefer repeated behavior and change over time over a single-frame impression.
+
+    If humans_detected = 0, human_action MUST be exactly: "Không phát hiện người trong chuỗi ảnh." and security_suspicious MUST be false.
+
+    Output rules:
+    - human_action MUST be natural Vietnamese with full diacritics.
+    - Keep human_action direct and suitable for a phone notification.
+    - Return raw JSON only. No markdown, no code fences, no extra text.
+    - The JSON must be on one line.
       {% endif %}
 
     {% else %}
 
       {# ============================================================ #}
-      {# TRƯỜNG HỢP 4: Structured — Chỉ người (humans)                #}
+      {# CASE 5: STRUCTURED — HUMANS ONLY                            #}
       {# ============================================================ #}
       {% if detect_subjects == 'humans' %}
-    Bạn là hệ thống thị giác máy tính giám sát camera. Hãy phân tích bối cảnh và hoạt động trong chuỗi ảnh.
-    Nhiệm vụ: CHỈ phân tích CON NGƯỜI trong ảnh. Bỏ qua hoàn toàn động vật và phương tiện.
-
-    RÀNG BUỘC BẮT BUỘC:
-    1. Ngôn ngữ: 100% Tiếng Việt chuẩn, đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-    2. Định dạng: Chỉ trả về MỘT câu duy nhất, tuyệt đối không ngắt dòng.
-    3. Giọng điệu: Trẻ trung, hóm hỉnh, đi thẳng vào trọng tâm, không rườm rà thưa gửi.
-    4. Chỉ dùng văn bản thuần, tuyệt đối không dùng markdown, emoji hay ký tự đặc biệt.
-    5. Nội dung ngắn gọn, đủ để đưa vào thông báo điện thoại.
-
-    Bước 1 — Đếm tổng số người nhìn thấy được. Điền số nguyên vào trường humans_detected (tối thiểu là 0).
-    Bước 2 — Điền giá trị CỐ ĐỊNH sau cho CÁC TRƯỜNG ĐỘNG VẬT (KHÔNG được thay đổi):
-              animals_detected = 0
-              animals_detected_summary = "" (chuỗi rỗng)
-              animals_detected_description = "Không phân tích động vật theo yêu cầu"
+    You are a computer-vision assistant for a residential camera. Analyze HUMANS ONLY across the full chronological image sequence.
+    Count distinct people, describe observable appearance/action and movement across frames, and use apartment/condominium or detached-house entrance context only when visually relevant.
+    Do not count the same person again in multiple frames. Do not infer identity or intent.
+    Fill the requested structured fields only. All user-facing text fields MUST be natural Vietnamese with full diacritics and concise enough for a phone notification.
+    For animal fields, return the fixed values requested by their field descriptions because animal analysis is not requested.
 
       {# ============================================================ #}
-      {# TRƯỜNG HỢP 5: Structured — Chỉ động vật (animals)            #}
+      {# CASE 6: STRUCTURED — ANIMALS ONLY                           #}
       {# ============================================================ #}
       {% elif detect_subjects == 'animals' %}
-    Bạn là hệ thống thị giác máy tính giám sát camera. Hãy phân tích bối cảnh và hoạt động trong chuỗi ảnh.
-    Nhiệm vụ: CHỈ phân tích ĐỘNG VẬT (chó, mèo, chim, chuột, thằn lằn, v.v.) trong ảnh. Bỏ qua hoàn toàn con người.
-
-    RÀNG BUỘC BẮT BUỘC:
-    1. Ngôn ngữ: 100% Tiếng Việt chuẩn, đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-    2. Định dạng: Chỉ trả về MỘT câu duy nhất, tuyệt đối không ngắt dòng.
-    3. Giọng điệu: Trẻ trung, hóm hỉnh, đi thẳng vào trọng tâm, không rườm rà thưa gửi.
-    4. Chỉ dùng văn bản thuần, tuyệt đối không dùng markdown, emoji hay ký tự đặc biệt.
-    5. Nội dung ngắn gọn, đủ để đưa vào thông báo điện thoại.
-
-    Bước 1 — Đếm tổng số động vật nhìn thấy được. Điền số nguyên vào trường animals_detected (tối thiểu là 0).
-    Bước 2 — Điền giá trị CỐ ĐỊNH sau cho CÁC TRƯỜNG NGƯỜI (KHÔNG được thay đổi):
-              humans_detected = 0
-              humans_detected_summary = "" (chuỗi rỗng)
-              humans_detected_description = "Không phân tích người theo yêu cầu"
+    You are a computer-vision assistant for a residential camera. Analyze ANIMALS ONLY across the full chronological image sequence.
+    Count distinct animals and describe species, visible color/markings, relative size, observable action and movement across frames.
+    Do not count the same animal again in multiple frames. Use only visible evidence.
+    Fill the requested structured fields only. All user-facing text fields MUST be natural Vietnamese with full diacritics and concise enough for a phone notification.
+    For human fields, return the fixed values requested by their field descriptions because human analysis is not requested.
 
       {# ============================================================ #}
-      {# TRƯỜNG HỢP 6: Structured — Cả người, động vật, phương tiện   #}
+      {# CASE 7: STRUCTURED — HUMANS + ANIMALS                       #}
+      {# ============================================================ #}
+      {% elif detect_subjects == 'both' %}
+    You are a computer-vision assistant for a residential camera. Analyze HUMANS and ANIMALS across the full chronological image sequence.
+    Count each distinct subject only once across repeated frames. Describe observable actions and movement, not unsupported identity or intent.
+    Use apartment/condominium or detached-house entrance context only when relevant. Vehicles may be briefly mentioned when they materially relate to a person's action.
+    Fill the requested structured fields only. All user-facing text fields MUST be natural Vietnamese with full diacritics and concise enough for a phone notification.
+
+      {# ============================================================ #}
+      {# CASE 8: STRUCTURED — SECURITY                               #}
       {# ============================================================ #}
       {% else %}
-    Bạn là hệ thống thị giác máy tính giám sát camera. Hãy phân tích bối cảnh và hoạt động trong chuỗi ảnh.
-    Nhiệm vụ: Phân tích tất cả các chủ thể động gồm CON NGƯỜI, ĐỘNG VẬT và PHƯƠNG TIỆN trong ảnh.
+    You are a computer-vision assistant for a residential security camera. Analyze the ENTIRE chronological image sequence and answer only three questions: how many DISTINCT people are visible, what they are doing, and whether their OBSERVED behavior is security-suspicious.
 
-    RÀNG BUỘC BẮT BUỘC:
-    1. Ngôn ngữ: 100% Tiếng Việt chuẩn, đầy đủ dấu. TUYỆT ĐỐI KHÔNG viết tiếng Việt không dấu.
-    2. Định dạng: Chỉ trả về MỘT câu duy nhất, tuyệt đối không ngắt dòng.
-    3. Giọng điệu: Trẻ trung, hóm hỉnh, đi thẳng vào trọng tâm, không rườm rà thưa gửi.
-    4. Chỉ dùng văn bản thuần, tuyệt đối không dùng markdown, emoji hay ký tự đặc biệt.
-    5. Nội dung ngắn gọn, đủ để đưa vào thông báo điện thoại.
+    Apply context carefully:
+    - In apartments/condominiums, ordinary corridor, elevator-lobby, visitor and delivery traffic is normal.
+    - At detached/private houses, ordinary sidewalk/street traffic, brief waiting, calling at the door, delivery, and normal entry/exit are normal.
+    - Mark behavior suspicious only when visible actions across the sequence support it, especially repeated loitering/returning, repeated inspection of a specific door/window/lock/interior, testing or manipulating an entrance/lock, unusual climbing or entry into a clearly private area, tampering with/taking property, threatening behavior, or a dangerous object in a clearly concerning context.
+    - A single glance around, looking at the camera, clothing, helmet/mask alone, or brief presence near an entrance is not enough.
+    - Do not infer identity, motive, occupation, relationship or criminal intent. If evidence is unclear, set security_suspicious to false.
 
-    Bước 1 — Đếm tổng số người nhìn thấy. Điền số nguyên vào humans_detected. Nếu không có người → điền 0.
-    Bước 2 — Đếm tổng số động vật (chó, mèo, chim, chuột, thằn lằn, v.v.). Điền số nguyên vào animals_detected. Nếu không có động vật → điền 0.
+    Fill only the requested structured fields. human_action MUST be concise natural Vietnamese with full diacritics.
       {% endif %}
 
     {% endif %}
 
   # ============================================================
-  # DESCRIPTION FIELDS CHO STRUCTURED OUTPUT (6 trường hợp)
+  # STRUCTURED OUTPUT FIELD DESCRIPTIONS - ENGLISH PROMPTS
   # ============================================================
   ai_structure_description_humans: >
     {% if ai_mode == 'structured' and detect_subjects in ['humans', 'both'] %}
-      {% if detect_subjects == 'humans' %}
-    Quét chuỗi ảnh và tập trung trích xuất dữ liệu CON NGƯỜI. Bỏ qua hoàn toàn cảnh quan, tòa nhà, vật thể tĩnh và động vật.
-    Đối với mỗi người phát hiện được:
-    - Xác định người lớn hay trẻ em, giới tính (đàn ông/phụ nữ/trẻ em).
-    - Mô tả màu sắc và thể loại trang phục cụ thể.
-    - Hành động đang thực hiện, tay đang cầm gì. NẾU CẦM VẬT NGUY HIỂM (dao, súng, gậy) HÃY CẢNH BÁO RÕ RÀNG.
-    - Hướng di chuyển: dựa vào sự thay đổi kích thước và vị trí của chủ thể giữa đầu và cuối chuỗi ảnh để kết luận "đang đi vào" (tiến gần camera, kích thước lớn dần), "đang đi ra" (đi xa camera, kích thước nhỏ dần) hoặc "di chuyển ngang".
-    - Ví dụ: "Một phụ nữ mặc đồ bộ hồng cam tay không cầm gì đang đi vào, bên cạnh là một bé trai áo vàng cam đang đứng chơi."
-    - Nếu humans_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
-      {% else %}
-    Quét chuỗi ảnh và tập trung trích xuất dữ liệu CON NGƯỜI. Bỏ qua hoàn toàn cảnh quan, tòa nhà và vật thể tĩnh. Động vật sẽ được mô tả ở trường riêng.
-    Đối với mỗi người phát hiện được:
-    - Xác định người lớn hay trẻ em, giới tính (đàn ông/phụ nữ/trẻ em).
-    - Mô tả màu sắc và thể loại trang phục cụ thể.
-    - Hành động đang thực hiện, tay đang cầm gì. NẾU CẦM VẬT NGUY HIỂM (dao, súng, gậy) HÃY CẢNH BÁO RÕ RÀNG.
-    - Nếu người đi kèm phương tiện (xe máy, ô tô, xe đạp), ghi chú thêm loại xe và màu sắc.
-    - Hướng di chuyển: dựa vào sự thay đổi kích thước và vị trí giữa đầu và cuối chuỗi ảnh để kết luận "đang đi vào", "đang đi ra" hoặc "di chuyển ngang".
-    - Nếu humans_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
-      {% endif %}
+    Describe each DISTINCT person in concise natural Vietnamese. Include apparent adult/child and apparent gender only when visually clear; clothing type and prominent colors; observable action; clearly visible held objects; and movement across the sequence (approaching, moving away, lateral movement, standing still, turning back). Do not count the same person twice across frames. Clearly mention a visible dangerous object without guessing intent. Only say someone is entering/leaving a residence when a doorway or gate crossing is visually supported. If humans_detected = 0, return EXACTLY: "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
     {% else %}
-    Không yêu cầu phân tích người theo cấu hình hiện tại.
-    PHẢI trả về CHÍNH XÁC chuỗi sau (không thêm bớt ký tự): "Không phân tích người theo yêu cầu".
+    Human analysis is not requested in the current mode. Return EXACTLY: "Không phân tích người theo yêu cầu".
     {% endif %}
 
   ai_structure_description_animals: >
     {% if ai_mode == 'structured' and detect_subjects in ['animals', 'both'] %}
-      {% if detect_subjects == 'animals' %}
-    Quét chuỗi ảnh và tập trung trích xuất dữ liệu ĐỘNG VẬT. Bỏ qua hoàn toàn cảnh quan, tòa nhà, vật thể tĩnh và con người.
-    Đối với mỗi động vật phát hiện được:
-    - Xác định rõ loài (chó, mèo, chim, chuột, thằn lằn, v.v.).
-    - Mô tả màu sắc lông/vũ cụ thể và kích thước tương đối (nhỏ/vừa/lớn).
-    - Hành động đang làm (chạy, nằm, ngồi, ăn, v.v.).
-    - Hướng di chuyển: dựa vào sự thay đổi kích thước và vị trí giữa đầu và cuối chuỗi ảnh để kết luận "đang tiến vào" (kích thước lớn dần), "đang đi ra" (kích thước nhỏ dần) hoặc "di chuyển ngang".
-    - Ví dụ: "Một con chó lông vàng cỡ vừa đang chạy vào, phía sau là một con mèo đen trắng đang ngồi liếm chân."
-    - Nếu animals_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
-      {% else %}
-    Quét chuỗi ảnh và tập trung trích xuất dữ liệu ĐỘNG VẬT và PHƯƠNG TIỆN không có người đi kèm. Bỏ qua hoàn toàn cảnh quan, tòa nhà và vật thể tĩnh. Con người đã được mô tả ở trường riêng.
-    Đối với mỗi động vật phát hiện được:
-    - Xác định rõ loài, màu sắc lông/vũ cụ thể, kích thước tương đối.
-    - Hành động đang làm và hướng di chuyển ("đang tiến vào", "đang đi ra" hoặc "di chuyển ngang") dựa theo sự thay đổi kích thước giữa các khung hình.
-    Nếu có phương tiện xuất hiện một mình (không có người đi kèm), ghi chú loại xe và màu sắc.
-    - Nếu animals_detected = 0, PHẢI trả về CHÍNH XÁC chuỗi: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
-      {% endif %}
+    Describe each DISTINCT animal in concise natural Vietnamese: species when clear, visible color/markings, relative size, observable action, and movement across the sequence (approaching, moving away, lateral movement, standing/sitting/lying still). Do not count the same animal twice across frames. If animals_detected = 0, return EXACTLY: "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
     {% else %}
-    Không yêu cầu phân tích động vật theo cấu hình hiện tại.
-    PHẢI trả về CHÍNH XÁC chuỗi sau (không thêm bớt ký tự): "Không phân tích động vật theo yêu cầu".
+    Animal analysis is not requested in the current mode. Return EXACTLY: "Không phân tích động vật theo yêu cầu".
     {% endif %}
+
+  ai_structure_description_security_action: >
+    Describe in ONE concise natural Vietnamese sentence what the DISTINCT people do across the full chronological sequence. Focus on observable actions and progression: passing, approaching, leaving, waiting, returning, pacing, repeatedly looking around, observing a door/window, delivery/collection, touching/testing an entrance, manipulating a lock, handling property, climbing, or carrying a clearly visible dangerous object. Use apartment/condominium versus detached-house context to avoid false alarms. Do not infer identity or motive. If no person is visible, return EXACTLY: "Không phát hiện người trong chuỗi ảnh.".
 
   # Mobile Notify
   include_notify: !input include_notify
@@ -1013,6 +1026,31 @@ condition:
 # ACTION
 # ============================================================
 action:
+
+  # ============================================================
+  # BƯỚC 0: TRIGGER CONFIRMATION (tùy chọn)
+  # Chờ X giây, sau đó kiểm tra lại sensor đã kích hoạt + Run Conditions.
+  # ============================================================
+  - choose:
+      - alias: "Xác nhận Trigger sau thời gian chờ"
+        conditions:
+          - condition: template
+            value_template: "{{ enable_trigger_confirmation }}"
+        sequence:
+          - delay:
+              seconds: "{{ trigger_confirmation_time }}"
+
+          # Kiểm tra lại chính sensor đã kích hoạt automation.
+          # Nếu chạy thủ công (không có trigger object), cho phép tiếp tục.
+          - condition: template
+            value_template: >
+              {{ trigger is not defined
+                 or trigger.entity_id is not defined
+                 or is_state(trigger.entity_id, trigger_to_state) }}
+
+          # Kiểm tra lại toàn bộ Run Conditions sau thời gian xác nhận.
+          - condition: and
+            conditions: !input run_conditions
 
   # ============================================================
   # BƯỚC 1: WAIT FOR PERSON (tùy chọn)
@@ -1453,13 +1491,14 @@ action:
         sequence:
 
           # ----------------------------------------------------------
-          # Chế độ Structured Output
+          # Structured Output
+          # Security uses exactly 3 fields; other modes keep the legacy 6 fields.
           # ----------------------------------------------------------
           - choose:
-              - alias: "Structured Output Mode"
+              - alias: "Structured Output - Humans / Animals / Both"
                 conditions:
                   - condition: template
-                    value_template: "{{ ai_mode == 'structured' }}"
+                    value_template: "{{ ai_mode == 'structured' and detect_subjects != 'security' }}"
                 sequence:
                   - action: ai_task.generate_data
                     data:
@@ -1468,19 +1507,17 @@ action:
                       entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
                       attachments: "{{ snapshots_url }}"
                       structure:
-                        # --- Trường phát hiện người ---
                         humans_detected:
                           description: >
-                            Tổng số người đếm được trong chuỗi ảnh (số nguyên ≥ 0).
-                            Nếu không có người hoặc không yêu cầu phân tích người → điền 0.
+                            Count DISTINCT people visible across the image sequence (integer >= 0).
+                            Do not count the same person again across frames. Return 0 when no human is visible or human analysis is not requested.
                           required: true
                           selector:
                             number:
                         humans_detected_summary:
                           description: >
-                            Tóm tắt số lượng người theo loại, viết tiếng Việt có dấu.
-                            Ví dụ: "1 phụ nữ, 2 đàn ông, 1 trẻ em".
-                            Trả về chuỗi rỗng nếu không có người hoặc không yêu cầu phân tích người.
+                            Concise Vietnamese count summary, for example "1 phụ nữ, 2 đàn ông, 1 trẻ em".
+                            Use apparent categories only when visually clear. Return an empty string when no human is visible or human analysis is not requested.
                           required: true
                           selector:
                             text:
@@ -1489,19 +1526,17 @@ action:
                           required: true
                           selector:
                             text:
-                        # --- Trường phát hiện động vật ---
                         animals_detected:
                           description: >
-                            Tổng số động vật (chó, mèo, chim, v.v.) đếm được trong chuỗi ảnh (số nguyên ≥ 0).
-                            Nếu không có động vật hoặc không yêu cầu phân tích động vật → điền 0.
+                            Count DISTINCT animals visible across the image sequence (integer >= 0).
+                            Do not count the same animal again across frames. Return 0 when none are visible or animal analysis is not requested.
                           required: true
                           selector:
                             number:
                         animals_detected_summary:
                           description: >
-                            Tóm tắt số lượng động vật theo loài, viết tiếng Việt có dấu.
-                            Ví dụ: "1 con chó vàng, 2 con mèo đen".
-                            Trả về chuỗi rỗng nếu không có động vật hoặc không yêu cầu phân tích động vật.
+                            Concise Vietnamese summary by species and visible color, for example "1 con chó vàng, 2 con mèo đen".
+                            Return an empty string when no animal is visible or animal analysis is not requested.
                           required: true
                           selector:
                             text:
@@ -1510,6 +1545,38 @@ action:
                           required: true
                           selector:
                             text:
+                    response_variable: humans_detected_report
+
+              - alias: "Structured Output - Security"
+                conditions:
+                  - condition: template
+                    value_template: "{{ ai_mode == 'structured' and detect_subjects == 'security' }}"
+                sequence:
+                  - action: ai_task.generate_data
+                    data:
+                      task_name: Phan tich an ninh camera
+                      instructions: "{{ ai_task_instructions }}"
+                      entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                      attachments: "{{ snapshots_url }}"
+                      structure:
+                        humans_detected:
+                          description: >
+                            Count DISTINCT people visible across the full image sequence (integer >= 0).
+                            Do not count the same person again across repeated frames.
+                          required: true
+                          selector:
+                            number:
+                        human_action:
+                          description: "{{ ai_structure_description_security_action }}"
+                          required: true
+                          selector:
+                            text:
+                        security_suspicious:
+                          description: >
+                            Boolean. true only when observable behavior across the sequence reasonably warrants residential security attention under the instructions; otherwise false. If evidence is unclear or no person is visible, return false.
+                          required: true
+                          selector:
+                            boolean:
                     response_variable: humans_detected_report
 
               # ----------------------------------------------------------
@@ -1543,7 +1610,9 @@ action:
                             'humans_detected_description':  parsed.get('humans_detected_description',  parsed.get('humansdetecteddescription', '')),
                             'animals_detected':             parsed.get('animals_detected',             parsed.get('animalsdetected', 0)),
                             'animals_detected_summary':     parsed.get('animals_detected_summary',     parsed.get('animalsdetectedsummary', '')),
-                            'animals_detected_description': parsed.get('animals_detected_description', parsed.get('animalsdetecteddescription', ''))
+                            'animals_detected_description': parsed.get('animals_detected_description', parsed.get('animalsdetecteddescription', '')),
+                            'human_action':                 parsed.get('human_action',                 parsed.get('humanaction', '')),
+                            'security_suspicious':          parsed.get('security_suspicious',          parsed.get('securitysuspicious', false))
                           } %}
                           {{ {'data': fixed} }}
                         {% else %}
@@ -1574,16 +1643,25 @@ action:
                     {%- set a_summary = humans_detected_report.data.get('animals_detected_summary', '') -%}
                     {%- set h_desc = humans_detected_report.data.get('humans_detected_description', '') -%}
                     {%- set a_desc = humans_detected_report.data.get('animals_detected_description', '') -%}
+                    {%- set s_action = humans_detected_report.data.get('human_action', '') -%}
+                    {%- set s_raw = humans_detected_report.data.get('security_suspicious', false) -%}
+                    {%- set s_flag = s_raw in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] -%}
                     {%- set days = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] -%}
                     {%- set ns = namespace(lines=[]) -%}
                     {%- set ns.lines = ns.lines + ['📊  ' + camera_name] -%}
-                    {%- if detect_subjects in ['humans', 'both'] -%}
-                      {%- set ns.lines = ns.lines + ['🚶: ' + (h_summary if h_summary | length > 0 else h_count | string)] -%}
-                      {%- set ns.lines = ns.lines + ['👉 ' + h_desc] -%}
-                    {%- endif -%}
-                    {%- if detect_subjects in ['animals', 'both'] -%}
-                      {%- set ns.lines = ns.lines + ['🐾: ' + (a_summary if a_summary | length > 0 else a_count | string)] -%}
-                      {%- set ns.lines = ns.lines + ['👉 ' + a_desc] -%}
+                    {%- if detect_subjects == 'security' -%}
+                      {%- set ns.lines = ns.lines + ['🚶: ' + h_count | string + ' người'] -%}
+                      {%- set ns.lines = ns.lines + ['👉 ' + (s_action if s_action | length > 0 else 'Không có mô tả hành động.')] -%}
+                      {%- set ns.lines = ns.lines + ['🛡️ Khả nghi: ' + ('CÓ' if s_flag else 'KHÔNG')] -%}
+                    {%- else -%}
+                      {%- if detect_subjects in ['humans', 'both'] -%}
+                        {%- set ns.lines = ns.lines + ['🚶: ' + (h_summary if h_summary | length > 0 else h_count | string)] -%}
+                        {%- set ns.lines = ns.lines + ['👉 ' + h_desc] -%}
+                      {%- endif -%}
+                      {%- if detect_subjects in ['animals', 'both'] -%}
+                        {%- set ns.lines = ns.lines + ['🐾: ' + (a_summary if a_summary | length > 0 else a_count | string)] -%}
+                        {%- set ns.lines = ns.lines + ['👉 ' + a_desc] -%}
+                      {%- endif -%}
                     {%- endif -%}
                     {%- set time_str = '🕒 ' + now().strftime('%H:%M:%S') + ' ' + days[now().weekday()] + ' Ngày ' + now().strftime('%d') + ' Tháng ' + now().strftime('%m') + ' Năm ' + now().strftime('%Y') + (' ' + notification_time if notification_time != '' else '') -%}
                     {%- set ns.lines = ns.lines + [time_str] -%}
@@ -1601,12 +1679,15 @@ action:
                       {% set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) %}
                       {% set a_desc  = humans_detected_report.data.get('animals_detected_description', '') | lower %}
 
-                      {# Xác định có người hợp lệ không #}
+                      {# Valid human detection for legacy human/both modes #}
                       {% set no_human_phrases = [
                         'không có người trong chuỗi ảnh khi so sánh',
                         'không có người',
                         'không có chuỗi hình ảnh nào được cung cấp',
-                        'không phân tích người'
+                        'không phân tích người',
+                        'no person',
+                        'no people',
+                        'human analysis is not requested'
                       ] %}
                       {% set human_invalid = namespace(value=false) %}
                       {% for phrase in no_human_phrases %}
@@ -1614,11 +1695,13 @@ action:
                       {% endfor %}
                       {% set human_ok = (h_count > 0) and not human_invalid.value %}
 
-                      {# Xác định có động vật hợp lệ không #}
+                      {# Valid animal detection #}
                       {% set no_animal_phrases = [
                         'không có động vật trong chuỗi ảnh khi so sánh',
                         'không có động vật',
-                        'không phân tích động vật'
+                        'không phân tích động vật',
+                        'no animal',
+                        'animal analysis is not requested'
                       ] %}
                       {% set animal_invalid = namespace(value=false) %}
                       {% for phrase in no_animal_phrases %}
@@ -1626,13 +1709,16 @@ action:
                       {% endfor %}
                       {% set animal_ok = (a_count > 0) and not animal_invalid.value %}
 
-                      {# Quyết định gửi thông báo theo detect_subjects #}
+                      {# Security mode sends the AI result whenever at least one person is detected,
+                         so the notification can state count + action + suspicious YES/NO. #}
                       {% if detect_subjects == 'humans' %}
                         {{ human_ok }}
                       {% elif detect_subjects == 'animals' %}
                         {{ animal_ok }}
-                      {% else %}
+                      {% elif detect_subjects == 'both' %}
                         {{ human_ok or animal_ok }}
+                      {% else %}
+                        {{ h_count > 0 }}
                       {% endif %}
                 then:
 
@@ -1782,14 +1868,21 @@ action:
                                 message: >
                                   {% set h_count = humans_detected_report.data.get('humans_detected', 0) | int(0) %}
                                   {% set a_count = humans_detected_report.data.get('animals_detected', 0) | int(0) %}
-                                  {% set parts = [] %}
-                                  {% if detect_subjects in ['humans', 'both'] and h_count > 0 %}
-                                    {% set parts = parts + [humans_detected_report.data.get('humans_detected_description', '')] %}
+                                  {% if detect_subjects == 'security' %}
+                                    {% set s_action = humans_detected_report.data.get('human_action', '') %}
+                                    {% set s_raw = humans_detected_report.data.get('security_suspicious', false) %}
+                                    {% set s_flag = s_raw in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
+                                    Phát hiện {{ h_count }} người. {{ s_action }}. Đánh giá an ninh: {{ 'khả nghi' if s_flag else 'không khả nghi' }}.
+                                  {% else %}
+                                    {% set parts = [] %}
+                                    {% if detect_subjects in ['humans', 'both'] and h_count > 0 %}
+                                      {% set parts = parts + [humans_detected_report.data.get('humans_detected_description', '')] %}
+                                    {% endif %}
+                                    {% if detect_subjects in ['animals', 'both'] and a_count > 0 %}
+                                      {% set parts = parts + [humans_detected_report.data.get('animals_detected_description', '')] %}
+                                    {% endif %}
+                                    {{ parts | join('. ') if parts | length > 0 else 'Phát hiện chuyển động.' }}
                                   {% endif %}
-                                  {% if detect_subjects in ['animals', 'both'] and a_count > 0 %}
-                                    {% set parts = parts + [humans_detected_report.data.get('animals_detected_description', '')] %}
-                                  {% endif %}
-                                  {{ parts | join('. ') if parts | length > 0 else 'Phát hiện chuyển động.' }}
 
             else:
               # ============================================================
