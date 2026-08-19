@@ -1441,6 +1441,38 @@ action:
         conditions: !input run_conditions
 
   # ============================================================
+  # BƯỚC 1: DỪNG SỚM NẾU KHÔNG CÓ GÌ ĐỂ LÀM
+  # Quên khai camera, hoặc tắt cả hai nhánh ảnh và video, thì mọi bước sau đều
+  # chạy vào chỗ trống: chụp vào camera rỗng, gửi những tệp không tồn tại, và
+  # mỗi lỗi bị continue_on_error nuốt mất nên chẳng ai biết vì sao im lặng.
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ camera_phan_tich | length == 0 }}"
+    then:
+      - action: system_log.write
+        data:
+          level: warning
+          logger: blueprint.canh_bao_camera_ai
+          message: >
+            Chưa chọn camera cho AI đọc nên không có gì để chụp. Mở automation
+            và điền ô "Camera cho AI đọc" ở mục Nhánh ảnh.
+      - stop: "Chưa chọn camera cho AI đọc"
+
+  - if:
+      - condition: template
+        value_template: "{{ not bat_nhanh_anh and not bat_nhanh_video }}"
+    then:
+      - action: system_log.write
+        data:
+          level: warning
+          logger: blueprint.canh_bao_camera_ai
+          message: >
+            Tắt cả nhánh ảnh lẫn nhánh video thì automation không có gì để gửi.
+            Bật ít nhất một trong hai.
+      - stop: "Không bật nhánh ảnh lẫn nhánh video"
+
+  # ============================================================
   # BƯỚC 1: BÁO NẾU CÓ Ô CHỌN BỊ HẠ CẤP
   # Chọn "chỉ khi mất an ninh" ở chế độ không có đánh giá an ninh là bấm
   # nhầm — nhưng im lặng không gửi gì thì người dùng tưởng automation hỏng.

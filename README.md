@@ -19,6 +19,7 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Chụp ảnh camera (Voice)](#-chụp-ảnh-camera-voice)
   - [Phân tích file / ảnh (LLM)](#-phân-tích-file--ảnh-llm)
   - [Cảnh báo người qua camera bằng AI](#-cảnh-báo-người-qua-camera-bằng-ai)
+  - [Cảnh báo camera AI 4 — cửa lọc, ảnh đôi, video](#-cảnh-báo-camera-ai-4--cửa-lọc-ảnh-đôi-video)
   - [LLM Vision Camera](#️-llm-vision-camera)
 - **Gửi tin nhắn**
   - [Gửi Telegram (Voice + xóa file)](#-gửi-telegram-voice--xóa-file)
@@ -301,6 +302,102 @@ Tự động phân tích sự kiện camera bằng AI Task khi phát hiện có 
 **Gộp Open ai và Gemini thêm phân tích động vật**
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera_3.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## 🎥 Cảnh báo camera AI 4 — cửa lọc, ảnh đôi, video
+
+Bản viết lại của blueprint trên, cho **nhà ở** — chung cư và nhà đất — chứ không phải nơi đông người qua lại. Ba thứ mới: một cửa lọc rẻ tiền chặn báo động ảo trước khi tốn công, ảnh cho AI đọc tách khỏi ảnh gửi cho bạn xem, và một nhánh video chạy song song với nhánh ảnh.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Binary sensor (kích hoạt), Camera entity, một AI Task entity |
+| **Chạy được với** | Google Gemini, OpenAI, Ollama, và mọi AI Task provider khác |
+
+### Cửa lọc một ảnh
+
+Bật lên thì mỗi lần cảm biến kêu, blueprint chụp **một** tấm bằng camera phân tích rồi hỏi AI đúng một câu: có người hay không. Không có ai thì dừng ngay — khỏi chụp tiếp, khỏi quay video, khỏi phân tích. Prompt của bước này viết cực ngắn có chủ đích, vì nó chạy cả những lần chẳng có ai.
+
+### Ảnh cho AI và ảnh gửi bạn là hai bộ riêng
+
+Đây là chỗ khác lớn nhất so với bản 3. Bạn khai hai camera:
+
+- **Camera cho AI đọc** — chọn luồng phụ, thường có đuôi `-sub`.
+- **Camera cho ảnh gửi đi** — chọn luồng chính, để ảnh nhận được thật nét.
+
+Mỗi nhịp chụp bấm **cả hai tấm cùng lúc**, rồi mới chờ hết giãn cách mới sang nhịp sau. Nhờ vậy khi AI chấm "khung số 2 rõ nhất" thì tấm nét số 2 đúng là khoảnh khắc đó.
+
+Vì sao đáng làm, đo trên máy thật với Qwen3-VL-4B:
+
+| Đưa vào AI | Token | Thời gian |
+|---|---|---|
+| 3 ảnh luồng phụ | 978 | ~1,0 giây |
+| 3 ảnh luồng chính | 8 425 | ~20 giây |
+
+Cùng cảnh đó, cùng số người nhận ra, mô tả như nhau. Ảnh nét chỉ để mắt người xem, đưa vào AI là trả giá gấp hai mươi lần mà không được gì thêm.
+
+### Sáu trường hợp gửi
+
+Ảnh, video và kết quả phân tích, mỗi thứ có ô riêng với ba lựa chọn: gửi mọi lượt, chỉ khi có người, hoặc chỉ khi mất an ninh. Kết quả phân tích không bao giờ đi một mình — nó chỉ kèm theo khi ảnh hoặc video đã được gửi, nên ba nhân ba rút xuống còn sáu tình huống thật.
+
+| # | Nguồn gửi khi | Phân tích gửi khi | Bạn nhận được gì |
+|---|---|---|---|
+| 1 | Mọi lượt | Cùng lúc | Ảnh tới ngay, chữ tới sau khi phân tích xong |
+| 2 | Mọi lượt | Khi có người | Lượt nào cũng có ảnh, phòng trống thì không kèm chữ |
+| 3 | Mọi lượt | Khi mất an ninh | Lượt nào cũng có ảnh, chỉ chuyện đáng ngờ mới kèm chữ |
+| 4 | Khi có người | Cùng lúc | Im khi không có ai; có người thì đủ cả hai |
+| 5 | Khi có người | Khi mất an ninh | Có người là thấy ảnh, chữ chỉ tới khi đáng ngờ |
+| 6 | Khi mất an ninh | Cùng lúc | Im hoàn toàn trừ lúc đáng ngờ — ít làm phiền nhất |
+
+Ba dòng có dính "mất an ninh" chỉ dùng được ở chế độ phân tích **An ninh**, vì ba chế độ kia không hỏi AI câu đáng ngờ hay không. Chọn nhầm thì blueprint tự hạ xuống "khi có người" và ghi một dòng vào nhật ký cho bạn biết, thay vì im lặng không gửi gì.
+
+### Một ảnh hoặc một video thì phân tích đi kèm luôn
+
+Telegram và Zalo cá nhân đều cho gửi ảnh hoặc video kèm chú thích, nên bạn nhận đúng **một tin** có cả hình lẫn lời. Chỉ khi gửi nhiều ảnh mới phải tách hai lần, vì dịch vụ gửi chùm không có chỗ đặt chú thích.
+
+Trần từng kênh khác nhau và blueprint đã tính sẵn: Telegram gộp tối đa 10 ảnh một chùm, Zalo cá nhân tới 50, Zalo Bot không có chùm nên mỗi tấm một tin, còn thông báo điện thoại thì mỗi tấm một thông báo.
+
+### Bấm vào thông báo là mở đúng tấm ảnh đó
+
+Đường dẫn ảnh để tương đối, nên ứng dụng tự nối với chính máy chủ đã gửi thông báo: ở nhà thì đi mạng LAN, ra ngoài thì đi tên miền. Bạn không phải khai địa chỉ nào cả.
+
+### Loa đọc câu do AI viết lại
+
+Câu hiện trên màn hình có emoji, dấu hai chấm và giờ giấc viết tắt — đọc nguyên văn ra loa nghe rất kỳ. Bật ô này thì AI viết lại thành một câu nói được: bỏ ký hiệu, đọc số thành chữ, dưới ba mươi từ. Tắt thì quay về câu ghép sẵn.
+
+### Đánh thức model ngay khi cảm biến kêu
+
+Dành cho ai chạy model tại nhà và cho nó ngủ lúc rảnh để nhường GPU. Blueprint gửi một lời gọi rỗng ngay lúc kích hoạt, chạy song song với việc chờ xác nhận, nên model nạp xong trước khi cần hỏi thật. Đo trên máy tại nhà: gọi lúc model đang ngủ mất 11,8 giây, gọi lúc đang thức mất 1,0 giây — bật ô này thì phần lớn quãng đó trôi qua trong lúc bạn còn đang chờ.
+
+### Cấu hình
+
+Mười hai mục, 63 ô. Những ô đáng để ý nhất:
+
+- **Cách xác nhận** — một ô chọn ba giá trị: không xác nhận, chờ rồi kiểm lại chính cảm biến đó, hoặc theo dõi một cảm biến khác. Chỉ một đường chạy, không cộng dồn thời gian chờ như bản cũ.
+- **Camera cho AI đọc** và **Camera cho ảnh gửi đi** — hai luồng khác nhau, xem phần trên.
+- **Phân tích cái gì** — chỉ người, chỉ động vật, cả hai, hoặc an ninh.
+- **AI Task cho cửa lọc** — để riêng được, vì bước này chỉ hỏi một câu nên giao cho model nhỏ, kể cả khi phần phân tích đầy đủ giao cho model lớn ngoài mạng.
+- **Thời lượng video** và **lấy thêm mấy giây trước lúc kích hoạt** — Home Assistant giữ sẵn một đoạn đệm nên lấy ngược lại được cả khoảnh khắc người ta vừa bước vào khung hình.
+
+### Yêu cầu cấu hình
+
+Thêm vào `configuration.yaml` để Home Assistant nhận đúng thư mục media:
+
+```yaml
+homeassistant:
+  media_dirs:
+    local: /media
+```
+
+Thiếu dòng này thì AI Task và thông báo điện thoại không đọc được ảnh.
+
+Nhánh video muốn cho AI đọc thẳng tệp mp4 thì phải dùng provider đọc được video, hiện là Google Gemini. Model chạy tại nhà qua Ollama hay llama.cpp chỉ nhận ảnh tĩnh, nên với chúng hãy để video ở chế độ chỉ gửi kèm — đó cũng là mặc định.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera_4.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
