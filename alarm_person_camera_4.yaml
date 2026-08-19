@@ -132,6 +132,20 @@ blueprint:
                   value: cam_bien_khac
               multiple: false
 
+        danh_thuc_som:
+          name: 🔑 Đánh thức model ngay khi cảm biến kêu
+          description: |
+            👉 BẬT: gửi một lời gọi rỗng cho AI ngay lúc kích hoạt, để model nạp lên GPU trong lúc
+            blueprint còn đang xác nhận và chụp ảnh. Giống hệt Idling Stop trên xe tay ga — vặn ga
+            là nổ lại, không đợi tới lúc cần mới khởi động.
+            ⚠️ Chỉ có ích khi model đặt chế độ ngủ khi rảnh. Đo trên máy tại nhà: model ngủ rồi gọi
+            mất 11,8 giây, model đang thức chỉ mất 1,0 giây. Bật ô này thì phần lớn 11 giây đó
+            trôi qua trong lúc bạn còn đang chờ xác nhận, nên không cảm thấy.
+            👉 TẮT nếu model của bạn luôn thức, hoặc dùng dịch vụ ngoài mạng tính tiền theo lượt gọi.
+          default: true
+          selector:
+            boolean: {}
+
         thoi_gian_kiem_lai:
           name: ⏱️ Chờ bao lâu rồi kiểm lại
           description: |
@@ -237,17 +251,6 @@ blueprint:
               step: 0.5
               unit_of_measurement: seconds
               mode: slider
-
-        cua_loc_chan_video:
-          name: 🚧 Cửa lọc chặn luôn cả video
-          description: |
-            👉 BẬT: không có người thì khỏi quay video. Tiết kiệm nhất.
-            👉 TẮT: video quay ngay từ đầu, giữ được cả những giây trong lúc cửa lọc đang chạy —
-            thường đúng lúc người ta vừa bước vào khung hình.
-            ⚠️ Chỉ có tác dụng khi cửa lọc đang bật.
-          default: true
-          selector:
-            boolean: {}
 
         ghi_de_anh:
           name: 🏞️ Ghi đè ảnh cũ
@@ -908,6 +911,7 @@ variables:
   trigger_sensor: !input trigger_sensor
   trigger_to_state: !input trigger_to_state
   che_do_xac_nhan: !input che_do_xac_nhan
+  danh_thuc_som: !input danh_thuc_som
   thoi_gian_kiem_lai: !input thoi_gian_kiem_lai
   cam_bien_nguoi: !input cam_bien_nguoi
   trang_thai_co_nguoi: !input trang_thai_co_nguoi
@@ -917,7 +921,6 @@ variables:
   # --- Cửa lọc ---
   bat_cua_loc: !input bat_cua_loc
   cho_truoc_khi_chup: !input cho_truoc_khi_chup
-  cua_loc_chan_video: !input cua_loc_chan_video
   ghi_de_anh: !input ghi_de_anh
 
   # --- Nhánh ảnh ---
@@ -986,9 +989,6 @@ variables:
   da_ha_cap: >
     {{ bat_ai and not co_danh_gia_an_ninh
        and 'an_ninh' in [anh_gui_khi_raw, video_gui_khi_raw, phan_tich_gui_khi_raw] }}
-
-  # Video quay trước hay quay sau cửa lọc.
-  video_cho_cua_loc: "{{ bat_cua_loc and cua_loc_chan_video }}"
 
   # ============================================================
   # PROMPT CỬA LỌC
@@ -1355,61 +1355,90 @@ condition:
 action:
 
   # ============================================================
-  # BƯỚC 0: XÁC NHẬN SAU KHI KÍCH HOẠT
-  # Một ô chọn, nên chỉ một đường chạy. Bản trước để hai công tắc rời nên
-  # bật cả hai là chúng chạy nối đuôi nhau, cộng dồn thời gian chờ.
+  # BƯỚC 0: ĐÁNH THỨC MODEL, SONG SONG VỚI VIỆC CHỜ XÁC NHẬN
+  #
+  # Model đặt chế độ ngủ khi rảnh thì nó trả VRAM lại cho card, và lời gọi đầu
+  # tiên phải nạp lại 4,4 GB — đo trên máy tại nhà mất 11,8 giây, trong khi
+  # model đang thức chỉ mất 1,0 giây. Gửi một lời gọi rỗng ngay lúc cảm biến
+  # kêu thì 11 giây đó chạy song song với việc chờ xác nhận và chụp ảnh, nên
+  # đến lúc cửa lọc cần hỏi thật thì model đã sẵn sàng.
+  #
+  # Phần CHỜ nằm trong parallel, phần KIỂM ĐIỀU KIỆN nằm ngoài. Bắt buộc phải
+  # tách như vậy: một điều kiện sai bên trong parallel chỉ dừng đúng nhánh đó,
+  # automation vẫn chạy tiếp — nên nếu để nguyên khối thì lần xác nhận trượt
+  # sẽ không chặn được gì.
   # ============================================================
-  - choose:
-      - alias: "Chờ rồi kiểm lại chính cảm biến đó"
-        conditions:
-          - condition: template
-            value_template: "{{ che_do_xac_nhan == 'kiem_lai' }}"
-        sequence:
-          - delay:
-              seconds: "{{ thoi_gian_kiem_lai }}"
-
-          # Chạy tay thì không có đối tượng trigger, khi đó cho đi tiếp.
-          - condition: template
-            value_template: >
-              {{ trigger is not defined
-                 or trigger.entity_id is not defined
-                 or is_state(trigger.entity_id, trigger_to_state) }}
-
-          - condition: and
-            conditions: !input run_conditions
-
-      - alias: "Theo dõi một cảm biến khác"
-        conditions:
-          - condition: template
-            value_template: >
-              {{ che_do_xac_nhan == 'cam_bien_khac' and cam_bien_nguoi | length > 0 }}
+  - parallel:
+      - alias: "Đánh thức model"
         sequence:
           - if:
               - condition: template
-                value_template: "{{ is_state(cam_bien_nguoi, trang_thai_co_nguoi) }}"
-            then: []
-            else:
-              - choose:
-                  - conditions:
+                value_template: "{{ danh_thuc_som and bat_ai }}"
+            then:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Danh thuc model
+                  instructions: "Reply with the single word: ok"
+                  entity_id: >
+                    {% if ai_provider_loc | length > 0 %}{{ ai_provider_loc }}
+                    {%- elif ai_provider | length > 0 %}{{ ai_provider }}
+                    {%- else %}{{ omit }}{% endif %}
+
+      - alias: "Chờ theo cách xác nhận đã chọn"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ che_do_xac_nhan == 'kiem_lai' }}"
+                sequence:
+                  - delay:
+                      seconds: "{{ thoi_gian_kiem_lai }}"
+
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ che_do_xac_nhan == 'cam_bien_khac' and cam_bien_nguoi | length > 0 }}
+                sequence:
+                  - if:
                       - condition: template
-                        value_template: "{{ cho_toi_da | int(0) == 0 }}"
-                    sequence:
-                      - wait_for_trigger:
-                          - platform: state
-                            entity_id: !input cam_bien_nguoi
-                            to: !input trang_thai_co_nguoi
-                        continue_on_timeout: true
-                  - conditions:
-                      - condition: template
-                        value_template: "{{ cho_toi_da | int(0) > 0 }}"
-                    sequence:
-                      - wait_for_trigger:
-                          - platform: state
-                            entity_id: !input cam_bien_nguoi
-                            to: !input trang_thai_co_nguoi
-                        timeout:
-                          seconds: "{{ cho_toi_da }}"
-                        continue_on_timeout: true
+                        value_template: "{{ is_state(cam_bien_nguoi, trang_thai_co_nguoi) }}"
+                    then: []
+                    else:
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ cho_toi_da | int(0) == 0 }}"
+                            sequence:
+                              - wait_for_trigger:
+                                  - platform: state
+                                    entity_id: !input cam_bien_nguoi
+                                    to: !input trang_thai_co_nguoi
+                                continue_on_timeout: true
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ cho_toi_da | int(0) > 0 }}"
+                            sequence:
+                              - wait_for_trigger:
+                                  - platform: state
+                                    entity_id: !input cam_bien_nguoi
+                                    to: !input trang_thai_co_nguoi
+                                timeout:
+                                  seconds: "{{ cho_toi_da }}"
+                                continue_on_timeout: true
+
+  # Chờ xong mới kiểm. Chạy tay thì không có đối tượng trigger, khi đó cho đi tiếp.
+  - if:
+      - condition: template
+        value_template: "{{ che_do_xac_nhan == 'kiem_lai' }}"
+    then:
+      - condition: template
+        value_template: >
+          {{ trigger is not defined
+             or trigger.entity_id is not defined
+             or is_state(trigger.entity_id, trigger_to_state) }}
+      - condition: and
+        conditions: !input run_conditions
 
   # ============================================================
   # BƯỚC 1: BÁO NẾU CÓ Ô CHỌN BỊ HẠ CẤP
@@ -1438,26 +1467,7 @@ action:
         {% if ghi_de_anh %}{{ ten_file }}{% else %}{{ ten_file }}_{{ context.id }}{% endif %}
 
   # ============================================================
-  # BƯỚC 3: QUAY VIDEO SỚM (khi cửa lọc không chặn video)
-  # Quay chạy nền để cửa lọc và việc chụp ảnh không phải đứng đợi hết đoạn
-  # video. Giữ được cả những giây người ta vừa bước vào khung hình.
-  # ============================================================
-  - if:
-      - condition: template
-        value_template: "{{ bat_nhanh_video and not video_cho_cua_loc and camera_video | length > 0 }}"
-    then:
-      - alias: "Quay video ngay, không đợi cửa lọc"
-        continue_on_error: true
-        action: camera.record
-        data:
-          filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
-          duration: "{{ thoi_luong_video }}"
-          lookback: "{{ lay_truoc_video }}"
-        target:
-          entity_id: "{{ camera_video }}"
-
-  # ============================================================
-  # BƯỚC 4: CHỜ RỒI CHỤP ẢNH CHO CỬA LỌC
+  # BƯỚC 3: CHỜ RỒI CHỤP ẢNH CHO CỬA LỌC
   # Đúng một ảnh, bằng camera phân tích. Cửa lọc chỉ cần biết có ai hay không.
   # ============================================================
   - delay:
@@ -1482,7 +1492,7 @@ action:
              'media_content_type': 'image/jpeg'}] }}
 
   # ============================================================
-  # BƯỚC 5: CỬA LỌC — HỎI AI ĐÚNG MỘT CÂU
+  # BƯỚC 4: CỬA LỌC — HỎI AI ĐÚNG MỘT CÂU
   # Chỉ chạy khi đợt 1 đúng một ảnh. Prompt ngắn là có chủ đích: bước này
   # chạy cả những lần chẳng có ai, nên mọi chữ thừa đều là thời gian đổ đi.
   # ============================================================
@@ -1557,66 +1567,70 @@ action:
         value_template: "{{ ket_qua_loc is not defined or ket_qua_loc }}"
 
   # ============================================================
-  # BƯỚC 6: QUAY VIDEO SAU CỬA LỌC
-  # ============================================================
-  - if:
-      - condition: template
-        value_template: "{{ bat_nhanh_video and video_cho_cua_loc and camera_video | length > 0 }}"
-    then:
-      - alias: "Quay video sau khi cửa lọc thấy có người"
-        continue_on_error: true
-        action: camera.record
-        data:
-          filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
-          duration: "{{ thoi_luong_video }}"
-          lookback: "{{ lay_truoc_video }}"
-        target:
-          entity_id: "{{ camera_video }}"
-
-  # ============================================================
-  # BƯỚC 7: CHỤP ĐỢT ẢNH CHÍNH
+  # BƯỚC 5: QUAY VIDEO VÀ CHỤP ĐỢT ẢNH CHÍNH, CÙNG LÚC
   #
-  # Chụp theo CẶP: mỗi nhịp lấy một tấm bằng camera phân tích cho AI đọc, và
-  # một tấm bằng camera gửi để bạn xem. Hai tấm cùng một thời điểm nên khi AI
-  # chấm "khung số 2 rõ nhất" thì tấm nét số 2 chính là cảnh đó. Khai một
-  # camera thôi thì chỉ chụp một tấm mỗi nhịp và dùng chung.
+  # camera.record chặn luồng cho tới khi quay xong, nên để nối tiếp thì nhánh
+  # ảnh phải đứng đợi hết đoạn video mới được chụp — mười giây trôi qua và người
+  # trong khung đã đi mất. Hai nhánh chạy song song thì ảnh vẫn đúng khoảnh khắc.
+  #
+  # Không quay trước cửa lọc nữa: tham số lookback đã lấy ngược lại được mấy
+  # giây TRƯỚC lúc cảm biến kêu, nên khoảnh khắc người ta vừa bước vào khung
+  # vẫn nằm trong đoạn video, mà lượt nào không có ai thì khỏi quay phí.
   # ============================================================
-  - if:
-      - condition: template
-        value_template: "{{ bat_nhanh_anh }}"
-    then:
-      - repeat:
-          count: "{{ so_anh }}"
-          sequence:
-            # Hai tấm phải bấm CÙNG LÚC, không nối tiếp. Chụp nối tiếp thì tấm
-            # nét trễ hơn tấm AI vài trăm mili giây, đủ để người trong khung đã
-            # bước sang chỗ khác — lúc đó tấm AI chấm là rõ nhất lại không khớp
-            # với tấm bạn nhận được.
-            - parallel:
-                - alias: "Tấm cho AI đọc"
-                  continue_on_error: true
-                  action: camera.snapshot
-                  data:
-                    filename: "/media/snapshots/{{ duong_dan }}_ai{{ repeat.index }}.jpg"
-                  target:
-                    entity_id: "{{ camera_phan_tich }}"
-                - if:
-                    - condition: template
-                      value_template: "{{ chup_hai_bo }}"
-                  then:
-                    - alias: "Tấm nét để gửi"
-                      continue_on_error: true
-                      action: camera.snapshot
-                      data:
-                        filename: "/media/snapshots/{{ duong_dan }}_gui{{ repeat.index }}.jpg"
-                      target:
-                        entity_id: "{{ camera_gui }}"
-            - if:
-                - condition: template
-                  value_template: "{{ repeat.index < so_anh | int(1) }}"
-              then:
-                - delay:
-                    seconds: "{{ gian_cach_anh }}"
+  - parallel:
+      - alias: "Quay video"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ bat_nhanh_video and camera_video | length > 0 }}"
+            then:
+              - continue_on_error: true
+                action: camera.record
+                data:
+                  filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
+                  duration: "{{ thoi_luong_video }}"
+                  lookback: "{{ lay_truoc_video }}"
+                target:
+                  entity_id: "{{ camera_video }}"
+
+      - alias: "Chụp đợt ảnh chính"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ bat_nhanh_anh }}"
+            then:
+              - repeat:
+                  count: "{{ so_anh }}"
+                  sequence:
+                    # Hai tấm của mỗi nhịp bấm CÙNG LÚC, không nối tiếp. Chụp nối
+                    # tiếp thì tấm nét trễ hơn tấm AI vài trăm mili giây, đủ để
+                    # người trong khung bước sang chỗ khác, và tấm AI chấm là rõ
+                    # nhất lại không khớp với tấm bạn nhận được.
+                    - parallel:
+                        - alias: "Tấm cho AI đọc"
+                          continue_on_error: true
+                          action: camera.snapshot
+                          data:
+                            filename: "/media/snapshots/{{ duong_dan }}_ai{{ repeat.index }}.jpg"
+                          target:
+                            entity_id: "{{ camera_phan_tich }}"
+                        - if:
+                            - condition: template
+                              value_template: "{{ chup_hai_bo }}"
+                          then:
+                            - alias: "Tấm nét để gửi"
+                              continue_on_error: true
+                              action: camera.snapshot
+                              data:
+                                filename: "/media/snapshots/{{ duong_dan }}_gui{{ repeat.index }}.jpg"
+                              target:
+                                entity_id: "{{ camera_gui }}"
+                    - if:
+                        - condition: template
+                          value_template: "{{ repeat.index < so_anh | int(1) }}"
+                      then:
+                        - delay:
+                            seconds: "{{ gian_cach_anh }}"
 
   - variables:
       so_anh_that: "{{ so_anh | int(3) }}"
@@ -1653,7 +1667,7 @@ action:
       anh_comma: "{{ duong_dan_anh | join(',') }}"
 
   # ============================================================
-  # BƯỚC 8: GỬI SỚM — CHỈ NHỮNG THỨ ĐẶT "GỬI MỌI LƯỢT"
+  # BƯỚC 6: GỬI SỚM — CHỈ NHỮNG THỨ ĐẶT "GỬI MỌI LƯỢT"
   # Đi trước khi AI chạy, nên chú thích ở đây là câu bạn tự đặt, chưa có
   # kết quả phân tích nào để kèm. Một ảnh thì lấy tấm đầu, vì chưa ai nói
   # được tấm nào rõ nhất.
@@ -1944,7 +1958,7 @@ action:
                   tag: "{{ tag }}_video"
 
   # ============================================================
-  # BƯỚC 9: PHÂN TÍCH AI
+  # BƯỚC 7: PHÂN TÍCH AI
   # ============================================================
   - variables:
       # Bật video cho AI đọc thì đưa tệp video, ngược lại đưa chuỗi ảnh.
@@ -2115,7 +2129,7 @@ action:
                     {% endif %}
 
   # ============================================================
-  # BƯỚC 10: ĐỌC KẾT QUẢ, QUYẾT ĐỊNH GỬI GÌ
+  # BƯỚC 8: ĐỌC KẾT QUẢ, QUYẾT ĐỊNH GỬI GÌ
   # ============================================================
   - variables:
       kq: "{{ ket_qua_ai.data if ket_qua_ai is defined and ket_qua_ai.data is defined else {} }}"
@@ -2176,7 +2190,7 @@ action:
       anh_chon_media: "{{ duong_dan_anh_media[khung_chon | int(1) - 1] }}"
 
   # ============================================================
-  # BƯỚC 11: DỰNG CÂU THÔNG BÁO
+  # BƯỚC 9: DỰNG CÂU THÔNG BÁO
   # ============================================================
   - variables:
       loi_nhan: >-
@@ -2218,7 +2232,7 @@ action:
       can_tin_chu_rieng: "{{ gui_phan_tich and not gop_vao_anh and not gop_vao_video }}"
 
   # ============================================================
-  # BƯỚC 12: GỬI MUỘN — ẢNH, VIDEO, VÀ PHÂN TÍCH
+  # BƯỚC 10: GỬI MUỘN — ẢNH, VIDEO, VÀ PHÂN TÍCH
   # ============================================================
 
   # --- Telegram: ảnh muộn ---
@@ -2555,7 +2569,7 @@ action:
                   {% endif %}
 
   # ============================================================
-  # BƯỚC 13: ĐỌC RA LOA
+  # BƯỚC 11: ĐỌC RA LOA
   # Câu gửi lên màn hình có emoji, dấu hai chấm và giờ giấc viết tắt — đọc
   # nguyên văn ra loa nghe rất kỳ. Nên loa dùng một câu riêng.
   # ============================================================
