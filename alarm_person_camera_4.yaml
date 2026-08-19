@@ -1,0 +1,2635 @@
+blueprint:
+  name: Cảnh báo camera AI 4
+  author: TriTue2011
+  homeassistant:
+    min_version: 2026.3.0
+  description: >
+    Phân tích sự kiện camera bằng AI Task. Có cửa lọc một ảnh để loại báo động ảo,
+    hai nhánh ảnh và video chạy song song, và ba đường gửi riêng cho ảnh, video,
+    kết quả phân tích. Gửi qua điện thoại, Telegram, Zalo và TTS ra loa.
+
+    <details>
+    <summary><b>Chi tiết:</b> - Nhấn để mở rộng</summary>
+
+      **Phiên bản: v.2026.08.19**
+
+      **Khác gì bản 3:**
+
+        1- **Xác nhận sau trigger thành một ô chọn.** Bản 3 có hai công tắc rời
+        (Trigger Confirmation và Wait for Person) bật cùng lúc được, chạy nối
+        đuôi nhau. Bản này gộp thành một ô chọn ba giá trị nên chỉ một đường
+        chạy, hoặc không đường nào.
+
+        2- **Cửa lọc một ảnh.** Chụp một ảnh hỏi AI đúng một câu có người hay
+        không rồi mới quyết định làm tiếp. Prompt lọc viết cực ngắn để chạy
+        nhanh trên model tại nhà. Đặt số ảnh đợt 1 từ 2 trở lên là tắt cửa lọc
+        và dùng luôn bộ ảnh đó để phân tích.
+
+        3- **Nhánh video.** Quay video kèm lookback, chọn được camera riêng,
+        thời lượng riêng. Bật cùng lúc với nhánh ảnh được.
+
+        4- **Ba đường gửi cho từng thứ.** Ảnh, video và kết quả phân tích mỗi
+        thứ có ô riêng: gửi mọi lượt, chỉ khi có người, hoặc chỉ khi mất an
+        ninh. Kết quả phân tích không đi một mình — nó chỉ kèm theo khi ảnh
+        hoặc video đã được gửi.
+
+        5- **Prompt viết lại cho model nhỏ.** Nói rõ các ảnh là khung liên tiếp
+        của cùng một cảnh và cùng một người xuất hiện lại ở khung sau không
+        phải người mới. Model được hỏi thêm khung nào rõ nhất, để blueprint
+        chọn đúng ảnh đó khi bạn chỉ muốn gửi một tấm.
+
+      **Chạy được với:** Google Gemini, OpenAI, Ollama, và mọi AI Task provider
+      khác trong Home Assistant. Nhánh video chỉ phân tích được bằng provider
+      đọc được tệp mp4 (Gemini); model chạy tại nhà thì để video ở chế độ chỉ
+      gửi kèm.
+
+    </details>
+
+    <details>
+    <summary><b>⚙️ Yêu cầu cấu hình:</b> - Nhấn để mở rộng</summary>
+
+      **Thêm vào `configuration.yaml` để HA nhận diện đúng thư mục media:**
+
+      ```yaml
+      homeassistant:
+        media_dirs:
+          local: /media
+      ```
+
+      ⚠️ Thiếu dòng này thì AI Task và thông báo điện thoại không đọc được ảnh.
+
+    </details>
+
+  domain: automation
+  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/alarm_person_camera_4.yaml
+
+  input:
+
+    # ============================================================
+    # TRIGGER
+    # ============================================================
+    trigger_section:
+      name: 1 · Cảm biến kích hoạt
+      icon: mdi:play-circle
+      collapsed: true
+      input:
+        trigger_sensor:
+          name: 🚶 Cảm biến kích hoạt
+          description: |
+            👉 Cảm biến làm automation chạy (cửa, chuyển động).
+            ✅ Chọn được nhiều cảm biến cùng lúc.
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+              multiple: true
+
+        trigger_from_state:
+          name: 🔄 Từ trạng thái
+          description: Trạng thái trước khi kích hoạt.
+          default: "off"
+          selector:
+            select:
+              options: ["off", "on"]
+              custom_value: true
+              multiple: false
+
+        trigger_to_state:
+          name: 🔄 Sang trạng thái
+          description: Trạng thái làm automation chạy.
+          default: "on"
+          selector:
+            select:
+              options: ["on", "off"]
+              custom_value: true
+              multiple: false
+
+    # ============================================================
+    # XÁC NHẬN SAU TRIGGER — MỘT Ô CHỌN, KHÔNG PHẢI HAI CÔNG TẮC
+    # ============================================================
+    confirm_section:
+      name: 2 · Xác nhận sau khi kích hoạt
+      icon: mdi:check-decagram
+      collapsed: true
+      input:
+        che_do_xac_nhan:
+          name: ✅ Cách xác nhận
+          description: |
+            👉 Chọn MỘT cách xác nhận trước khi tốn công chụp ảnh.
+            ✅ Không xác nhận: chạy thẳng, nhanh nhất.
+            ✅ Chờ rồi kiểm lại: lọc được cảm biến rung, chớp nhanh, chuyển động thoáng qua.
+            ✅ Theo dõi cảm biến khác: chờ một cảm biến khác báo có người, hợp với mmWave.
+            ⚠️ Hai cách sau loại trừ nhau, không chạy cùng lúc được.
+          default: khong
+          selector:
+            select:
+              options:
+                - label: Không xác nhận, chạy thẳng
+                  value: khong
+                - label: Chờ một lúc rồi kiểm lại chính cảm biến đó
+                  value: kiem_lai
+                - label: Theo dõi một cảm biến khác
+                  value: cam_bien_khac
+              multiple: false
+
+        thoi_gian_kiem_lai:
+          name: ⏱️ Chờ bao lâu rồi kiểm lại
+          description: |
+            👉 Số giây chờ trước khi kiểm tra lại cảm biến và toàn bộ Điều kiện chạy.
+            ⚠️ Chỉ dùng khi chọn cách "Chờ một lúc rồi kiểm lại".
+            ✅ 0 giây nghĩa là kiểm lại ngay.
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: box
+
+        cam_bien_nguoi:
+          name: 🧍 Cảm biến khác để theo dõi
+          description: |
+            👉 Cảm biến phát hiện người, ví dụ mmWave hoặc vùng PIR.
+            ⚠️ Chỉ dùng khi chọn cách "Theo dõi một cảm biến khác".
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+              multiple: false
+
+        trang_thai_co_nguoi:
+          name: 🔎 Trạng thái nghĩa là có người
+          description: Trạng thái của cảm biến đó khi thấy người.
+          default: "on"
+          selector:
+            select:
+              options: ["on", "off"]
+              custom_value: true
+              multiple: false
+
+        cho_toi_da:
+          name: ⌛ Chờ cảm biến khác tối đa
+          description: |
+            👉 Số giây chờ tối đa. Hết giờ mà cảm biến chưa báo thì vẫn chạy tiếp.
+            ⚠️ Đặt 0 là chờ không giới hạn — automation sẽ nằm chờ cho tới khi có người.
+          default: 30
+          selector:
+            number:
+              min: 0
+              max: 3600
+              unit_of_measurement: seconds
+              mode: box
+              step: 1
+
+    # ============================================================
+    # ĐIỀU KIỆN CHẠY
+    # ============================================================
+    run_conditions:
+      name: 🛠️ Điều kiện chạy
+      description: |
+        👉 Điều kiện phải đúng thì automation mới chạy.
+        ⚠️ Cách xác nhận "Chờ rồi kiểm lại" sẽ kiểm tra lại toàn bộ các điều kiện này lần nữa.
+      default: []
+      selector:
+        condition: {}
+
+    cooldown:
+      name: ⏱️ Nghỉ giữa hai lần chạy
+      description: |
+        👉 Chạy xong thì nghỉ bao lâu mới cho chạy lại.
+        ✅ Tránh dội thông báo khi cảm biến kêu liên tục.
+      default:
+        minutes: 10
+      selector:
+        duration: {}
+
+    # ============================================================
+    # CỬA LỌC — ĐỢT ẢNH ĐẦU TIÊN
+    # ============================================================
+    loc_section:
+      name: 3 · Cửa lọc một ảnh
+      icon: mdi:filter-check
+      collapsed: true
+      input:
+        bat_cua_loc:
+          name: ✅ Bật cửa lọc
+          description: |
+            👉 BẬT: chụp MỘT ảnh bằng camera phân tích rồi hỏi AI đúng một câu có người hay không.
+            Không có ai thì dừng, khỏi tốn công chụp tiếp, quay video và phân tích.
+            👉 TẮT: chạy thẳng xuống chụp ảnh và phân tích.
+            ✅ Đây là chỗ tiết kiệm nhiều nhất khi cảm biến hay báo động ảo.
+          default: true
+          selector:
+            boolean: {}
+
+        cho_truoc_khi_chup:
+          name: ⌛ Chờ trước khi chụp tấm đầu
+          description: |
+            👉 Số giây chờ sau khi kích hoạt rồi mới chụp.
+            ✅ Cho người kịp bước vào khung hình, và cho camera kịp lấy nét.
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 10
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: slider
+
+        cua_loc_chan_video:
+          name: 🚧 Cửa lọc chặn luôn cả video
+          description: |
+            👉 BẬT: không có người thì khỏi quay video. Tiết kiệm nhất.
+            👉 TẮT: video quay ngay từ đầu, giữ được cả những giây trong lúc cửa lọc đang chạy —
+            thường đúng lúc người ta vừa bước vào khung hình.
+            ⚠️ Chỉ có tác dụng khi cửa lọc đang bật.
+          default: true
+          selector:
+            boolean: {}
+
+        ghi_de_anh:
+          name: 🏞️ Ghi đè ảnh cũ
+          description: |
+            👉 BẬT để ảnh mới ghi đè ảnh cũ, tiết kiệm ổ đĩa.
+            ⚠️ TẮT thì mỗi lần chạy lưu một bộ ảnh riêng, đầy ổ rất nhanh.
+            ✅ Ảnh luôn nằm trong /media/snapshots/.
+          default: true
+          selector:
+            boolean: {}
+    # ============================================================
+    # NHÁNH ẢNH — ĐỢT 2
+    # ============================================================
+    anh_section:
+      name: 4 · Nhánh ảnh
+      icon: mdi:camera-burst
+      collapsed: true
+      input:
+        bat_nhanh_anh:
+          name: ✅ Bật nhánh ảnh
+          description: |
+            👉 BẬT để chụp một đợt ảnh sau khi cửa lọc thấy có người.
+            ⚠️ Tắt cả nhánh ảnh lẫn nhánh video thì automation không có gì để gửi.
+          default: true
+          selector:
+            boolean: {}
+
+        camera_phan_tich:
+          name: 🔍 Camera cho AI đọc
+          description: |
+            👉 Camera chụp những tấm ĐƯA VÀO AI, và cũng là camera dùng cho cửa lọc.
+            ✅ Nên chọn luồng phụ, thường có đuôi -sub. Đo trên máy thật: ba ảnh luồng chính tốn
+            8425 token và 20,7 giây, cùng cảnh đó ba ảnh luồng phụ chỉ tốn 925 token và 4,3 giây,
+            mà AI nhận ra đúng từng ấy người với mô tả như nhau.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+
+        camera_gui:
+          name: 🖼️ Camera cho ảnh gửi đi
+          description: |
+            👉 Camera chụp những tấm GỬI CHO BẠN XEM.
+            ✅ Chọn luồng chính ở đây để ảnh nhận được thật nét, trong khi AI vẫn đọc bản nhẹ.
+            ✅ Bỏ trống là dùng lại camera ở trên, khi đó mỗi lần chỉ chụp một tấm.
+            ⚠️ Hai tấm của mỗi nhịp được bấm CÙNG LÚC chứ không nối tiếp, nên tấm AI chấm là
+            rõ nhất luôn khớp đúng khoảnh khắc với tấm nét gửi cho bạn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+
+        so_anh:
+          name: ⌛ Số ảnh
+          description: |
+            👉 Chụp mấy tấm liên tiếp để AI so sánh.
+            ✅ Ba tấm là đủ thấy người đó đang đi vào hay đi ra.
+          default: 3
+          selector:
+            number:
+              min: 1
+              max: 5
+              step: 1
+              unit_of_measurement: ảnh
+              mode: slider
+
+        gian_cach_anh:
+          name: ⌛ Giãn cách giữa các ảnh
+          description: |
+            👉 Số giây giữa hai tấm.
+            ⚠️ Quá ngắn thì ba tấm gần như giống hệt nhau, AI không thấy được chuyển động.
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 10
+              step: 0.5
+              unit_of_measurement: seconds
+              mode: slider
+
+        anh_gui_khi:
+          name: 📤 Gửi ảnh khi nào
+          description: |
+            👉 Gửi mọi lượt: ảnh đi ngay sau khi chụp, không đợi AI. Nhanh nhất.
+            👉 Chỉ khi có người: đợi AI xong, có người mới gửi.
+            👉 Chỉ khi mất an ninh: đợi AI xong, đáng ngờ mới gửi.
+            ⚠️ Đường mất an ninh cần chế độ phân tích An ninh. Chọn chế độ khác thì blueprint
+            tự hạ xuống thành "chỉ khi có người" và ghi một dòng vào nhật ký cho bạn biết.
+          default: ngay
+          selector:
+            select:
+              options:
+                - label: Gửi mọi lượt, không đợi AI
+                  value: ngay
+                - label: Chỉ khi có người
+                  value: co_nguoi
+                - label: Chỉ khi mất an ninh
+                  value: an_ninh
+              multiple: false
+
+        anh_gui_may_tam:
+          name: 🖼️ Gửi mấy tấm
+          description: |
+            👉 Một tấm: gửi tấm mà AI nói là thấy rõ nhất. Nếu gửi ngay không đợi AI thì lấy tấm đầu.
+            👉 Tất cả: gửi hết cả đợt.
+            ⚠️ Mỗi kênh có trần riêng — Telegram gộp tối đa 10 ảnh một chùm, Zalo cá nhân 50 ảnh,
+            còn Zalo Bot và thông báo điện thoại thì mỗi ảnh là một tin riêng.
+          default: mot
+          selector:
+            select:
+              options:
+                - label: Một tấm, chọn tấm rõ nhất
+                  value: mot
+                - label: Tất cả ảnh đã chụp
+                  value: tat_ca
+              multiple: false
+
+    # ============================================================
+    # NHÁNH VIDEO
+    # ============================================================
+    video_section:
+      name: 5 · Nhánh video
+      icon: mdi:video
+      collapsed: true
+      input:
+        bat_nhanh_video:
+          name: ✅ Bật nhánh video
+          description: |
+            👉 BẬT để quay một đoạn video song song với nhánh ảnh.
+            ✅ Bật cả hai nhánh thì ảnh tới trước cho bạn xem ngay, video tới sau.
+            ⚠️ Camera phải có luồng chạy được (tích hợp stream), nếu không thì việc quay sẽ hỏng.
+          default: false
+          selector:
+            boolean: {}
+
+        camera_video:
+          name: 🎥 Camera quay video
+          description: |
+            👉 Camera dùng để quay.
+            ✅ Bỏ trống là dùng lại camera của nhánh ảnh.
+            ✅ Chọn luồng chính cho video xem lại cho rõ, hoặc luồng phụ cho tệp nhẹ gửi nhanh.
+          default: []
+          selector:
+            entity:
+              multiple: false
+              filter:
+                - domain: camera
+
+        thoi_luong_video:
+          name: ⏱️ Quay bao nhiêu giây
+          description: |
+            👉 Độ dài đoạn quay.
+            ⚠️ Home Assistant coi con số này là ước lượng, độ dài thật xê dịch đôi chút nhưng
+            xê dịch đều nhau ở cùng một camera.
+          default: 10
+          selector:
+            number:
+              min: 3
+              max: 60
+              step: 1
+              unit_of_measurement: seconds
+              mode: slider
+
+        lay_truoc_video:
+          name: ⏪ Lấy thêm mấy giây TRƯỚC lúc kích hoạt
+          description: |
+            👉 Home Assistant giữ sẵn một đoạn đệm của luồng đang chạy, nên lấy ngược lại được
+            cả khoảnh khắc trước khi cảm biến kêu.
+            ✅ Đây là cách duy nhất thấy được người ta lúc mới bước vào khung hình.
+            ⚠️ Chỉ chạy khi camera đang có luồng HLS hoạt động. Đặt 0 để tắt.
+          default: 5
+          selector:
+            number:
+              min: 0
+              max: 30
+              step: 1
+              unit_of_measurement: seconds
+              mode: slider
+
+        video_gui_khi:
+          name: 📤 Gửi video khi nào
+          description: |
+            👉 Ba đường giống hệt nhánh ảnh, nhưng đặt riêng.
+            ✅ Kiểu dùng hay gặp: ảnh gửi mọi lượt cho nhanh, video chỉ gửi khi thật sự đáng ngờ.
+            ⚠️ Video luôn tới sau ảnh vì phải quay xong mới gửi được.
+          default: an_ninh
+          selector:
+            select:
+              options:
+                - label: Gửi mọi lượt, không đợi AI
+                  value: ngay
+                - label: Chỉ khi có người
+                  value: co_nguoi
+                - label: Chỉ khi mất an ninh
+                  value: an_ninh
+              multiple: false
+
+        video_dua_vao_ai:
+          name: 🧠 Đưa video cho AI đọc
+          description: |
+            👉 BẬT: AI đọc thẳng tệp video, thấy được chuyển động liên tục.
+            ⚠️ Chỉ provider đọc được tệp mp4 mới làm nổi, hiện là Google Gemini. Model chạy tại
+            nhà qua Ollama hay llama.cpp chỉ nhận ảnh tĩnh — bật ô này với chúng là hỏng cả lượt.
+            👉 TẮT: video chỉ để gửi cho bạn xem, phần phân tích vẫn dựa vào ảnh. Đây là mặc định
+            và là cách chạy được với mọi provider.
+          default: false
+          selector:
+            boolean: {}
+
+    # ============================================================
+    # PHÂN TÍCH AI
+    # ============================================================
+    ai_section:
+      name: 6 · Phân tích AI
+      icon: mdi:brain
+      collapsed: true
+      input:
+        bat_ai:
+          name: ✅ Bật phân tích AI
+          description: |
+            👉 TẮT thì automation gửi ảnh ngay khi có chuyển động, không phân tích gì cả.
+            ⚠️ Tắt AI thì ba đường "chỉ khi có người" và "chỉ khi mất an ninh" mất chỗ dựa,
+            nên mọi thứ đều gửi như đường "gửi mọi lượt".
+          default: true
+          selector:
+            boolean: {}
+
+        che_do_ket_qua:
+          name: 🤖 Kiểu kết quả
+          description: |
+            ✅ Có cấu trúc: dùng đường sẵn có của Home Assistant, chắc chắn hơn. Nên chọn cái này.
+            ✅ JSON: dành cho provider chỉ trả về chữ thô. Blueprint tự bóc dấu ```json và tự đọc.
+          default: co_cau_truc
+          selector:
+            select:
+              options:
+                - label: Có cấu trúc (Home Assistant lo, khuyến nghị)
+                  value: co_cau_truc
+                - label: JSON thô
+                  value: json
+              multiple: false
+
+        doi_tuong:
+          name: 🔍 Phân tích cái gì
+          description: |
+            ✅ Chỉ người: đếm và tả người.
+            ✅ Chỉ động vật: đếm và tả chó, mèo, chim.
+            ✅ Cả hai: tả cả người lẫn động vật.
+            ✅ An ninh: đếm người, tả hành động, và chấm một câu có đáng ngờ hay không.
+            ⚠️ Chỉ chế độ An ninh mới mở khoá được các đường gửi "chỉ khi mất an ninh".
+          default: humans
+          selector:
+            select:
+              options:
+                - label: 👤 Chỉ người
+                  value: humans
+                - label: 🐾 Chỉ động vật
+                  value: animals
+                - label: 👤🐾 Cả người và động vật
+                  value: both
+                - label: 🛡️ An ninh
+                  value: security
+              multiple: false
+
+        ai_provider:
+          name: 🤖 AI Task dùng để phân tích
+          description: |
+            👉 Chọn thực thể AI Task lo phần phân tích đầy đủ.
+            ✅ Bỏ trống để dùng cái mặc định của hệ thống.
+          default: []
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+        ai_provider_loc:
+          name: ⚡ AI Task dùng cho cửa lọc
+          description: |
+            👉 Cửa lọc chỉ hỏi đúng một câu nên nên giao cho model nhỏ và nhanh, kể cả khi phần
+            phân tích đầy đủ bạn giao cho model lớn ngoài mạng.
+            ✅ Bỏ trống là dùng chung cái ở trên.
+          default: []
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+        phan_tich_gui_khi:
+          name: 📤 Gửi kết quả phân tích khi nào
+          description: |
+            👉 Đi kèm: gửi bất cứ khi nào ảnh hoặc video được gửi.
+            👉 Chỉ khi có người: có người mới gửi phần chữ.
+            👉 Chỉ khi mất an ninh: đáng ngờ mới gửi phần chữ.
+            ⚠️ Kết quả phân tích không bao giờ đi một mình. Nếu lượt đó không gửi ảnh lẫn video
+            thì cũng không gửi chữ, dù bạn chọn "Đi kèm".
+          default: di_kem
+          selector:
+            select:
+              options:
+                - label: Đi kèm, cứ có ảnh hoặc video là gửi
+                  value: di_kem
+                - label: Chỉ khi có người
+                  value: co_nguoi
+                - label: Chỉ khi mất an ninh
+                  value: an_ninh
+              multiple: false
+    notification_section:
+      name: 7 · Thông báo điện thoại
+      icon: mdi:bell
+      collapsed: true
+      input:
+        include_notify:
+          name: ✅ Mobile App Notify Option (Optional)
+          description: |
+            👉 Bật nếu muốn gửi thông báo lên điện thoại đã cài HA Companion App.
+          default: false
+          selector:
+            boolean: {}
+
+        is_ios_android:
+          name: 🔔 Android or iOS device?
+          description: |
+            👉 Chọn hệ điều hành của điện thoại nhận thông báo.
+          default: android_device
+          selector:
+            select:
+              options:
+                - label: Android
+                  value: android_device
+                - label: iOS
+                  value: ios_device
+              multiple: false
+
+        notify_device:
+          name: 📱 Devices Notified
+          description: |
+            👉 Chọn điện thoại muốn nhận thông báo đẩy.
+            ✅ Có thể chọn nhiều điện thoại.
+          default: []
+          selector:
+            device:
+              filter:
+                - integration: mobile_app
+              multiple: true
+
+        notify_title:
+          name: 📝 Title
+          description: |
+            👉 Tiêu đề của thông báo.
+          default: "🔔 <b><span style=\"color: red\">Có chuyển động</span></b>\n"
+          selector:
+            text: {}
+
+        tap_navigate:
+          name: 📲 Tap Navigate
+          description: |
+            👉 Mở HA và đi đến vị trí này khi nhấn vào thông báo.
+          default: /lovelace/camera
+          selector:
+            text: {}
+
+        status_bar_icon:
+          name: 🌠 Status Bar Icon (Android)
+          description: |
+            👉 Dành cho Android - Thiết lập icon cho thông báo trên Status Bar.
+          default: mdi:motion-sensor
+          selector:
+            icon: {}
+
+        notification_color:
+          name: 🎨 Notification Color (Android)
+          description: 👉 Dành cho Android - Màu của icon thông báo trên Status Bar.
+          default: [255, 0, 0]
+          selector:
+            color_rgb: {}
+
+        notification_time:
+          name: 🕒 Notification Time
+          description: 👉 Tùy chọn hiển thị thời gian trong nội dung thông báo.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: No Time Added
+                  value: ""
+                - label: 12 Hour
+                  value: "at {{ now().strftime('%-I:%M %p') }}"
+                - label: 24 Hour
+                  value: "at {{ now().strftime('%H:%M') }}"
+              multiple: false
+
+    # ============================================================
+    # TELEGRAM SETTINGS
+    # ============================================================
+    telegram_section:
+      name: 8 · Telegram
+      icon: mdi:send
+      collapsed: true
+      input:
+        include_telegram_notify:
+          name: ✅ Telegram Option (Optional)
+          description: |
+            👉 Bật nếu muốn gửi thông báo lên Telegram.
+          default: false
+          selector:
+            boolean: {}
+
+        telegram_config_entry:
+          name: 🤖 Telegram Bot
+          description: 👉 Chọn Telegram Bot đã cấu hình trong HA.
+          default: ""
+          selector:
+            config_entry:
+              integration: telegram_bot
+
+        telegram_target:
+          name: 🧑‍💻 Target Chat ID
+          description: |
+            👉 Chat ID của người hoặc nhóm nhận thông báo.
+            ✅ Bỏ trống để dùng chat ID mặc định của bot.
+          default: ""
+          selector:
+            text: {}
+
+        telegram_thread_id:
+          name: 🧵 Thread ID (Optional)
+          description: |
+            👉 ID của chủ đề trong nhóm Telegram (nếu dùng nhóm có topic).
+            ✅ Bỏ trống nếu không dùng topic.
+          default: ""
+          selector:
+            text: {}
+
+        telegram_initial_caption:
+          name: 📝 Initial Caption
+          description: 👉 Caption gửi kèm ảnh ban đầu (trước khi có kết quả AI).
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text: {}
+
+    # ============================================================
+    # ZALO BOT SETTINGS (PYSCRIPT)
+    # ============================================================
+    zalo_bot_section:
+      name: 9 · Zalo Bot (Pyscript)
+      icon: mdi:chat
+      collapsed: true
+      input:
+        enable_zalo_bot:
+          name: ✅ Enable Zalo Bot (Pyscript)
+          description: |
+            👉 Bật/tắt gửi thông báo qua Zalo Bot dùng Pyscript.
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_bot_chat_id:
+          name: 🧑‍💻 Zalo Bot Chat ID
+          description: 👉 Chat ID hoặc User ID nhận thông báo Zalo Bot qua Pyscript.
+          default: ""
+          selector:
+            text: {}
+
+        zalo_bot_initial_caption:
+          name: 📝 Zalo Bot Initial Caption
+          description: 👉 Caption khi gửi ảnh ban đầu qua Zalo Bot.
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text: {}
+
+    # ============================================================
+    # ZALO CUSTOM INTEGRATION SETTINGS
+    # ============================================================
+    zalo_custom_section:
+      name: 10 · Zalo cá nhân
+      icon: mdi:chat-processing
+      collapsed: true
+      input:
+        enable_zalo_custom:
+          name: ✅ Enable Zalo Custom Integration
+          description: |
+            👉 Bật/tắt gửi thông báo qua Zalo Custom Integration (zalo_bot).
+          default: false
+          selector:
+            boolean: {}
+
+        zalo_custom_account:
+          name: 📱 Zalo Account
+          description: |
+            👉 Số điện thoại tài khoản Zalo dùng để gửi tin nhắn.
+            ⚠️ Ví dụ: +84376861184
+          default: ""
+          selector:
+            text: {}
+
+        zalo_custom_thread_id:
+          name: 💬 Thread ID (Nhóm)
+          description: |
+            👉 ID của nhóm Zalo muốn gửi thông báo.
+            ⚠️ Nhập dạng text để tránh mất độ chính xác với số lớn.
+            ⚠️ Chỉ dùng khi Receiver Type = Group.
+          default: ""
+          selector:
+            text:
+              multiple: false
+
+        zalo_custom_user_id:
+          name: 👤 User ID (Cá nhân)
+          description: |
+            👉 ID của người nhận Zalo.
+            ⚠️ Nhập dạng text để tránh mất độ chính xác với số lớn.
+            ⚠️ Chỉ dùng khi Receiver Type = User.
+          default: ""
+          selector:
+            text:
+              multiple: false
+
+        zalo_custom_receiver_type:
+          name: 👥 Type of Receiver
+          description: |
+            👉 Loại người nhận tin nhắn Zalo.
+          default: "0"
+          selector:
+            select:
+              options:
+                - label: User (Cá nhân)
+                  value: "0"
+                - label: Group (Nhóm)
+                  value: "1"
+              multiple: false
+
+        zalo_custom_ttl:
+          name: ⏳ Message TTL
+          description: |
+            👉 Thời gian tự động thu hồi tin nhắn (milliseconds).
+            ✅ Đặt 0 = không thu hồi. Tối đa 86400000ms = 24 giờ.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400000
+              step: 1000
+              mode: box
+
+        zalo_custom_initial_caption:
+          name: 📝 Initial Caption
+          description: 👉 Nội dung tin nhắn ban đầu gửi kèm ảnh qua Zalo Custom.
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text:
+              multiline: true
+
+    # ============================================================
+    # TTS SPEAKER SETTINGS
+    # ============================================================
+    tts_speaker_section:
+      name: 11 · Đọc ra loa
+      icon: mdi:speaker
+      collapsed: true
+      input:
+        include_tts_announcement:
+          name: ✅ Use TTS Announcement (Optional)
+          description: |
+            👉 Bật để phát thông báo bằng giọng nói ra loa được tích hợp HA.
+          default: false
+          selector:
+            boolean: {}
+
+        num_volume_speaker:
+          name: 🔊 Volume Set
+          description: |
+            👉 Thiết lập âm lượng cho loa (từ 0.1 đến 1.0).
+            ✅ Mặc định: 0.5 (50%).
+          default: 0.5
+          selector:
+            number:
+              min: 0.1
+              max: 1.0
+              step: 0.1
+              mode: slider
+
+        text_to_speech_engine:
+          name: 🗣️ Text-to-Speech Service Provider
+          description: 👉 Chọn dịch vụ TTS hỗ trợ trong HA.
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: tts
+              multiple: false
+
+        media_player:
+          name: 🎶 Media Player
+          description: |
+            👉 Chọn loa để phát thông báo giọng nói.
+            ✅ Có thể chọn nhiều loa cùng lúc.
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+              multiple: true
+
+    # ============================================================
+    # DELAY SETTINGS
+    # ============================================================
+        tts_viet_lai:
+          name: 🗣️ Nhờ AI viết lại câu cho loa
+          description: |
+            👉 BẬT: AI viết lại thành một câu nói được — bỏ emoji và ký hiệu, đọc số thành chữ,
+            gọn dưới ba mươi từ. Loa đọc nghe như người nói.
+            👉 TẮT: loa đọc câu ghép sẵn, vẫn hiểu được nhưng khô hơn.
+            ⚠️ Bật thì mỗi lượt có thông báo tốn thêm một lần gọi AI.
+          default: true
+          selector:
+            boolean: {}
+
+        tts_ai_provider:
+          name: 🤖 AI Task dùng để viết lại câu
+          description: |
+            👉 Việc này chỉ là viết lại một câu ngắn nên model nhỏ chạy tại nhà là đủ.
+            ✅ Bỏ trống là dùng chung cái ở mục Phân tích AI.
+          default: []
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+    delay_settings:
+      name: 12 · Chờ cuối lượt
+      icon: mdi:clock-start
+      collapsed: true
+      input:
+        num_delay_actions:
+          name: ⌛ Delays
+          description: |
+            👉 Thời gian chờ (giây) sau khi hoàn thành tất cả các hành động.
+          default: 10
+          selector:
+            number:
+              min: 5
+              max: 120
+              step: 5
+              unit_of_measurement: seconds
+              mode: slider
+
+# ============================================================
+# VARIABLES
+# ============================================================
+# BIẾN
+# ============================================================
+variables:
+  # --- Kích hoạt và xác nhận ---
+  trigger_sensor: !input trigger_sensor
+  trigger_to_state: !input trigger_to_state
+  che_do_xac_nhan: !input che_do_xac_nhan
+  thoi_gian_kiem_lai: !input thoi_gian_kiem_lai
+  cam_bien_nguoi: !input cam_bien_nguoi
+  trang_thai_co_nguoi: !input trang_thai_co_nguoi
+  cho_toi_da: !input cho_toi_da
+  cooldown: !input cooldown
+
+  # --- Cửa lọc ---
+  bat_cua_loc: !input bat_cua_loc
+  cho_truoc_khi_chup: !input cho_truoc_khi_chup
+  cua_loc_chan_video: !input cua_loc_chan_video
+  ghi_de_anh: !input ghi_de_anh
+
+  # --- Nhánh ảnh ---
+  bat_nhanh_anh: !input bat_nhanh_anh
+  camera_phan_tich_list: !input camera_phan_tich
+  camera_gui_list: !input camera_gui
+  so_anh: !input so_anh
+  gian_cach_anh: !input gian_cach_anh
+  anh_gui_khi_raw: !input anh_gui_khi
+  anh_gui_may_tam: !input anh_gui_may_tam
+
+  # --- Nhánh video ---
+  bat_nhanh_video: !input bat_nhanh_video
+  camera_video_chon: !input camera_video
+  thoi_luong_video: !input thoi_luong_video
+  lay_truoc_video: !input lay_truoc_video
+  video_gui_khi_raw: !input video_gui_khi
+  video_dua_vao_ai: !input video_dua_vao_ai
+
+  # --- AI ---
+  bat_ai: !input bat_ai
+  che_do_ket_qua: !input che_do_ket_qua
+  doi_tuong: !input doi_tuong
+  ai_provider: !input ai_provider
+  ai_provider_loc: !input ai_provider_loc
+  phan_tich_gui_khi_raw: !input phan_tich_gui_khi
+
+  # Camera thật sự dùng ở từng nhánh. Bỏ trống ô sau thì dùng lại ô trước, để
+  # người chỉ có một camera khỏi phải khai ba lần.
+  camera_phan_tich: >
+    {{ camera_phan_tich_list[0] if camera_phan_tich_list | length > 0 else '' }}
+  # Bỏ trống camera gửi thì mỗi lần chỉ chụp một tấm và dùng chung cho cả hai
+  # việc. Khai riêng thì mỗi lần chụp một cặp: bản nhẹ cho AI, bản nét để gửi.
+  camera_gui: >
+    {{ camera_gui_list[0] if camera_gui_list | length > 0 else camera_phan_tich }}
+  chup_hai_bo: >
+    {{ camera_gui_list | length > 0 and camera_gui_list[0] != camera_phan_tich }}
+  camera_video: >
+    {{ camera_video_chon if camera_video_chon | length > 0 else camera_gui }}
+  camera_name: >
+    {{ state_attr(camera_gui, 'friendly_name') | default(camera_gui, true) }}
+  ten_file: "{{ camera_gui.replace('camera.', '') if camera_gui else 'camera' }}"
+
+  # ĐƯỜNG GỬI SAU KHI HẠ CẤP.
+  #
+  # Ba đường "chỉ khi mất an ninh" dựa vào một trường mà chỉ chế độ An ninh mới
+  # hỏi AI. Home Assistant không giấu được một ô theo lựa chọn của ô khác, nên
+  # người dùng vẫn chọn nhầm được. Chọn nhầm mà im lặng không gửi gì là kiểu
+  # hỏng khó tìm nhất, nên ở đây hạ xuống "chỉ khi có người" và ghi một dòng
+  # vào nhật ký ở bước sau.
+  #
+  # Tắt phân tích AI cũng vậy: không có kết quả nào để dựa vào, nên mọi đường
+  # đều thành "gửi mọi lượt".
+  co_danh_gia_an_ninh: "{{ bat_ai and doi_tuong == 'security' }}"
+  anh_gui_khi: >
+    {% if not bat_ai %}ngay
+    {%- elif anh_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
+    {%- else %}{{ anh_gui_khi_raw }}{% endif %}
+  video_gui_khi: >
+    {% if not bat_ai %}ngay
+    {%- elif video_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
+    {%- else %}{{ video_gui_khi_raw }}{% endif %}
+  phan_tich_gui_khi: >
+    {% if phan_tich_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
+    {%- else %}{{ phan_tich_gui_khi_raw }}{% endif %}
+  da_ha_cap: >
+    {{ bat_ai and not co_danh_gia_an_ninh
+       and 'an_ninh' in [anh_gui_khi_raw, video_gui_khi_raw, phan_tich_gui_khi_raw] }}
+
+  # Video quay trước hay quay sau cửa lọc.
+  video_cho_cua_loc: "{{ bat_cua_loc and cua_loc_chan_video }}"
+
+  # ============================================================
+  # PROMPT CỬA LỌC
+  # ============================================================
+  # Cực ngắn là có chủ đích. Bước này chạy mỗi lần cảm biến kêu, kể cả những
+  # lần chẳng có ai, nên mọi chữ thừa đều là tiền và thời gian đổ đi. Nó chỉ
+  # cần trả lời đúng một câu.
+  prompt_loc: >
+    Look at this security camera image. Answer one question only: is there at
+    least one person visible? A pet, a vehicle, a shadow, a curtain moving or a
+    reflection is not a person. If you are unsure, answer false.
+
+  prompt_loc_json: >
+    Look at this security camera image. Is there at least one person visible? A
+    pet, a vehicle, a shadow, a curtain moving or a reflection is not a person.
+    If you are unsure, answer false.
+    Return raw JSON only, on one line, exactly: {"co_nguoi":false}
+    No markdown, no code fences, no explanation.
+
+  # ============================================================
+  # PHẦN MỞ ĐẦU DÙNG CHUNG CHO MỌI PROMPT PHÂN TÍCH
+  # ============================================================
+  # Vì sao có đoạn này: các khung được gửi liền nhau nên model dễ coi chúng là
+  # những cảnh rời rạc, rồi tả cùng một người thành hai người mặc đồ giống hệt.
+  # Nói thẳng rằng đây là các khung liên tiếp của cùng một cảnh, và bắt số
+  # người được tả phải khớp với số người đã đếm, là cách rẻ nhất chặn lỗi đó.
+  mo_dau_chuoi: >
+    You are given several frames captured from the SAME camera a few seconds
+    apart, in time order. They are consecutive moments of one scene, not
+    separate scenes.
+
+    Rules for reading the sequence:
+    - The same subject normally appears in several frames. Two frames showing
+      someone with the same clothing and build are the SAME person.
+    - Describe SUBJECTS, not frames. Merge everything you see of one subject
+      across all frames into one description of that subject.
+    - The number of subjects you describe MUST equal the count you report.
+      Never describe more subjects than you counted.
+    - Prefer what changes across the sequence: approaching, moving away, moving
+      sideways, standing still, turning back, arriving then leaving.
+
+  # ============================================================
+  # PROMPT PHÂN TÍCH — 8 TRƯỜNG HỢP
+  # ============================================================
+  # 4 chế độ nhân 2 kiểu kết quả. Viết bằng tiếng Anh cho model bám sát yêu
+  # cầu, nhưng mọi câu chữ gửi tới người dùng đều bắt buộc là tiếng Việt có dấu.
+  prompt_phan_tich: >
+    {% if che_do_ket_qua == 'json' %}
+
+      {% if doi_tuong == 'humans' %}
+    {{ mo_dau_chuoi }}
+
+    Analyze HUMANS ONLY. Ignore animals unless one is needed to explain what a
+    person is doing. The camera may face an apartment corridor, a lobby, a unit
+    entrance, or a house porch, gate, driveway, yard or doorway.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":"","khung_ro_nhat":1}
+
+    Field rules:
+    humans_detected: integer, how many DISTINCT people appear across the whole
+    sequence. 0 if nobody is visible.
+    humans_detected_summary: short Vietnamese summary such as "1 phụ nữ, 2 trẻ
+    em". Empty string if nobody is visible.
+    humans_detected_description: concise Vietnamese description of each distinct
+    person — adult or child and apparent gender only when visually clear;
+    clothing type and main colours; what they are doing; anything clearly being
+    carried; and how they move across the sequence. State a clearly visible
+    dangerous object such as a knife, gun or club plainly, without guessing why.
+    Only say someone enters or leaves a home when a doorway or gate is actually
+    crossed on camera.
+    khung_ro_nhat: integer, which frame number shows the people most clearly.
+    Count from 1. Use 1 when nobody is visible.
+    If humans_detected is 0, humans_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+
+    Output rules:
+    - Every text value MUST be natural Vietnamese with full diacritics.
+    - Use only what is visible. Do not identify anyone, and do not guess
+      occupation, relationship, ethnicity, health or intent.
+    - Raw JSON only. No markdown, no code fences, no extra text.
+
+      {% elif doi_tuong == 'animals' %}
+    {{ mo_dau_chuoi }}
+
+    Analyze ANIMALS ONLY.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"animals_detected":0,"animals_detected_summary":"","animals_detected_description":"","khung_ro_nhat":1}
+
+    Field rules:
+    animals_detected: integer, how many DISTINCT animals appear across the whole
+    sequence. 0 if none.
+    animals_detected_summary: short Vietnamese summary by species and visible
+    colour such as "1 con chó vàng, 2 con mèo đen". Empty string if none.
+    animals_detected_description: concise Vietnamese description of each animal —
+    species when clear, visible colour and markings, relative size, what it is
+    doing, and how it moves across the sequence.
+    khung_ro_nhat: integer, which frame number shows the animals most clearly.
+    Count from 1. Use 1 when none are visible.
+    If animals_detected is 0, animals_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
+
+    Output rules:
+    - Every text value MUST be natural Vietnamese with full diacritics.
+    - Do not invent a breed or species you cannot actually see.
+    - Raw JSON only. No markdown, no code fences, no extra text.
+
+      {% elif doi_tuong == 'both' %}
+    {{ mo_dau_chuoi }}
+
+    Analyze HUMANS and ANIMALS.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":"","animals_detected":0,"animals_detected_summary":"","animals_detected_description":"","khung_ro_nhat":1}
+
+    Count DISTINCT people and DISTINCT animals across the sequence. Describe
+    people with clothing, action, anything carried and movement; describe
+    animals with species, colour, size, action and movement. All Vietnamese
+    with full diacritics.
+    khung_ro_nhat: integer, which frame number shows the subjects most clearly,
+    counting from 1.
+    If humans_detected is 0, humans_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+    If animals_detected is 0, animals_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có động vật trong chuỗi ảnh khi so sánh".
+
+    A vehicle may be mentioned briefly inside the human description when it
+    clearly relates to what a person does. Never count a vehicle as a person or
+    an animal.
+
+    Output rules:
+    - Raw JSON only. No markdown, no code fences, no extra text.
+
+      {% else %}
+    {{ mo_dau_chuoi }}
+
+    You are watching a home security camera. Answer three things only: how many
+    people are there, what they are doing, and whether what you actually see
+    deserves security attention.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"humans_detected":0,"human_action":"","security_suspicious":false,"khung_ro_nhat":1}
+
+    Field rules:
+    humans_detected: integer, how many DISTINCT people across the sequence.
+    human_action: one concise Vietnamese sentence about what the people actually
+    do across the frames — passing by, approaching, leaving, waiting, coming
+    back, pacing, looking around repeatedly, watching a door or window,
+    delivering or picking something up, touching or testing a door or gate,
+    working at a lock, handling property, climbing, or carrying something
+    clearly dangerous.
+    security_suspicious: true only when what you SEE reasonably deserves
+    attention.
+    khung_ro_nhat: integer, which frame shows it most clearly, counting from 1.
+
+    How to judge, with context:
+    - In apartment buildings, shared corridors and lobbies normally carry
+      neighbours, visitors and deliveries. Walking past, waiting briefly,
+      checking a door number, or making a delivery is NOT suspicious by itself.
+    - At houses, the street and pavement outside normally carry passers-by.
+      Approaching the gate, waiting, calling at the door, delivering, or simply
+      going in and out is NOT suspicious by itself.
+    - Suspicion comes from behaviour building up across frames: lingering at the
+      same entrance, returning again and again, inspecting one door or window or
+      lock repeatedly, pulling or testing a handle, working at a lock, reaching
+      through an opening, climbing into somewhere clearly private, tampering
+      with or taking property, hiding or dodging the camera together with other
+      worrying actions, threatening behaviour, or a dangerous object used in a
+      clearly worrying way.
+    - One glance around, looking at the camera, ordinary clothes, a helmet or a
+      mask on its own, or standing near an entrance for a moment is NOT enough.
+    - Never guess intent, identity, job, relationship or motive. Never mark
+      someone suspicious for how they look.
+    - When the evidence is thin, the sequence too short, or there is an ordinary
+      explanation the frames support, set security_suspicious to false.
+    If humans_detected is 0, human_action MUST be exactly:
+    "Không phát hiện người trong chuỗi ảnh." and security_suspicious MUST be false.
+
+    Output rules:
+    - human_action MUST be natural Vietnamese with full diacritics, short enough
+      to read on a phone notification.
+    - Raw JSON only. No markdown, no code fences, no extra text.
+      {% endif %}
+
+    {% else %}
+
+      {% if doi_tuong == 'humans' %}
+    {{ mo_dau_chuoi }}
+
+    Analyze HUMANS ONLY across the whole sequence. Count distinct people,
+    describe what they look like and what they do, and say how they move. Use
+    apartment or house entrance context only when it actually helps. Never
+    identify anyone and never guess intent.
+    Fill only the requested fields. Every text field MUST be natural Vietnamese
+    with full diacritics, short enough for a phone notification.
+    For the animal fields, return exactly the fixed values their descriptions
+    ask for, because animals are not being analysed this time.
+
+      {% elif doi_tuong == 'animals' %}
+    {{ mo_dau_chuoi }}
+
+    Analyze ANIMALS ONLY across the whole sequence. Count distinct animals and
+    describe species, visible colour and markings, relative size, what they do
+    and how they move. Use only what you can actually see.
+    Fill only the requested fields. Every text field MUST be natural Vietnamese
+    with full diacritics, short enough for a phone notification.
+    For the human fields, return exactly the fixed values their descriptions ask
+    for, because people are not being analysed this time.
+
+      {% elif doi_tuong == 'both' %}
+    {{ mo_dau_chuoi }}
+
+    Analyze HUMANS and ANIMALS across the whole sequence. Count each distinct
+    subject once. Describe what they do and how they move, never who they are or
+    why. A vehicle may be mentioned briefly when it clearly relates to what a
+    person does.
+    Fill only the requested fields. Every text field MUST be natural Vietnamese
+    with full diacritics, short enough for a phone notification.
+
+      {% else %}
+    {{ mo_dau_chuoi }}
+
+    You are watching a home security camera. Answer three things only: how many
+    DISTINCT people are visible, what they are doing, and whether what you
+    actually see deserves security attention.
+
+    Judge with context:
+    - In apartment buildings, ordinary corridor, lobby, visitor and delivery
+      traffic is normal.
+    - At houses, ordinary street traffic, brief waiting, calling at the door,
+      deliveries, and going in and out are normal.
+    - Call it suspicious only when behaviour across the frames supports it:
+      lingering or returning repeatedly, inspecting one door or window or lock
+      again and again, testing or working at an entrance, climbing somewhere
+      clearly private, tampering with or taking property, threatening
+      behaviour, or a dangerous object in a clearly worrying situation.
+    - One glance around, looking at the camera, clothing, a helmet or mask
+      alone, or a moment near an entrance is not enough.
+    - Never guess identity, motive, job or relationship. When the evidence is
+      thin, say it is not suspicious.
+    Fill only the requested fields. The action field MUST be concise natural
+    Vietnamese with full diacritics.
+      {% endif %}
+
+    {% endif %}
+
+  # ============================================================
+  # MÔ TẢ TỪNG Ô CỦA KẾT QUẢ CÓ CẤU TRÚC
+  # ============================================================
+  mo_ta_o_nguoi: >
+    {% if che_do_ket_qua == 'co_cau_truc' and doi_tuong in ['humans', 'both'] %}
+    Describe each DISTINCT person in concise natural Vietnamese: adult or child
+    and apparent gender only when visually clear, clothing type and main
+    colours, what they are doing, anything clearly being carried, and how they
+    move across the sequence. Never describe the same person twice. State a
+    clearly visible dangerous object plainly without guessing why. Only say
+    someone enters or leaves a home when a doorway or gate is actually crossed
+    on camera. If nobody is visible, return EXACTLY: "Đã phát hiện chuyển động
+    tuy nhiên không có người trong chuỗi ảnh khi so sánh".
+    {% else %}
+    People are not being analysed this time. Return EXACTLY: "Không phân tích người theo yêu cầu".
+    {% endif %}
+
+  mo_ta_o_dong_vat: >
+    {% if che_do_ket_qua == 'co_cau_truc' and doi_tuong in ['animals', 'both'] %}
+    Describe each DISTINCT animal in concise natural Vietnamese: species when
+    clear, visible colour and markings, relative size, what it is doing, and how
+    it moves across the sequence. Never describe the same animal twice. If none
+    are visible, return EXACTLY: "Đã phát hiện chuyển động tuy nhiên không có
+    động vật trong chuỗi ảnh khi so sánh".
+    {% else %}
+    Animals are not being analysed this time. Return EXACTLY: "Không phân tích động vật theo yêu cầu".
+    {% endif %}
+
+  mo_ta_o_hanh_dong: >
+    Describe in ONE concise natural Vietnamese sentence what the DISTINCT people
+    do across the whole sequence, and how that develops: passing, approaching,
+    leaving, waiting, returning, pacing, looking around repeatedly, watching a
+    door or window, delivering or collecting something, touching or testing an
+    entrance, working at a lock, handling property, climbing, or carrying
+    something clearly dangerous. Use apartment or house context so ordinary
+    traffic does not read as alarming. Never guess identity or motive. If nobody
+    is visible, return EXACTLY: "Không phát hiện người trong chuỗi ảnh.".
+
+  mo_ta_o_khung: >
+    Which frame shows the subjects most clearly, counting from 1 for the first
+    frame. This picks the single photo worth sending when only one is wanted, so
+    prefer a frame where faces, clothing or the action are easiest to make out.
+    Return 1 when nothing is visible.
+
+  # --- Thông báo điện thoại ---
+  include_notify: !input include_notify
+  notify_device: !input notify_device
+  is_ios_android: !input is_ios_android
+  notify_title: !input notify_title
+  tap_navigate: !input tap_navigate
+  notification_time: !input notification_time
+  filtered_devices: "{{ notify_device }}"
+
+  # --- Telegram ---
+  include_telegram_notify: !input include_telegram_notify
+  telegram_config_entry: !input telegram_config_entry
+  telegram_target: !input telegram_target
+  telegram_thread_id: !input telegram_thread_id
+  telegram_initial_caption: !input telegram_initial_caption
+
+  # --- Zalo Bot (Pyscript) ---
+  enable_zalo_bot: !input enable_zalo_bot
+  zalo_bot_chat_id: !input zalo_bot_chat_id
+  zalo_bot_initial_caption: !input zalo_bot_initial_caption
+
+  # --- Zalo cá nhân ---
+  enable_zalo_custom: !input enable_zalo_custom
+  zalo_custom_account: !input zalo_custom_account
+  zalo_custom_thread_id: !input zalo_custom_thread_id
+  zalo_custom_user_id: !input zalo_custom_user_id
+  zalo_custom_receiver_type: !input zalo_custom_receiver_type
+  zalo_custom_ttl: !input zalo_custom_ttl
+  zalo_custom_initial_caption: !input zalo_custom_initial_caption
+  # Chỉ dùng để KIỂM TRA đã có ID hay chưa. TUYỆT ĐỐI không dùng làm thread_id:
+  # kết quả template bị Home Assistant diễn giải thành số và ID 19 chữ số bị làm
+  # tròn qua float64 (đo thật: …385728 gửi đi thành …385600).
+  zalo_resolved_id: >-
+    {{ (zalo_custom_thread_id if zalo_custom_receiver_type == '1'
+        else zalo_custom_user_id) | trim }}
+
+  status_bar_icon: !input status_bar_icon
+
+  # --- Loa ---
+  include_tts_announcement: !input include_tts_announcement
+  num_volume_speaker: !input num_volume_speaker
+  text_to_speech_engine: !input text_to_speech_engine
+  media_player: !input media_player
+  tts_viet_lai: !input tts_viet_lai
+  tts_ai_provider: !input tts_ai_provider
+  num_delay_actions: !input num_delay_actions
+
+  tag: "{{ camera_gui + int(as_timestamp(now())) | string }}"
+
+  notification_color: !input notification_color
+  notification_color_hex: >
+    #{{ '%02x%02x%02x' | format(notification_color[0], notification_color[1], notification_color[2]) }}
+
+max_exceeded: silent
+mode: single
+
+trigger_variables:
+  _trigger_sensors: !input trigger_sensor
+
+trigger:
+  - platform: state
+    entity_id: !input trigger_sensor
+    from: !input trigger_from_state
+    to: !input trigger_to_state
+
+condition:
+  - condition: and
+    conditions: !input run_conditions
+
+# ============================================================
+# HÀNH ĐỘNG
+# ============================================================
+action:
+
+  # ============================================================
+  # BƯỚC 0: XÁC NHẬN SAU KHI KÍCH HOẠT
+  # Một ô chọn, nên chỉ một đường chạy. Bản trước để hai công tắc rời nên
+  # bật cả hai là chúng chạy nối đuôi nhau, cộng dồn thời gian chờ.
+  # ============================================================
+  - choose:
+      - alias: "Chờ rồi kiểm lại chính cảm biến đó"
+        conditions:
+          - condition: template
+            value_template: "{{ che_do_xac_nhan == 'kiem_lai' }}"
+        sequence:
+          - delay:
+              seconds: "{{ thoi_gian_kiem_lai }}"
+
+          # Chạy tay thì không có đối tượng trigger, khi đó cho đi tiếp.
+          - condition: template
+            value_template: >
+              {{ trigger is not defined
+                 or trigger.entity_id is not defined
+                 or is_state(trigger.entity_id, trigger_to_state) }}
+
+          - condition: and
+            conditions: !input run_conditions
+
+      - alias: "Theo dõi một cảm biến khác"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ che_do_xac_nhan == 'cam_bien_khac' and cam_bien_nguoi | length > 0 }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ is_state(cam_bien_nguoi, trang_thai_co_nguoi) }}"
+            then: []
+            else:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ cho_toi_da | int(0) == 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input cam_bien_nguoi
+                            to: !input trang_thai_co_nguoi
+                        continue_on_timeout: true
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ cho_toi_da | int(0) > 0 }}"
+                    sequence:
+                      - wait_for_trigger:
+                          - platform: state
+                            entity_id: !input cam_bien_nguoi
+                            to: !input trang_thai_co_nguoi
+                        timeout:
+                          seconds: "{{ cho_toi_da }}"
+                        continue_on_timeout: true
+
+  # ============================================================
+  # BƯỚC 1: BÁO NẾU CÓ Ô CHỌN BỊ HẠ CẤP
+  # Chọn "chỉ khi mất an ninh" ở chế độ không có đánh giá an ninh là bấm
+  # nhầm — nhưng im lặng không gửi gì thì người dùng tưởng automation hỏng.
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ da_ha_cap }}"
+    then:
+      - action: system_log.write
+        data:
+          level: warning
+          logger: blueprint.canh_bao_camera_ai
+          message: >
+            Có ô đang đặt "chỉ khi mất an ninh" nhưng chế độ phân tích là
+            "{{ doi_tuong }}" nên không có đánh giá an ninh nào để dựa vào.
+            Blueprint tạm hạ các ô đó xuống "chỉ khi có người". Đổi chế độ
+            phân tích sang An ninh để dùng đúng thứ bạn chọn.
+
+  # ============================================================
+  # BƯỚC 2: ĐƯỜNG DẪN TỆP
+  # ============================================================
+  - variables:
+      duong_dan: >
+        {% if ghi_de_anh %}{{ ten_file }}{% else %}{{ ten_file }}_{{ context.id }}{% endif %}
+
+  # ============================================================
+  # BƯỚC 3: QUAY VIDEO SỚM (khi cửa lọc không chặn video)
+  # Quay chạy nền để cửa lọc và việc chụp ảnh không phải đứng đợi hết đoạn
+  # video. Giữ được cả những giây người ta vừa bước vào khung hình.
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ bat_nhanh_video and not video_cho_cua_loc and camera_video | length > 0 }}"
+    then:
+      - alias: "Quay video ngay, không đợi cửa lọc"
+        continue_on_error: true
+        action: camera.record
+        data:
+          filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
+          duration: "{{ thoi_luong_video }}"
+          lookback: "{{ lay_truoc_video }}"
+        target:
+          entity_id: "{{ camera_video }}"
+
+  # ============================================================
+  # BƯỚC 4: CHỜ RỒI CHỤP ẢNH CHO CỬA LỌC
+  # Đúng một ảnh, bằng camera phân tích. Cửa lọc chỉ cần biết có ai hay không.
+  # ============================================================
+  - delay:
+      seconds: "{{ cho_truoc_khi_chup }}"
+
+  - if:
+      - condition: template
+        value_template: "{{ bat_cua_loc and bat_ai }}"
+    then:
+      - alias: "Chụp ảnh cho cửa lọc"
+        continue_on_error: true
+        action: camera.snapshot
+        data:
+          filename: "/media/snapshots/{{ duong_dan }}_loc.jpg"
+        target:
+          entity_id: "{{ camera_phan_tich }}"
+
+  - variables:
+      anh_cua_loc: >
+        {{ [{'media_content_id': 'media-source://media_source/local/snapshots/'
+             ~ duong_dan ~ '_loc.jpg',
+             'media_content_type': 'image/jpeg'}] }}
+
+  # ============================================================
+  # BƯỚC 5: CỬA LỌC — HỎI AI ĐÚNG MỘT CÂU
+  # Chỉ chạy khi đợt 1 đúng một ảnh. Prompt ngắn là có chủ đích: bước này
+  # chạy cả những lần chẳng có ai, nên mọi chữ thừa đều là thời gian đổ đi.
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ bat_cua_loc and bat_ai }}"
+    then:
+      - choose:
+          - alias: "Cửa lọc — kết quả có cấu trúc"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'co_cau_truc' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Loc anh camera co nguoi hay khong
+                  instructions: "{{ prompt_loc }}"
+                  entity_id: >
+                    {% if ai_provider_loc | length > 0 %}{{ ai_provider_loc }}
+                    {%- elif ai_provider | length > 0 %}{{ ai_provider }}
+                    {%- else %}{{ omit }}{% endif %}
+                  attachments: "{{ anh_cua_loc }}"
+                  structure:
+                    co_nguoi:
+                      description: >
+                        True when at least one person is visible in the image.
+                        A pet, a vehicle, a shadow, a moving curtain or a
+                        reflection is not a person. When unsure, answer false.
+                      required: true
+                      selector:
+                        boolean:
+                response_variable: ket_qua_loc_raw
+              - variables:
+                  ket_qua_loc: >
+                    {{ ket_qua_loc_raw.data.get('co_nguoi', true)
+                       if ket_qua_loc_raw is defined and ket_qua_loc_raw.data is defined
+                       else true }}
+
+          - alias: "Cửa lọc — kết quả JSON thô"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'json' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Loc anh camera co nguoi hay khong
+                  instructions: "{{ prompt_loc_json }}"
+                  entity_id: >
+                    {% if ai_provider_loc | length > 0 %}{{ ai_provider_loc }}
+                    {%- elif ai_provider | length > 0 %}{{ ai_provider }}
+                    {%- else %}{{ omit }}{% endif %}
+                  attachments: "{{ anh_cua_loc }}"
+                response_variable: ket_qua_loc_raw
+              - variables:
+                  ket_qua_loc: >
+                    {% if ket_qua_loc_raw is defined and ket_qua_loc_raw.data is defined %}
+                      {% set p = (ket_qua_loc_raw.data
+                        | regex_replace('```json\\s*', '')
+                        | regex_replace('```\\s*', '')
+                        | trim | from_json(default={})) %}
+                      {{ p.get('co_nguoi', true) in [true, 'true', 'True', 1, '1', 'yes'] }}
+                    {% else %}
+                      true
+                    {% endif %}
+
+      # Cửa lọc bảo không có ai thì dừng hẳn. AI hỏng hoặc quá giờ thì
+      # ket_qua_loc mặc định là true — thà báo thừa còn hơn nuốt mất một
+      # lần có người thật.
+      - condition: template
+        value_template: "{{ ket_qua_loc is not defined or ket_qua_loc }}"
+
+  # ============================================================
+  # BƯỚC 6: QUAY VIDEO SAU CỬA LỌC
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ bat_nhanh_video and video_cho_cua_loc and camera_video | length > 0 }}"
+    then:
+      - alias: "Quay video sau khi cửa lọc thấy có người"
+        continue_on_error: true
+        action: camera.record
+        data:
+          filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
+          duration: "{{ thoi_luong_video }}"
+          lookback: "{{ lay_truoc_video }}"
+        target:
+          entity_id: "{{ camera_video }}"
+
+  # ============================================================
+  # BƯỚC 7: CHỤP ĐỢT ẢNH CHÍNH
+  #
+  # Chụp theo CẶP: mỗi nhịp lấy một tấm bằng camera phân tích cho AI đọc, và
+  # một tấm bằng camera gửi để bạn xem. Hai tấm cùng một thời điểm nên khi AI
+  # chấm "khung số 2 rõ nhất" thì tấm nét số 2 chính là cảnh đó. Khai một
+  # camera thôi thì chỉ chụp một tấm mỗi nhịp và dùng chung.
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ bat_nhanh_anh }}"
+    then:
+      - repeat:
+          count: "{{ so_anh }}"
+          sequence:
+            # Hai tấm phải bấm CÙNG LÚC, không nối tiếp. Chụp nối tiếp thì tấm
+            # nét trễ hơn tấm AI vài trăm mili giây, đủ để người trong khung đã
+            # bước sang chỗ khác — lúc đó tấm AI chấm là rõ nhất lại không khớp
+            # với tấm bạn nhận được.
+            - parallel:
+                - alias: "Tấm cho AI đọc"
+                  continue_on_error: true
+                  action: camera.snapshot
+                  data:
+                    filename: "/media/snapshots/{{ duong_dan }}_ai{{ repeat.index }}.jpg"
+                  target:
+                    entity_id: "{{ camera_phan_tich }}"
+                - if:
+                    - condition: template
+                      value_template: "{{ chup_hai_bo }}"
+                  then:
+                    - alias: "Tấm nét để gửi"
+                      continue_on_error: true
+                      action: camera.snapshot
+                      data:
+                        filename: "/media/snapshots/{{ duong_dan }}_gui{{ repeat.index }}.jpg"
+                      target:
+                        entity_id: "{{ camera_gui }}"
+            - if:
+                - condition: template
+                  value_template: "{{ repeat.index < so_anh | int(1) }}"
+              then:
+                - delay:
+                    seconds: "{{ gian_cach_anh }}"
+
+  - variables:
+      so_anh_that: "{{ so_anh | int(3) }}"
+      # Khai một camera thì tấm gửi chính là tấm AI đã đọc.
+      tien_to_gui: "{{ '_gui' if chup_hai_bo else '_ai' }}"
+
+  - variables:
+      duong_dan_anh: >
+        {% set ns = namespace(ds=[]) %}
+        {%- for i in range(1, (so_anh_that | int(1)) + 1) -%}
+          {% set ns.ds = ns.ds + ['/media/snapshots/' ~ duong_dan ~ tien_to_gui ~ i ~ '.jpg'] %}
+        {%- endfor -%}
+        {{ ns.ds }}
+      duong_dan_anh_media: >
+        {% set ns = namespace(ds=[]) %}
+        {%- for i in range(1, (so_anh_that | int(1)) + 1) -%}
+          {% set ns.ds = ns.ds + ['/media/local/snapshots/' ~ duong_dan ~ tien_to_gui ~ i ~ '.jpg'] %}
+        {%- endfor -%}
+        {{ ns.ds }}
+      anh_cho_ai: >
+        {% set ns = namespace(ds=[]) %}
+        {%- for i in range(1, (so_anh_that | int(1)) + 1) -%}
+          {% set ns.ds = ns.ds + [{
+            'media_content_id': 'media-source://media_source/local/snapshots/' ~ duong_dan ~ '_ai' ~ i ~ '.jpg',
+            'media_content_type': 'image/jpeg'
+          }] %}
+        {%- endfor -%}
+        {{ ns.ds }}
+      video_cho_ai: >
+        {{ [{'media_content_id': 'media-source://media_source/local/snapshots/' ~ duong_dan ~ '_video.mp4',
+             'media_content_type': 'video/mp4'}] }}
+      duong_dan_video: "/media/snapshots/{{ duong_dan }}_video.mp4"
+      duong_dan_video_media: "/media/local/snapshots/{{ duong_dan }}_video.mp4"
+      anh_comma: "{{ duong_dan_anh | join(',') }}"
+
+  # ============================================================
+  # BƯỚC 8: GỬI SỚM — CHỈ NHỮNG THỨ ĐẶT "GỬI MỌI LƯỢT"
+  # Đi trước khi AI chạy, nên chú thích ở đây là câu bạn tự đặt, chưa có
+  # kết quả phân tích nào để kèm. Một ảnh thì lấy tấm đầu, vì chưa ai nói
+  # được tấm nào rõ nhất.
+  # ============================================================
+  - variables:
+      som_gui_anh: "{{ bat_nhanh_anh and anh_gui_khi == 'ngay' and duong_dan_anh | length > 0 }}"
+      som_gui_video: "{{ bat_nhanh_video and video_gui_khi == 'ngay' }}"
+      som_nhieu_anh: "{{ som_gui_anh and anh_gui_may_tam == 'tat_ca' and duong_dan_anh | length > 1 }}"
+
+  # --- Telegram: ảnh ---
+  - choose:
+      - alias: "Telegram sớm — một ảnh kèm chú thích"
+        conditions:
+          - condition: template
+            value_template: "{{ include_telegram_notify and som_gui_anh and not som_nhieu_anh }}"
+        sequence:
+          - continue_on_error: true
+            action: telegram_bot.send_photo
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'file': duong_dan_anh[0],
+                          'caption': telegram_initial_caption} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+      - alias: "Telegram sớm — chùm ảnh"
+        conditions:
+          - condition: template
+            value_template: "{{ include_telegram_notify and som_nhieu_anh }}"
+        sequence:
+          # send_media_group bắt buộc từ 2 tới 10 ảnh. Một ảnh là cả lời gọi bị
+          # từ chối, nên nhánh trên đã tách riêng. Cắt ở 10 tại đây chứ không
+          # để Telegram đánh trượt cả lô.
+          - continue_on_error: true
+            action: telegram_bot.send_media_group
+            data: >
+              {% set ns = namespace(m=[]) %}
+              {%- for p in duong_dan_anh[:10] -%}
+                {% if loop.first %}
+                  {% set ns.m = ns.m + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
+                {% else %}
+                  {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
+                {% endif %}
+              {%- endfor -%}
+              {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+  # --- Telegram: video ---
+  - if:
+      - condition: template
+        value_template: "{{ include_telegram_notify and som_gui_video }}"
+    then:
+      - continue_on_error: true
+        action: telegram_bot.send_video
+        data: >
+          {% set d = {'config_entry_id': telegram_config_entry,
+                      'file': duong_dan_video,
+                      'caption': telegram_initial_caption} %}
+          {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+          {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+          {{ d }}
+
+  # --- Zalo Bot (Pyscript): chỉ ảnh, nền tảng này không nhận video ---
+  - if:
+      - condition: template
+        value_template: "{{ enable_zalo_bot and som_gui_anh }}"
+    then:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ som_nhieu_anh }}"
+            sequence:
+              # Zalo Bot không có chùm ảnh — mỗi tấm là một tin riêng.
+              - repeat:
+                  for_each: "{{ duong_dan_anh }}"
+                  sequence:
+                    - continue_on_error: true
+                      action: pyscript.send_zalo_photo
+                      data:
+                        chat_id: "{{ zalo_bot_chat_id }}"
+                        file_path: "{{ repeat.item }}"
+                        caption: "{{ zalo_bot_initial_caption if repeat.index == 1 else '' }}"
+                      response_variable: zalo_bot_photo_response
+            default:
+              - continue_on_error: true
+                action: pyscript.send_zalo_photo
+                data:
+                  chat_id: "{{ zalo_bot_chat_id }}"
+                  file_path: "{{ duong_dan_anh[0] }}"
+                  caption: "{{ zalo_bot_initial_caption }}"
+                response_variable: zalo_bot_photo_response
+
+  # --- Zalo cá nhân: ảnh ---
+  # thread_id PHẢI đi bằng !input, KHÔNG qua template. Đo thật: khai
+  # 3295299208151385728 thì Home Assistant gửi đi 3295299208151385600 — lệch
+  # 128, vì kết quả template bị diễn giải thành số rồi làm tròn qua float64.
+  # `| string` không cứu được. Vì !input không chọn được bằng template nên
+  # phải tách hẳn hai nhánh nhóm và cá nhân.
+  - choose:
+      - alias: "Zalo cá nhân sớm — NHÓM"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and som_gui_anh
+                 and zalo_custom_receiver_type == '1'
+                 and zalo_custom_thread_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ som_nhieu_anh }}"
+                sequence:
+                  # send_images_to_group là service duy nhất tách được chuỗi
+                  # ngăn bằng dấu phẩy, nhưng nó không có tham số chú thích nên
+                  # chú thích phải đi thành một tin chữ riêng đứng trước.
+                  - if:
+                      - condition: template
+                        value_template: "{{ zalo_custom_initial_caption | length > 0 }}"
+                    then:
+                      - continue_on_error: true
+                        action: zalo_bot.send_message
+                        data:
+                          account_selection: !input zalo_custom_account
+                          thread_id: !input zalo_custom_thread_id
+                          type: "1"
+                          message: !input zalo_custom_initial_caption
+                          ttl: !input zalo_custom_ttl
+                  - continue_on_error: true
+                    action: zalo_bot.send_images_to_group
+                    data:
+                      account_selection: !input zalo_custom_account
+                      thread_id: !input zalo_custom_thread_id
+                      image_paths: "{{ anh_comma }}"
+                    response_variable: zalo_anh_response
+            default:
+              - continue_on_error: true
+                action: zalo_bot.send_image
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_thread_id
+                  type: "1"
+                  image_path: "{{ duong_dan_anh[0] }}"
+                  message: !input zalo_custom_initial_caption
+                  ttl: !input zalo_custom_ttl
+                response_variable: zalo_anh_response
+
+      - alias: "Zalo cá nhân sớm — CÁ NHÂN"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and som_gui_anh
+                 and zalo_custom_receiver_type != '1'
+                 and zalo_custom_user_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ som_nhieu_anh }}"
+                sequence:
+                  - if:
+                      - condition: template
+                        value_template: "{{ zalo_custom_initial_caption | length > 0 }}"
+                    then:
+                      - continue_on_error: true
+                        action: zalo_bot.send_message
+                        data:
+                          account_selection: !input zalo_custom_account
+                          thread_id: !input zalo_custom_user_id
+                          type: "0"
+                          message: !input zalo_custom_initial_caption
+                          ttl: !input zalo_custom_ttl
+                  - continue_on_error: true
+                    action: zalo_bot.send_images_to_user
+                    data:
+                      account_selection: !input zalo_custom_account
+                      thread_id: !input zalo_custom_user_id
+                      image_paths: "{{ anh_comma }}"
+                    response_variable: zalo_anh_response
+            default:
+              - continue_on_error: true
+                action: zalo_bot.send_image
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_user_id
+                  type: "0"
+                  image_path: "{{ duong_dan_anh[0] }}"
+                  message: !input zalo_custom_initial_caption
+                  ttl: !input zalo_custom_ttl
+                response_variable: zalo_anh_response
+
+  # --- Zalo cá nhân: video ---
+  - choose:
+      - alias: "Zalo cá nhân sớm — video NHÓM"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and som_gui_video
+                 and zalo_custom_receiver_type == '1'
+                 and zalo_custom_thread_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_video
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: !input zalo_custom_thread_id
+              type: "1"
+              video_path_or_url: "{{ duong_dan_video }}"
+              message: !input zalo_custom_initial_caption
+              ttl: !input zalo_custom_ttl
+
+      - alias: "Zalo cá nhân sớm — video CÁ NHÂN"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and som_gui_video
+                 and zalo_custom_receiver_type != '1'
+                 and zalo_custom_user_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_video
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: !input zalo_custom_user_id
+              type: "0"
+              video_path_or_url: "{{ duong_dan_video }}"
+              message: !input zalo_custom_initial_caption
+              ttl: !input zalo_custom_ttl
+
+  # --- Điện thoại: ảnh ---
+  # Đường dẫn để tương đối là có chủ đích. Ứng dụng nối nó với đúng máy chủ đã
+  # gửi thông báo, nên bấm vào lúc ở nhà thì đi mạng LAN, ở ngoài thì đi tên
+  # miền — blueprint không phải biết địa chỉ nào cả.
+  - if:
+      - condition: template
+        value_template: "{{ include_notify and filtered_devices | length > 0 and som_gui_anh }}"
+    then:
+      - repeat:
+          for_each: >
+            {{ duong_dan_anh_media if som_nhieu_anh else duong_dan_anh_media[:1] }}
+          sequence:
+            - variables:
+                anh_nay: "{{ repeat.item }}"
+            - repeat:
+                for_each: "{{ filtered_devices }}"
+                sequence:
+                  - continue_on_error: true
+                    action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+                    data:
+                      title: !input notify_title
+                      message: "{{ telegram_initial_caption }}"
+                      data: >
+                        {% set chung = {'image': anh_nay,
+                                        'url': anh_nay,
+                                        'clickAction': anh_nay,
+                                        'tag': tag ~ '_anh'} %}
+                        {% if is_ios_android == 'android_device' %}
+                          {{ dict(chung, priority='high',
+                                  notification_icon=status_bar_icon,
+                                  color=notification_color_hex) }}
+                        {% else %}
+                          {{ chung }}
+                        {% endif %}
+
+  # --- Điện thoại: video ---
+  - if:
+      - condition: template
+        value_template: "{{ include_notify and filtered_devices | length > 0 and som_gui_video }}"
+    then:
+      - repeat:
+          for_each: "{{ filtered_devices }}"
+          sequence:
+            - continue_on_error: true
+              action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+              data:
+                title: !input notify_title
+                message: "{{ telegram_initial_caption }}"
+                data:
+                  video: "{{ duong_dan_video_media }}"
+                  url: "{{ duong_dan_video_media }}"
+                  clickAction: "{{ duong_dan_video_media }}"
+                  tag: "{{ tag }}_video"
+
+  # ============================================================
+  # BƯỚC 9: PHÂN TÍCH AI
+  # ============================================================
+  - variables:
+      # Bật video cho AI đọc thì đưa tệp video, ngược lại đưa chuỗi ảnh.
+      dinh_kem_ai: >
+        {{ video_cho_ai if (bat_nhanh_video and video_dua_vao_ai) else anh_cho_ai }}
+
+  - if:
+      - condition: template
+        value_template: "{{ bat_ai }}"
+    then:
+      - choose:
+          - alias: "Kết quả có cấu trúc — người, động vật, cả hai"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'co_cau_truc' and doi_tuong != 'security' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Phan tich camera khi co chuyen dong
+                  instructions: "{{ prompt_phan_tich }}"
+                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  attachments: "{{ dinh_kem_ai }}"
+                  structure:
+                    humans_detected:
+                      description: >
+                        How many DISTINCT people appear across the whole
+                        sequence. Never count the same person again in a later
+                        frame. 0 when nobody is visible or people are not being
+                        analysed this time.
+                      required: true
+                      selector:
+                        number:
+                          min: 0
+                          max: 50
+                    humans_detected_summary:
+                      description: >
+                        Short Vietnamese count summary such as "1 phụ nữ, 2 trẻ
+                        em". Empty string when nobody is visible.
+                      required: false
+                      selector:
+                        text:
+                    humans_detected_description:
+                      description: "{{ mo_ta_o_nguoi }}"
+                      required: false
+                      selector:
+                        text:
+                    animals_detected:
+                      description: >
+                        How many DISTINCT animals appear across the whole
+                        sequence. 0 when none are visible or animals are not
+                        being analysed this time.
+                      required: true
+                      selector:
+                        number:
+                          min: 0
+                          max: 50
+                    animals_detected_summary:
+                      description: >
+                        Short Vietnamese summary by species and visible colour
+                        such as "1 con chó vàng". Empty string when none.
+                      required: false
+                      selector:
+                        text:
+                    animals_detected_description:
+                      description: "{{ mo_ta_o_dong_vat }}"
+                      required: false
+                      selector:
+                        text:
+                    khung_ro_nhat:
+                      description: "{{ mo_ta_o_khung }}"
+                      required: false
+                      selector:
+                        number:
+                          min: 1
+                          max: 5
+                response_variable: ket_qua_ai
+
+          - alias: "Kết quả có cấu trúc — an ninh"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'co_cau_truc' and doi_tuong == 'security' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Danh gia an ninh tu camera
+                  instructions: "{{ prompt_phan_tich }}"
+                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  attachments: "{{ dinh_kem_ai }}"
+                  structure:
+                    humans_detected:
+                      description: >
+                        How many DISTINCT people appear across the whole
+                        sequence. Never count the same person twice. 0 when
+                        nobody is visible.
+                      required: true
+                      selector:
+                        number:
+                          min: 0
+                          max: 50
+                    human_action:
+                      description: "{{ mo_ta_o_hanh_dong }}"
+                      required: true
+                      selector:
+                        text:
+                    security_suspicious:
+                      description: >
+                        True only when what you actually SEE deserves security
+                        attention at a home. Ordinary living counts as normal:
+                        residents and their children coming and going, guests,
+                        neighbours, a delivery or a courier, someone dropping
+                        leaflets, cleaning or maintenance work. Suspicion needs
+                        behaviour that builds across the frames — lingering at
+                        an entrance, coming back again and again, checking one
+                        door or window or lock repeatedly, testing a handle,
+                        working at a lock, reaching through an opening, climbing
+                        somewhere clearly private, taking or tampering with
+                        property, or something clearly dangerous being carried
+                        in a worrying way. Clothing, a mask, a helmet or a
+                        glance at the camera is never enough on its own. When
+                        unsure, answer false.
+                      required: true
+                      selector:
+                        boolean:
+                    khung_ro_nhat:
+                      description: "{{ mo_ta_o_khung }}"
+                      required: false
+                      selector:
+                        number:
+                          min: 1
+                          max: 5
+                response_variable: ket_qua_ai
+
+          - alias: "Kết quả JSON thô"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'json' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Phan tich camera khi co chuyen dong
+                  instructions: "{{ prompt_phan_tich }}"
+                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  attachments: "{{ dinh_kem_ai }}"
+                response_variable: ket_qua_ai_raw
+              - variables:
+                  ket_qua_ai: >
+                    {% if ket_qua_ai_raw is defined and ket_qua_ai_raw.data is defined %}
+                      {% set p = (ket_qua_ai_raw.data
+                        | regex_replace('```json\\s*', '')
+                        | regex_replace('```\\s*', '')
+                        | trim | from_json(default={})) %}
+                      {{ {'data': {
+                        'humans_detected':              p.get('humans_detected', 0),
+                        'humans_detected_summary':      p.get('humans_detected_summary', ''),
+                        'humans_detected_description':  p.get('humans_detected_description', ''),
+                        'animals_detected':             p.get('animals_detected', 0),
+                        'animals_detected_summary':     p.get('animals_detected_summary', ''),
+                        'animals_detected_description': p.get('animals_detected_description', ''),
+                        'human_action':                 p.get('human_action', ''),
+                        'security_suspicious':          p.get('security_suspicious', false),
+                        'khung_ro_nhat':                p.get('khung_ro_nhat', 1)
+                      }} }}
+                    {% else %}
+                      {{ {'data': {}} }}
+                    {% endif %}
+
+  # ============================================================
+  # BƯỚC 10: ĐỌC KẾT QUẢ, QUYẾT ĐỊNH GỬI GÌ
+  # ============================================================
+  - variables:
+      kq: "{{ ket_qua_ai.data if ket_qua_ai is defined and ket_qua_ai.data is defined else {} }}"
+      so_nguoi: "{{ kq.get('humans_detected', 0) | int(0) }}"
+      so_thu: "{{ kq.get('animals_detected', 0) | int(0) }}"
+      mo_ta_nguoi: "{{ kq.get('humans_detected_description', '') }}"
+      mo_ta_thu: "{{ kq.get('animals_detected_description', '') }}"
+      tom_tat_nguoi: "{{ kq.get('humans_detected_summary', '') }}"
+      tom_tat_thu: "{{ kq.get('animals_detected_summary', '') }}"
+      hanh_dong: "{{ kq.get('human_action', '') }}"
+      nghi_ngo: >
+        {{ kq.get('security_suspicious', false)
+           in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] }}
+      # Khung nào rõ nhất, kẹp vào khoảng ảnh thật sự có. Model đếm sai hoặc
+      # bỏ trống thì lấy tấm đầu.
+      khung_chon: >
+        {% set k = kq.get('khung_ro_nhat', 1) | int(1) %}
+        {{ [[k, 1] | max, so_anh_that | int(1)] | min }}
+
+  - variables:
+      # AI hỏng, quá giờ, hoặc bị tắt thì coi như có người: thà báo thừa còn
+      # hơn nuốt mất một lần có người thật.
+      ai_hong: "{{ not bat_ai or kq | length == 0 }}"
+      co_nguoi: >
+        {% if ai_hong %}true
+        {%- elif doi_tuong == 'animals' %}{{ so_thu > 0 }}
+        {%- elif doi_tuong == 'both' %}{{ so_nguoi > 0 or so_thu > 0 }}
+        {%- else %}{{ so_nguoi > 0 }}{% endif %}
+      dat_an_ninh: "{{ nghi_ngo if not ai_hong else true }}"
+
+  - variables:
+      dat_dk_anh: >
+        {% if anh_gui_khi == 'ngay' %}true
+        {%- elif anh_gui_khi == 'co_nguoi' %}{{ co_nguoi }}
+        {%- else %}{{ dat_an_ninh }}{% endif %}
+      dat_dk_video: >
+        {% if video_gui_khi == 'ngay' %}true
+        {%- elif video_gui_khi == 'co_nguoi' %}{{ co_nguoi }}
+        {%- else %}{{ dat_an_ninh }}{% endif %}
+      dat_dk_phan_tich: >
+        {% if phan_tich_gui_khi == 'di_kem' %}true
+        {%- elif phan_tich_gui_khi == 'co_nguoi' %}{{ co_nguoi }}
+        {%- else %}{{ dat_an_ninh }}{% endif %}
+
+  - variables:
+      muon_gui_anh: "{{ bat_nhanh_anh and anh_gui_khi != 'ngay' and dat_dk_anh }}"
+      muon_gui_video: "{{ bat_nhanh_video and video_gui_khi != 'ngay' and dat_dk_video }}"
+      da_gui_gi_do: >
+        {{ (bat_nhanh_anh and dat_dk_anh) or (bat_nhanh_video and dat_dk_video) }}
+      # Kết quả phân tích không bao giờ đi một mình. Lượt nào không gửi ảnh lẫn
+      # video thì cũng không gửi chữ, kể cả khi ô phân tích đặt "đi kèm".
+      gui_phan_tich: "{{ bat_ai and dat_dk_phan_tich and da_gui_gi_do and kq | length > 0 }}"
+
+  - variables:
+      muon_nhieu_anh: "{{ muon_gui_anh and anh_gui_may_tam == 'tat_ca' and duong_dan_anh | length > 1 }}"
+      # Tấm được chọn để gửi khi chỉ gửi một ảnh: tấm AI nói là rõ nhất.
+      anh_chon: "{{ duong_dan_anh[khung_chon | int(1) - 1] }}"
+      anh_chon_media: "{{ duong_dan_anh_media[khung_chon | int(1) - 1] }}"
+
+  # ============================================================
+  # BƯỚC 11: DỰNG CÂU THÔNG BÁO
+  # ============================================================
+  - variables:
+      loi_nhan: >-
+        {%- set thu = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] -%}
+        {%- set ns = namespace(d=[]) -%}
+        {%- set ns.d = ns.d + ['📊  ' ~ camera_name] -%}
+        {%- if doi_tuong == 'security' -%}
+          {%- set ns.d = ns.d + ['🚶: ' ~ so_nguoi ~ ' người'] -%}
+          {%- set ns.d = ns.d + ['👉 ' ~ (hanh_dong if hanh_dong | length > 0 else 'Không có mô tả hành động.')] -%}
+          {%- set ns.d = ns.d + ['🛡️ Khả nghi: ' ~ ('CÓ' if nghi_ngo else 'KHÔNG')] -%}
+        {%- else -%}
+          {%- if doi_tuong in ['humans', 'both'] -%}
+            {%- set ns.d = ns.d + ['🚶: ' ~ (tom_tat_nguoi if tom_tat_nguoi | length > 0 else so_nguoi | string)] -%}
+            {%- set ns.d = ns.d + ['👉 ' ~ mo_ta_nguoi] -%}
+          {%- endif -%}
+          {%- if doi_tuong in ['animals', 'both'] -%}
+            {%- set ns.d = ns.d + ['🐾: ' ~ (tom_tat_thu if tom_tat_thu | length > 0 else so_thu | string)] -%}
+            {%- set ns.d = ns.d + ['👉 ' ~ mo_ta_thu] -%}
+          {%- endif -%}
+        {%- endif -%}
+        {%- set gio = '🕒 ' ~ now().strftime('%H:%M:%S') ~ ' ' ~ thu[now().weekday()]
+              ~ ' Ngày ' ~ now().strftime('%d') ~ ' Tháng ' ~ now().strftime('%m')
+              ~ ' Năm ' ~ now().strftime('%Y')
+              ~ (' ' ~ notification_time if notification_time != '' else '') -%}
+        {%- set ns.d = ns.d + [gio] -%}
+        {{ ns.d | join('\n') }}
+
+      # Chú thích đi kèm ảnh hoặc video gửi muộn. Gộp được thì gộp — người
+      # nhận thấy một tin có cả hình lẫn lời, thay vì hai tin rời nhau.
+      chu_kem: >
+        {% if gui_phan_tich %}{{ loi_nhan }}{% else %}{{ telegram_initial_caption }}{% endif %}
+
+  - variables:
+      # Phân tích gộp vào thứ gửi muộn ĐẦU TIÊN. Một ảnh thì gộp vào ảnh; nhiều
+      # ảnh thì không gộp được vì service gửi chùm không có tham số chú thích;
+      # không có ảnh muộn thì gộp vào video.
+      gop_vao_anh: "{{ gui_phan_tich and muon_gui_anh and not muon_nhieu_anh }}"
+      gop_vao_video: "{{ gui_phan_tich and not gop_vao_anh and muon_gui_video }}"
+      can_tin_chu_rieng: "{{ gui_phan_tich and not gop_vao_anh and not gop_vao_video }}"
+
+  # ============================================================
+  # BƯỚC 12: GỬI MUỘN — ẢNH, VIDEO, VÀ PHÂN TÍCH
+  # ============================================================
+
+  # --- Telegram: ảnh muộn ---
+  - choose:
+      - alias: "Telegram muộn — một ảnh, gộp cả phân tích"
+        conditions:
+          - condition: template
+            value_template: "{{ include_telegram_notify and muon_gui_anh and not muon_nhieu_anh }}"
+        sequence:
+          - continue_on_error: true
+            action: telegram_bot.send_photo
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'file': anh_chon,
+                          'caption': chu_kem if gop_vao_anh else telegram_initial_caption} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+      - alias: "Telegram muộn — chùm ảnh"
+        conditions:
+          - condition: template
+            value_template: "{{ include_telegram_notify and muon_nhieu_anh }}"
+        sequence:
+          - continue_on_error: true
+            action: telegram_bot.send_media_group
+            data: >
+              {% set ns = namespace(m=[]) %}
+              {%- for p in duong_dan_anh[:10] -%}
+                {% if loop.first %}
+                  {% set ns.m = ns.m + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
+                {% else %}
+                  {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
+                {% endif %}
+              {%- endfor -%}
+              {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+  # --- Telegram: video muộn ---
+  - if:
+      - condition: template
+        value_template: "{{ include_telegram_notify and muon_gui_video }}"
+    then:
+      - continue_on_error: true
+        action: telegram_bot.send_video
+        data: >
+          {% set d = {'config_entry_id': telegram_config_entry,
+                      'file': duong_dan_video,
+                      'caption': chu_kem if gop_vao_video else telegram_initial_caption} %}
+          {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+          {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+          {{ d }}
+
+  # --- Telegram: tin chữ riêng ---
+  - if:
+      - condition: template
+        value_template: "{{ include_telegram_notify and can_tin_chu_rieng }}"
+    then:
+      - continue_on_error: true
+        action: telegram_bot.send_message
+        data: >
+          {% set d = {'config_entry_id': telegram_config_entry,
+                      'message': loi_nhan,
+                      'parse_mode': 'plain_text'} %}
+          {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+          {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+          {{ d }}
+
+  # --- Zalo Bot (Pyscript): ảnh muộn rồi tới chữ ---
+  - if:
+      - condition: template
+        value_template: "{{ enable_zalo_bot and muon_gui_anh }}"
+    then:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ muon_nhieu_anh }}"
+            sequence:
+              - repeat:
+                  for_each: "{{ duong_dan_anh }}"
+                  sequence:
+                    - continue_on_error: true
+                      action: pyscript.send_zalo_photo
+                      data:
+                        chat_id: "{{ zalo_bot_chat_id }}"
+                        file_path: "{{ repeat.item }}"
+                        caption: "{{ zalo_bot_initial_caption if repeat.index == 1 else '' }}"
+                      response_variable: zalo_bot_photo_response
+            default:
+              - continue_on_error: true
+                action: pyscript.send_zalo_photo
+                data:
+                  chat_id: "{{ zalo_bot_chat_id }}"
+                  file_path: "{{ anh_chon }}"
+                  caption: "{{ chu_kem if gop_vao_anh else zalo_bot_initial_caption }}"
+                response_variable: zalo_bot_photo_response
+
+  - if:
+      - condition: template
+        value_template: >
+          {{ enable_zalo_bot and gui_phan_tich
+             and not (gop_vao_anh and muon_gui_anh) }}
+    then:
+      - continue_on_error: true
+        action: pyscript.send_zalo_message
+        data:
+          chat_id: "{{ zalo_bot_chat_id }}"
+          message: "{{ loi_nhan }}"
+        response_variable: zalo_bot_message_response
+
+  # --- Zalo cá nhân: ảnh muộn ---
+  - choose:
+      - alias: "Zalo cá nhân muộn — ảnh NHÓM"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and muon_gui_anh
+                 and zalo_custom_receiver_type == '1'
+                 and zalo_custom_thread_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ muon_nhieu_anh }}"
+                sequence:
+                  - continue_on_error: true
+                    action: zalo_bot.send_images_to_group
+                    data:
+                      account_selection: !input zalo_custom_account
+                      thread_id: !input zalo_custom_thread_id
+                      image_paths: "{{ anh_comma }}"
+                    response_variable: zalo_anh_response
+            default:
+              - continue_on_error: true
+                action: zalo_bot.send_image
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_thread_id
+                  type: "1"
+                  image_path: "{{ anh_chon }}"
+                  message: "{{ chu_kem if gop_vao_anh else zalo_custom_initial_caption }}"
+                  ttl: !input zalo_custom_ttl
+                response_variable: zalo_anh_response
+
+      - alias: "Zalo cá nhân muộn — ảnh CÁ NHÂN"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and muon_gui_anh
+                 and zalo_custom_receiver_type != '1'
+                 and zalo_custom_user_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ muon_nhieu_anh }}"
+                sequence:
+                  - continue_on_error: true
+                    action: zalo_bot.send_images_to_user
+                    data:
+                      account_selection: !input zalo_custom_account
+                      thread_id: !input zalo_custom_user_id
+                      image_paths: "{{ anh_comma }}"
+                    response_variable: zalo_anh_response
+            default:
+              - continue_on_error: true
+                action: zalo_bot.send_image
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_user_id
+                  type: "0"
+                  image_path: "{{ anh_chon }}"
+                  message: "{{ chu_kem if gop_vao_anh else zalo_custom_initial_caption }}"
+                  ttl: !input zalo_custom_ttl
+                response_variable: zalo_anh_response
+
+  # --- Zalo cá nhân: video muộn ---
+  - choose:
+      - alias: "Zalo cá nhân muộn — video NHÓM"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and muon_gui_video
+                 and zalo_custom_receiver_type == '1'
+                 and zalo_custom_thread_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_video
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: !input zalo_custom_thread_id
+              type: "1"
+              video_path_or_url: "{{ duong_dan_video }}"
+              message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
+              ttl: !input zalo_custom_ttl
+
+      - alias: "Zalo cá nhân muộn — video CÁ NHÂN"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and muon_gui_video
+                 and zalo_custom_receiver_type != '1'
+                 and zalo_custom_user_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_video
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: !input zalo_custom_user_id
+              type: "0"
+              video_path_or_url: "{{ duong_dan_video }}"
+              message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
+              ttl: !input zalo_custom_ttl
+
+  # --- Zalo cá nhân: tin chữ riêng ---
+  - choose:
+      - alias: "Zalo cá nhân — chữ riêng NHÓM"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and can_tin_chu_rieng
+                 and zalo_custom_receiver_type == '1'
+                 and zalo_custom_thread_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_message
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: !input zalo_custom_thread_id
+              type: "1"
+              message: "{{ loi_nhan }}"
+              ttl: !input zalo_custom_ttl
+
+      - alias: "Zalo cá nhân — chữ riêng CÁ NHÂN"
+        conditions:
+          - condition: template
+            value_template: >
+              {{ enable_zalo_custom and can_tin_chu_rieng
+                 and zalo_custom_receiver_type != '1'
+                 and zalo_custom_user_id | length > 0
+                 and zalo_custom_account | length > 0 }}
+        sequence:
+          - continue_on_error: true
+            action: zalo_bot.send_message
+            data:
+              account_selection: !input zalo_custom_account
+              thread_id: !input zalo_custom_user_id
+              type: "0"
+              message: "{{ loi_nhan }}"
+              ttl: !input zalo_custom_ttl
+
+  # --- Điện thoại: ảnh muộn ---
+  - if:
+      - condition: template
+        value_template: "{{ include_notify and filtered_devices | length > 0 and muon_gui_anh }}"
+    then:
+      - repeat:
+          for_each: >
+            {{ duong_dan_anh_media if muon_nhieu_anh else [anh_chon_media] }}
+          sequence:
+            - variables:
+                anh_nay: "{{ repeat.item }}"
+            - repeat:
+                for_each: "{{ filtered_devices }}"
+                sequence:
+                  - continue_on_error: true
+                    action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+                    data:
+                      title: !input notify_title
+                      message: >
+                        {{ chu_kem if gop_vao_anh else telegram_initial_caption }}
+                      data: >
+                        {% set chung = {'image': anh_nay,
+                                        'url': anh_nay,
+                                        'clickAction': anh_nay,
+                                        'tag': tag ~ '_anh'} %}
+                        {% if is_ios_android == 'android_device' %}
+                          {{ dict(chung, priority='high',
+                                  notification_icon=status_bar_icon,
+                                  color=notification_color_hex) }}
+                        {% else %}
+                          {{ chung }}
+                        {% endif %}
+
+  # --- Điện thoại: video muộn ---
+  - if:
+      - condition: template
+        value_template: "{{ include_notify and filtered_devices | length > 0 and muon_gui_video }}"
+    then:
+      - repeat:
+          for_each: "{{ filtered_devices }}"
+          sequence:
+            - continue_on_error: true
+              action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+              data:
+                title: !input notify_title
+                message: "{{ chu_kem if gop_vao_video else telegram_initial_caption }}"
+                data:
+                  video: "{{ duong_dan_video_media }}"
+                  url: "{{ duong_dan_video_media }}"
+                  clickAction: "{{ duong_dan_video_media }}"
+                  tag: "{{ tag }}_video"
+
+  # --- Điện thoại: tin chữ riêng ---
+  - if:
+      - condition: template
+        value_template: "{{ include_notify and filtered_devices | length > 0 and can_tin_chu_rieng }}"
+    then:
+      - repeat:
+          for_each: "{{ filtered_devices }}"
+          sequence:
+            - continue_on_error: true
+              action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+              data:
+                title: !input notify_title
+                message: "{{ loi_nhan }}"
+                data: >
+                  {% set chung = {'url': tap_navigate,
+                                  'clickAction': tap_navigate,
+                                  'tag': tag ~ '_chu'} %}
+                  {% if is_ios_android == 'android_device' %}
+                    {{ dict(chung, priority='high',
+                            notification_icon=status_bar_icon,
+                            color=notification_color_hex) }}
+                  {% else %}
+                    {{ chung }}
+                  {% endif %}
+
+  # ============================================================
+  # BƯỚC 13: ĐỌC RA LOA
+  # Câu gửi lên màn hình có emoji, dấu hai chấm và giờ giấc viết tắt — đọc
+  # nguyên văn ra loa nghe rất kỳ. Nên loa dùng một câu riêng.
+  # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ include_tts_announcement and media_player | length > 0 and gui_phan_tich }}"
+    then:
+      # Nhờ AI viết lại thành câu nói được. Vừa bỏ emoji, vừa đọc số thành
+      # chữ, vừa gãy gọn hơn câu ghép bằng template.
+      - if:
+          - condition: template
+            value_template: "{{ tts_viet_lai and bat_ai }}"
+        then:
+          - continue_on_error: true
+            action: ai_task.generate_data
+            data:
+              task_name: Viet lai cau doc ra loa
+              instructions: >
+                Rewrite the following Vietnamese home security notice as ONE
+                spoken sentence for a smart speaker at home.
+                Rules: drop every emoji, symbol and label; write numbers as
+                Vietnamese words; keep it under 30 words; say the camera
+                location first; keep full Vietnamese diacritics; sound calm and
+                factual, never alarming. Return the sentence only, nothing else.
+
+                Notice:
+                {{ loi_nhan }}
+              entity_id: >
+                {% if tts_ai_provider | length > 0 %}{{ tts_ai_provider }}
+                {%- elif ai_provider | length > 0 %}{{ ai_provider }}
+                {%- else %}{{ omit }}{% endif %}
+            response_variable: cau_doc_ai
+
+      - variables:
+          cau_doc: >-
+            {%- if tts_viet_lai and cau_doc_ai is defined and cau_doc_ai.data is defined
+                  and cau_doc_ai.data | string | trim | length > 0 -%}
+              {{ cau_doc_ai.data | string | trim }}
+            {%- elif doi_tuong == 'security' -%}
+              Camera {{ camera_name }} phát hiện {{ so_nguoi }} người.
+              {{ hanh_dong }}.
+              Đánh giá an ninh: {{ 'khả nghi' if nghi_ngo else 'không khả nghi' }}.
+            {%- else -%}
+              {%- set ns = namespace(p=[]) -%}
+              {%- if doi_tuong in ['humans', 'both'] and so_nguoi > 0 -%}
+                {%- set ns.p = ns.p + [mo_ta_nguoi] -%}
+              {%- endif -%}
+              {%- if doi_tuong in ['animals', 'both'] and so_thu > 0 -%}
+                {%- set ns.p = ns.p + [mo_ta_thu] -%}
+              {%- endif -%}
+              Camera {{ camera_name }}. {{ ns.p | join(' ') }}
+            {%- endif -%}
+
+      - repeat:
+          for_each: "{{ media_player }}"
+          sequence:
+            - continue_on_error: true
+              action: media_player.volume_set
+              data:
+                volume_level: "{{ num_volume_speaker }}"
+              target:
+                entity_id: "{{ repeat.item }}"
+            - continue_on_error: true
+              action: tts.speak
+              target:
+                entity_id: !input text_to_speech_engine
+              data:
+                media_player_entity_id: "{{ repeat.item }}"
+                message: "{{ cau_doc }}"
+
+  # ============================================================
+  # BƯỚC CUỐI: CHỜ RỒI NGHỈ
+  # ============================================================
+  - delay:
+      seconds: "{{ num_delay_actions }}"
+
+  - delay: !input cooldown
