@@ -1375,6 +1375,9 @@ action:
               - condition: template
                 value_template: "{{ danh_thuc_som and bat_ai }}"
             then:
+              # response_variable là BẮT BUỘC với ai_task.generate_data, kể cả khi
+              # ta không cần kết quả: Home Assistant từ chối cả lời gọi nếu thiếu,
+              # và automation đứt ngay từ bước này.
               - continue_on_error: true
                 action: ai_task.generate_data
                 data:
@@ -1384,6 +1387,7 @@ action:
                     {% if ai_provider_loc | length > 0 %}{{ ai_provider_loc }}
                     {%- elif ai_provider | length > 0 %}{{ ai_provider }}
                     {%- else %}{{ omit }}{% endif %}
+                response_variable: danh_thuc_bo_qua
 
       - alias: "Chờ theo cách xác nhận đã chọn"
         sequence:
