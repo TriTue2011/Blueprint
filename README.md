@@ -20,6 +20,7 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Phân tích file / ảnh (LLM)](#-phân-tích-file--ảnh-llm)
   - [Cảnh báo người qua camera bằng AI](#-cảnh-báo-người-qua-camera-bằng-ai)
   - [Cảnh báo camera AI 4 — cửa lọc, ảnh đôi, video](#-cảnh-báo-camera-ai-4--cửa-lọc-ảnh-đôi-video)
+  - [Giữ model AI thức trong khung giờ](#-giữ-model-ai-thức-trong-khung-giờ)
   - [LLM Vision Camera](#️-llm-vision-camera)
 - **Gửi tin nhắn**
   - [Gửi Telegram (Voice + xóa file)](#-gửi-telegram-voice--xóa-file)
@@ -398,6 +399,50 @@ Thiếu dòng này thì AI Task và thông báo điện thoại không đọc đ
 Nhánh video muốn cho AI đọc thẳng tệp mp4 thì phải dùng provider đọc được video, hiện là Google Gemini. Model chạy tại nhà qua Ollama hay llama.cpp chỉ nhận ảnh tĩnh, nên với chúng hãy để video ở chế độ chỉ gửi kèm — đó cũng là mặc định.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera_4.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## ⏰ Giữ model AI thức trong khung giờ
+
+Dành cho ai chạy model tại nhà và đã cho nó ngủ lúc rảnh để nhường GPU. Automation gọi model một lời gọi rỗng theo chu kỳ, đủ để nó không kịp ngủ, nhưng chỉ trong khung giờ bạn cần báo động nhạy nhất.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Một AI Task entity trỏ tới model chạy tại nhà |
+
+### Vì sao cần
+
+Đo trên RTX 2060 SUPER với Qwen3-VL-4B:
+
+| Gọi lúc | Thời gian |
+|---|---|
+| Model đang ngủ | **11 804 ms** |
+| Model đang thức | 1 044 ms |
+
+Mười giây chênh lệch đó **không rút ngắn được bằng tham số**. Đã thử năm cấu hình, mỗi cấu hình hai lượt: bản gốc, thêm `--mlock`, hạ cửa sổ ngữ cảnh còn một nửa, kết hợp cả hai, và nén bộ nhớ đệm KV xuống q8_0. Cả mười lượt đều rơi vào 10,1–10,4 giây. Nó là chi phí dựng lại ngữ cảnh CUDA và đẩy trọng số lên card, không có cờ nào chạm tới được.
+
+Nên cách duy nhất là **ít phải thức dậy hơn**. Automation này giữ model thức suốt khung giờ bạn chọn, để mọi báo động trong khoảng đó trả lời trong một giây.
+
+### Cái giá
+
+Model giữ VRAM suốt khung giờ ấy — với Qwen3-VL-4B là khoảng 4,4 GB trên card 8 GB. Vì vậy hãy chọn khung giờ mà GPU không phải làm việc gì khác. Ban đêm thường là lựa chọn đúng: đó vừa là lúc báo động cần nhạy nhất, vừa là lúc bạn không ra lệnh bằng giọng nói hay dịch phụ đề.
+
+### Một điều dễ đặt sai
+
+**Chu kỳ gọi phải ngắn hơn ngưỡng ngủ của model.** Model đặt `--sleep-idle-seconds 300` thì gọi mỗi 4 phút là vừa. Nếu ngưỡng ngủ chỉ 30 giây thì automation này không đuổi kịp — hãy nâng ngưỡng ngủ lên trước, rồi mới dùng.
+
+### Cấu hình
+
+- **AI Task** — thực thể trỏ tới model chạy tại nhà. Đừng trỏ vào dịch vụ ngoài mạng tính tiền theo lượt gọi, vì automation gọi vài trăm lần mỗi đêm.
+- **Gọi mỗi bao nhiêu phút** — mặc định 4.
+- **Bắt đầu** và **thôi giữ thức** — đặt giờ kết thúc sớm hơn giờ bắt đầu là khung qua nửa đêm, ví dụ 22:00 tới 06:00, Home Assistant hiểu đúng.
+- **Điều kiện thêm** — ví dụ chỉ giữ thức khi báo động đang bật, hoặc khi có người ở nhà.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fgiu_model_thuc.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 

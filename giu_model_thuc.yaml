@@ -1,0 +1,144 @@
+blueprint:
+  name: Giữ model AI thức trong khung giờ
+  author: TriTue2011
+  homeassistant:
+    min_version: 2026.3.0
+  description: >
+    Gọi model một lời gọi rỗng theo chu kỳ để nó không kịp ngủ, trong đúng khung
+    giờ bạn cần báo động nhạy nhất. Ngoài khung giờ đó model vẫn ngủ và nhả GPU
+    như bình thường.
+
+    <details>
+    <summary><b>Chi tiết:</b> - Nhấn để mở rộng</summary>
+
+      **Phiên bản: v.2026.08.20**
+
+      **Dùng khi nào:** bạn chạy model tại nhà và đã đặt cho nó ngủ lúc rảnh để
+      nhường GPU. Đo trên RTX 2060 SUPER với Qwen3-VL-4B: gọi lúc model đang ngủ
+      mất **11,8 giây**, gọi lúc đang thức mất **1,0 giây**.
+
+      Mười giây chênh lệch đó không rút ngắn được bằng tham số — đã thử `--mlock`,
+      hạ cửa sổ ngữ cảnh, nén bộ nhớ đệm KV, cả ba đều không suy chuyển. Nó là chi
+      phí dựng lại ngữ cảnh CUDA và đẩy trọng số lên card.
+
+      Nên cách duy nhất là **ít phải thức dậy hơn**. Automation này giữ model thức
+      suốt khung giờ bạn chọn, để mọi báo động trong khoảng đó trả lời trong một
+      giây.
+
+      **Cái giá:** model giữ VRAM suốt khung giờ ấy — với Qwen3-VL-4B là khoảng
+      4,4 GB. Chọn khung giờ mà GPU không phải làm việc khác, thường là ban đêm.
+
+      **Quan trọng:** chu kỳ gọi phải NGẮN HƠN ngưỡng ngủ của model. Đặt
+      `--sleep-idle-seconds 300` thì gọi mỗi 4 phút là vừa; đặt 30 giây thì
+      automation này không đuổi kịp, hãy nâng ngưỡng ngủ lên trước.
+
+    </details>
+
+  domain: automation
+  source_url: https://raw.githubusercontent.com/TriTue2011/Blueprint/main/giu_model_thuc.yaml
+
+  input:
+    model_section:
+      name: 1 · Model cần giữ thức
+      icon: mdi:brain
+      collapsed: false
+      input:
+        ai_task_entity:
+          name: 🤖 AI Task
+          description: |
+            👉 Chọn thực thể AI Task trỏ tới model chạy tại nhà.
+            ⚠️ Đừng trỏ vào dịch vụ ngoài mạng tính tiền theo lượt gọi — automation này
+            gọi vài trăm lần mỗi đêm.
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+        chu_ky_phut:
+          name: ⏱️ Gọi mỗi bao nhiêu phút
+          description: |
+            👉 Phải NGẮN HƠN ngưỡng ngủ của model, để lời gọi sau tới trước khi nó kịp ngủ.
+            ✅ Model đặt ngủ sau 300 giây (5 phút) thì để 4 phút là vừa.
+            ⚠️ Để dài hơn ngưỡng ngủ thì automation chạy mà chẳng giữ được gì.
+          default: 4
+          selector:
+            number:
+              min: 1
+              max: 30
+              step: 1
+              unit_of_measurement: phút
+              mode: slider
+
+    khung_gio_section:
+      name: 2 · Khung giờ giữ thức
+      icon: mdi:clock-outline
+      collapsed: false
+      input:
+        gio_bat_dau:
+          name: 🌙 Bắt đầu giữ thức
+          description: |
+            👉 Từ giờ này trở đi model được giữ thức.
+            ✅ Ban đêm là lúc đáng chọn nhất: báo động cần nhạy nhất, mà GPU không phải
+            làm việc gì khác.
+          default: "22:00:00"
+          selector:
+            time: {}
+
+        gio_ket_thuc:
+          name: ☀️ Thôi giữ thức
+          description: |
+            👉 Sau giờ này model lại ngủ như bình thường và nhả GPU.
+            ✅ Đặt giờ kết thúc SỚM HƠN giờ bắt đầu là khung qua nửa đêm, ví dụ 22:00 tới
+            06:00 — Home Assistant hiểu đúng.
+          default: "06:00:00"
+          selector:
+            time: {}
+
+        dieu_kien_them:
+          name: 🛠️ Điều kiện thêm
+          description: |
+            👉 Chỉ giữ thức khi những điều kiện này cùng đúng.
+            ✅ Ví dụ hay dùng: chỉ giữ thức khi báo động đang bật, hoặc khi có người ở nhà.
+            ✅ Bỏ trống thì chỉ cần đúng khung giờ.
+          default: []
+          selector:
+            condition: {}
+
+mode: single
+max_exceeded: silent
+
+variables:
+  chu_ky_phut: !input chu_ky_phut
+
+# Kích hoạt mỗi phút rồi tự lọc, vì trigger theo mẫu thời gian không nhận được
+# giá trị người dùng chọn — `minutes: "/4"` phải là hằng số viết cứng trong tệp.
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+condition:
+  - condition: template
+    value_template: "{{ now().minute % (chu_ky_phut | int(4)) == 0 }}"
+
+  # Giờ kết thúc sớm hơn giờ bắt đầu thì đây là khung qua nửa đêm, Home Assistant
+  # tự hiểu đúng, không phải tách làm hai điều kiện.
+  - condition: time
+    after: !input gio_bat_dau
+    before: !input gio_ket_thuc
+
+  - condition: and
+    conditions: !input dieu_kien_them
+
+action:
+  # Lời gọi rẻ nhất có thể: không ảnh, một từ trả về. Nó không cần kết quả gì,
+  # chỉ cần chạm vào model để đồng hồ đếm rảnh của server quay lại từ đầu.
+  #
+  # continue_on_error để một lần model bận hay mạng trục trặc không làm automation
+  # đỏ trong nhật ký — lượt sau vẫn gọi tiếp sau đúng chu kỳ.
+  - alias: "Chạm vào model cho nó khỏi ngủ"
+    continue_on_error: true
+    action: ai_task.generate_data
+    data:
+      task_name: Giu model thuc
+      instructions: "Reply with the single word: ok"
+      entity_id: !input ai_task_entity
