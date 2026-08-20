@@ -977,17 +977,17 @@ variables:
 
   # Camera thật sự dùng ở từng nhánh. Bỏ trống ô sau thì dùng lại ô trước, để
   # người chỉ có một camera khỏi phải khai ba lần.
-  camera_phan_tich: >
+  camera_phan_tich: >-
     {{ camera_phan_tich_list[0] if camera_phan_tich_list | length > 0 else '' }}
   # Bỏ trống camera gửi thì mỗi lần chỉ chụp một tấm và dùng chung cho cả hai
   # việc. Khai riêng thì mỗi lần chụp một cặp: bản nhẹ cho AI, bản nét để gửi.
-  camera_gui: >
+  camera_gui: >-
     {{ camera_gui_list[0] if camera_gui_list | length > 0 else camera_phan_tich }}
-  chup_hai_bo: >
+  chup_hai_bo: >-
     {{ camera_gui_list | length > 0 and camera_gui_list[0] != camera_phan_tich }}
-  camera_video: >
+  camera_video: >-
     {{ camera_video_chon if camera_video_chon | length > 0 else camera_gui }}
-  camera_name: >
+  camera_name: >-
     {{ state_attr(camera_gui, 'friendly_name') | default(camera_gui, true) }}
   ten_file: "{{ camera_gui.replace('camera.', '') if camera_gui else 'camera' }}"
 
@@ -1002,18 +1002,18 @@ variables:
   # Tắt phân tích AI cũng vậy: không có kết quả nào để dựa vào, nên mọi đường
   # đều thành "gửi mọi lượt".
   co_danh_gia_an_ninh: "{{ bat_ai and doi_tuong == 'security' }}"
-  anh_gui_khi: >
+  anh_gui_khi: >-
     {% if not bat_ai %}ngay
     {%- elif anh_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
     {%- else %}{{ anh_gui_khi_raw }}{% endif %}
-  video_gui_khi: >
+  video_gui_khi: >-
     {% if not bat_ai %}ngay
     {%- elif video_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
     {%- else %}{{ video_gui_khi_raw }}{% endif %}
-  phan_tich_gui_khi: >
+  phan_tich_gui_khi: >-
     {% if phan_tich_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
     {%- else %}{{ phan_tich_gui_khi_raw }}{% endif %}
-  da_ha_cap: >
+  da_ha_cap: >-
     {{ bat_ai and not co_danh_gia_an_ninh
        and 'an_ninh' in [anh_gui_khi_raw, video_gui_khi_raw, phan_tich_gui_khi_raw] }}
 
@@ -1021,7 +1021,7 @@ variables:
   #
   # Chọn video mà quên bật nhánh video thì không có tệp nào để đưa cho AI, và
   # lượt đó sẽ im lặng không rõ lý do. Ở đây quay về chỉ ảnh và ghi nhật ký.
-  nguon_phan_tich: >
+  nguon_phan_tich: >-
     {% if nguon_phan_tich_raw in ['video', 'ca_hai'] and not bat_nhanh_video %}anh
     {%- elif nguon_phan_tich_raw == 'ca_hai' and not bat_nhanh_anh %}video
     {%- else %}{{ nguon_phan_tich_raw }}{% endif %}
@@ -1030,7 +1030,7 @@ variables:
 
   # Lời gọi có video thì đi bằng provider khai riêng, vì model tại nhà không
   # đọc được mp4 còn provider đám mây thì đọc được.
-  provider_phan_tich: >
+  provider_phan_tich: >-
     {% if co_video_cho_ai and ai_provider_video | length > 0 %}{{ ai_provider_video }}
     {%- else %}{{ ai_provider }}{% endif %}
 
