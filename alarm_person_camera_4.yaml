@@ -1786,14 +1786,14 @@ action:
                         file_path: "{{ repeat.item }}"
                         caption: "{{ zalo_bot_initial_caption if repeat.index == 1 else '' }}"
                       response_variable: zalo_bot_photo_response
-            default:
-              - continue_on_error: true
-                action: pyscript.send_zalo_photo
-                data:
-                  chat_id: "{{ zalo_bot_chat_id }}"
-                  file_path: "{{ duong_dan_anh[0] }}"
-                  caption: "{{ zalo_bot_initial_caption }}"
-                response_variable: zalo_bot_photo_response
+        default:
+          - continue_on_error: true
+            action: pyscript.send_zalo_photo
+            data:
+              chat_id: "{{ zalo_bot_chat_id }}"
+              file_path: "{{ duong_dan_anh[0] }}"
+              caption: "{{ zalo_bot_initial_caption }}"
+            response_variable: zalo_bot_photo_response
 
   # --- Zalo cá nhân: ảnh ---
   # thread_id PHẢI đi bằng !input, KHÔNG qua template. Đo thật: khai
@@ -2355,14 +2355,14 @@ action:
                         file_path: "{{ repeat.item }}"
                         caption: "{{ zalo_bot_initial_caption if repeat.index == 1 else '' }}"
                       response_variable: zalo_bot_photo_response
-            default:
-              - continue_on_error: true
-                action: pyscript.send_zalo_photo
-                data:
-                  chat_id: "{{ zalo_bot_chat_id }}"
-                  file_path: "{{ anh_chon }}"
-                  caption: "{{ chu_kem if gop_vao_anh else zalo_bot_initial_caption }}"
-                response_variable: zalo_bot_photo_response
+        default:
+          - continue_on_error: true
+            action: pyscript.send_zalo_photo
+            data:
+              chat_id: "{{ zalo_bot_chat_id }}"
+              file_path: "{{ anh_chon }}"
+              caption: "{{ chu_kem if gop_vao_anh else zalo_bot_initial_caption }}"
+            response_variable: zalo_bot_photo_response
 
   - if:
       - condition: template
