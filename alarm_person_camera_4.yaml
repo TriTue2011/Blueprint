@@ -2345,7 +2345,12 @@ action:
       # ảnh thì không gộp được vì service gửi chùm không có tham số chú thích;
       # không có ảnh muộn thì gộp vào video.
       gop_vao_anh: "{{ gui_phan_tich and muon_gui_anh and not muon_nhieu_anh }}"
-      gop_vao_video: "{{ gui_phan_tich and not gop_vao_anh and muon_gui_video }}"
+      # Chỉ gộp vào video khi lượt đó KHÔNG gửi ảnh. Gộp trong khi vẫn gửi album
+      # ảnh thì phần chữ phải nằm đợi video quay xong mới tới — người nhận thấy
+      # ảnh trước cả chục giây rồi mới có lời giải thích, mà nếu video hỏng thì
+      # không bao giờ thấy chữ.
+      gop_vao_video: >-
+        {{ gui_phan_tich and not gop_vao_anh and muon_gui_video and not muon_gui_anh }}
       can_tin_chu_rieng: "{{ gui_phan_tich and not gop_vao_anh and not gop_vao_video }}"
 
   # ============================================================
