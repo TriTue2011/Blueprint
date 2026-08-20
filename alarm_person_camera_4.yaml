@@ -1019,10 +1019,27 @@ variables:
 
   # NGUỒN PHÂN TÍCH SAU KHI HẠ CẤP.
   #
-  # Chọn video mà quên bật nhánh video thì không có tệp nào để đưa cho AI, và
-  # lượt đó sẽ im lặng không rõ lý do. Ở đây quay về chỉ ảnh và ghi nhật ký.
+  # Hai lý do phải hạ: quên bật nhánh cần thiết, hoặc provider không đọc nổi tệp
+  # video. Không hạ thì lượt báo động chết hẳn — đo trên máy thật 20/08: 23 lượt
+  # liên tiếp hỏng ở bước phân tích với unsupported_attachment_type, và vì
+  # blueprint coi "AI hỏng" là "cứ báo cho chắc" nên chủ nhà nhận ảnh cả những
+  # lần cửa trống.
+  provider_video_that: >-
+    {% if ai_provider_video | length > 0 %}{{ ai_provider_video }}
+    {%- else %}{{ ai_provider }}{% endif %}
+
+  # Chỉ tích hợp Google Generative AI chịu nhận tệp mp4. Ollama trả thẳng "only
+  # supports image attachments", còn các tích hợp OpenAI-compatible ném
+  # unsupported_attachment_type ngay trong mã của chúng — gói tin không bao giờ
+  # rời Home Assistant, nên máy chủ phía sau có đọc được video hay không cũng
+  # chẳng cứu được. Kiểm trước ở đây thì blueprint chạy với MỌI provider: cái
+  # nào đọc được video thì dùng video, cái nào không thì tự lùi về ảnh.
+  video_dung_duoc: >-
+    {{ provider_video_that in integration_entities('google_generative_ai_conversation') }}
+
   nguon_phan_tich: >-
     {% if nguon_phan_tich_raw in ['video', 'ca_hai'] and not bat_nhanh_video %}anh
+    {%- elif nguon_phan_tich_raw in ['video', 'ca_hai'] and not video_dung_duoc %}anh
     {%- elif nguon_phan_tich_raw == 'ca_hai' and not bat_nhanh_anh %}video
     {%- else %}{{ nguon_phan_tich_raw }}{% endif %}
   co_video_cho_ai: "{{ nguon_phan_tich in ['video', 'ca_hai'] }}"
@@ -1534,9 +1551,13 @@ action:
           level: warning
           logger: blueprint.canh_bao_camera_ai
           message: >
-            Ô "AI phân tích cái gì" đang đặt "{{ nguon_phan_tich_raw }}" nhưng nhánh
-            cần thiết lại chưa bật, nên không có tệp nào để đưa cho AI. Blueprint
-            tạm dùng "{{ nguon_phan_tich }}". Bật nhánh tương ứng ở mục 4 hoặc 5.
+            Ô "AI phân tích cái gì" đang đặt "{{ nguon_phan_tich_raw }}" nhưng không
+            dùng được, nên blueprint tạm chạy "{{ nguon_phan_tich }}".
+            {% if not bat_nhanh_video %}Lý do: nhánh video chưa bật ở mục 5.
+            {%- elif not video_dung_duoc %}Lý do: {{ provider_video_that }} không nhận
+            được tệp video. Chỉ tích hợp Google Generative AI làm được việc đó — khai
+            một AI Task của Google vào ô "AI Task dùng khi có video" ở mục 5.
+            {%- else %}Lý do: nhánh ảnh chưa bật ở mục 4.{% endif %}
 
   - if:
       - condition: template
