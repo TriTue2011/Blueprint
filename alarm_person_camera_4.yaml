@@ -452,17 +452,30 @@ blueprint:
                   value: an_ninh
               multiple: false
 
-        video_dua_vao_ai:
-          name: 🧠 Đưa video cho AI đọc
+        nguon_phan_tich:
+          name: 🧠 AI phân tích cái gì
           description: |
-            👉 BẬT: AI đọc thẳng tệp video, thấy được chuyển động liên tục.
-            ⚠️ Chỉ provider đọc được tệp mp4 mới làm nổi, hiện là Google Gemini. Model chạy tại
-            nhà qua Ollama hay llama.cpp chỉ nhận ảnh tĩnh — bật ô này với chúng là hỏng cả lượt.
-            👉 TẮT: video chỉ để gửi cho bạn xem, phần phân tích vẫn dựa vào ảnh. Đây là mặc định
-            và là cách chạy được với mọi provider.
-          default: false
+            👉 Chỉ ảnh: AI đọc chuỗi ảnh. Nhanh nhất, chạy với mọi provider kể cả model tại nhà.
+            👉 Chỉ video: AI đọc đoạn phim, thấy được chuyển động liên tục thay vì vài khoảnh khắc rời.
+            👉 Cả hai: gửi ảnh lẫn video trong cùng một lời gọi, AI có đủ cả nét lẫn diễn tiến.
+            ⚠️ Hai lựa chọn có video CHỈ chạy với provider đọc được tệp mp4, hiện là Google Gemini.
+            Tích hợp Local OpenAI từ chối thẳng tệp video (lỗi unsupported_attachment_type), nên
+            model chạy tại nhà phải để ở "Chỉ ảnh".
+            ⚠️ Video ăn token gấp nhiều lần ảnh: đo trên máy tại nhà, ba ảnh luồng phụ tốn 978 token
+            còn mười giây video tốn 7 025 token.
+            ✅ Chọn video mà quên bật nhánh video thì blueprint tự quay về chỉ ảnh và ghi một dòng
+            vào nhật ký.
+          default: anh
           selector:
-            boolean: {}
+            select:
+              options:
+                - label: 📸 Chỉ ảnh
+                  value: anh
+                - label: 🎥 Chỉ video
+                  value: video
+                - label: 📸🎥 Cả hai, trong cùng một lời gọi
+                  value: ca_hai
+              multiple: false
 
     # ============================================================
     # PHÂN TÍCH AI
@@ -536,6 +549,19 @@ blueprint:
             👉 Cửa lọc chỉ hỏi đúng một câu nên nên giao cho model nhỏ và nhanh, kể cả khi phần
             phân tích đầy đủ bạn giao cho model lớn ngoài mạng.
             ✅ Bỏ trống là dùng chung cái ở trên.
+          default: []
+          selector:
+            entity:
+              domain: ai_task
+              multiple: false
+
+        ai_provider_video:
+          name: 🎬 AI Task dùng khi có video
+          description: |
+            👉 Chỉ dùng khi ô "AI phân tích cái gì" có chọn video.
+            ✅ Đây là chỗ khai provider đám mây đọc được mp4, trong khi phần còn lại vẫn chạy model
+            tại nhà.
+            ✅ Bỏ trống là dùng chung ô AI Task ở trên.
           default: []
           selector:
             entity:
@@ -938,7 +964,7 @@ variables:
   thoi_luong_video: !input thoi_luong_video
   lay_truoc_video: !input lay_truoc_video
   video_gui_khi_raw: !input video_gui_khi
-  video_dua_vao_ai: !input video_dua_vao_ai
+  nguon_phan_tich_raw: !input nguon_phan_tich
 
   # --- AI ---
   bat_ai: !input bat_ai
@@ -946,6 +972,7 @@ variables:
   doi_tuong: !input doi_tuong
   ai_provider: !input ai_provider
   ai_provider_loc: !input ai_provider_loc
+  ai_provider_video: !input ai_provider_video
   phan_tich_gui_khi_raw: !input phan_tich_gui_khi
 
   # Camera thật sự dùng ở từng nhánh. Bỏ trống ô sau thì dùng lại ô trước, để
@@ -989,6 +1016,23 @@ variables:
   da_ha_cap: >
     {{ bat_ai and not co_danh_gia_an_ninh
        and 'an_ninh' in [anh_gui_khi_raw, video_gui_khi_raw, phan_tich_gui_khi_raw] }}
+
+  # NGUỒN PHÂN TÍCH SAU KHI HẠ CẤP.
+  #
+  # Chọn video mà quên bật nhánh video thì không có tệp nào để đưa cho AI, và
+  # lượt đó sẽ im lặng không rõ lý do. Ở đây quay về chỉ ảnh và ghi nhật ký.
+  nguon_phan_tich: >
+    {% if nguon_phan_tich_raw in ['video', 'ca_hai'] and not bat_nhanh_video %}anh
+    {%- elif nguon_phan_tich_raw == 'ca_hai' and not bat_nhanh_anh %}video
+    {%- else %}{{ nguon_phan_tich_raw }}{% endif %}
+  co_video_cho_ai: "{{ nguon_phan_tich in ['video', 'ca_hai'] }}"
+  ha_cap_nguon: "{{ nguon_phan_tich != nguon_phan_tich_raw }}"
+
+  # Lời gọi có video thì đi bằng provider khai riêng, vì model tại nhà không
+  # đọc được mp4 còn provider đám mây thì đọc được.
+  provider_phan_tich: >
+    {% if co_video_cho_ai and ai_provider_video | length > 0 %}{{ ai_provider_video }}
+    {%- else %}{{ ai_provider }}{% endif %}
 
   # ============================================================
   # PROMPT CỬA LỌC
@@ -1481,6 +1525,19 @@ action:
   # Chọn "chỉ khi mất an ninh" ở chế độ không có đánh giá an ninh là bấm
   # nhầm — nhưng im lặng không gửi gì thì người dùng tưởng automation hỏng.
   # ============================================================
+  - if:
+      - condition: template
+        value_template: "{{ ha_cap_nguon }}"
+    then:
+      - action: system_log.write
+        data:
+          level: warning
+          logger: blueprint.canh_bao_camera_ai
+          message: >
+            Ô "AI phân tích cái gì" đang đặt "{{ nguon_phan_tich_raw }}" nhưng nhánh
+            cần thiết lại chưa bật, nên không có tệp nào để đưa cho AI. Blueprint
+            tạm dùng "{{ nguon_phan_tich }}". Bật nhánh tương ứng ở mục 4 hoặc 5.
+
   - if:
       - condition: template
         value_template: "{{ da_ha_cap }}"
@@ -1997,9 +2054,12 @@ action:
   # BƯỚC 7: PHÂN TÍCH AI
   # ============================================================
   - variables:
-      # Bật video cho AI đọc thì đưa tệp video, ngược lại đưa chuỗi ảnh.
+      # `attachments` vốn là danh sách, nên "cả hai" chỉ là nối hai danh sách lại
+      # rồi gửi trong CÙNG một lời gọi — không phải chạy hai lượt rồi gộp kết quả.
       dinh_kem_ai: >
-        {{ video_cho_ai if (bat_nhanh_video and video_dua_vao_ai) else anh_cho_ai }}
+        {% if nguon_phan_tich == 'video' %}{{ video_cho_ai }}
+        {%- elif nguon_phan_tich == 'ca_hai' %}{{ anh_cho_ai + video_cho_ai }}
+        {%- else %}{{ anh_cho_ai }}{% endif %}
 
   - if:
       - condition: template
@@ -2016,7 +2076,7 @@ action:
                 data:
                   task_name: Phan tich camera khi co chuyen dong
                   instructions: "{{ prompt_phan_tich }}"
-                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  entity_id: "{{ provider_phan_tich if provider_phan_tich | length > 0 else omit }}"
                   attachments: "{{ dinh_kem_ai }}"
                   structure:
                     humans_detected:
@@ -2083,7 +2143,7 @@ action:
                 data:
                   task_name: Danh gia an ninh tu camera
                   instructions: "{{ prompt_phan_tich }}"
-                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  entity_id: "{{ provider_phan_tich if provider_phan_tich | length > 0 else omit }}"
                   attachments: "{{ dinh_kem_ai }}"
                   structure:
                     humans_detected:
@@ -2139,7 +2199,7 @@ action:
                 data:
                   task_name: Phan tich camera khi co chuyen dong
                   instructions: "{{ prompt_phan_tich }}"
-                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  entity_id: "{{ provider_phan_tich if provider_phan_tich | length > 0 else omit }}"
                   attachments: "{{ dinh_kem_ai }}"
                 response_variable: ket_qua_ai_raw
               - variables:
