@@ -2028,6 +2028,17 @@ action:
                        if ket_qua_loc_raw is defined and ket_qua_loc_raw.data is defined
                        else true }}
 
+              # Dừng ngay trong nhánh này. Biến đặt bên trong một nhánh choose
+              # KHÔNG thoát ra ngoài được, nên điều kiện đặt sau khối choose chỉ
+              # thấy "chưa định nghĩa" và cho mọi lượt đi tiếp — đo trên máy
+              # thật 21/08: cửa lọc trả false mà automation vẫn chụp đủ sáu ảnh,
+              # quay phim và gọi AI thêm hai lần.
+              - if:
+                  - condition: template
+                    value_template: "{{ not ket_qua_loc }}"
+                then:
+                  - stop: "Cửa lọc: không có ai trong ảnh"
+
           - alias: "Cửa lọc — kết quả JSON thô"
             conditions:
               - condition: template
@@ -2056,11 +2067,16 @@ action:
                       true
                     {% endif %}
 
-      # Cửa lọc bảo không có ai thì dừng hẳn. AI hỏng hoặc quá giờ thì
-      # ket_qua_loc mặc định là true — thà báo thừa còn hơn nuốt mất một
-      # lần có người thật.
-      - condition: template
-        value_template: "{{ ket_qua_loc is not defined or ket_qua_loc }}"
+              # Dừng ngay trong nhánh này. Biến đặt bên trong một nhánh choose
+              # KHÔNG thoát ra ngoài được, nên điều kiện đặt sau khối choose chỉ
+              # thấy "chưa định nghĩa" và cho mọi lượt đi tiếp — đo trên máy
+              # thật 21/08: cửa lọc trả false mà automation vẫn chụp đủ sáu ảnh,
+              # quay phim và gọi AI thêm hai lần.
+              - if:
+                  - condition: template
+                    value_template: "{{ not ket_qua_loc }}"
+                then:
+                  - stop: "Cửa lọc: không có ai trong ảnh"
 
   # ============================================================
   # BƯỚC 5: QUAY VIDEO VÀ CHỤP ĐỢT ẢNH CHÍNH, CÙNG LÚC
