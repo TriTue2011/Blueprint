@@ -825,12 +825,29 @@ blueprint:
             http://192.168.1.x:8123 thì không dùng được.
             ⚠️ Bỏ trống thì video vẫn tới nơi, nhưng dưới dạng TỆP ĐÍNH KÈM phải bấm tải về
             mới xem được.
-            ⚠️ Khi điền, đoạn video được lưu ở /config/www thay vì /media, nên AI không đọc
-            được nó nữa — ô "AI phân tích cái gì" tự lùi về chỉ ảnh.
+            ⚠️ Điền ô này mà bỏ trống ô "Đường công khai tới thư mục media" ngay dưới thì
+            đoạn video phải dời sang /config/www, và AI hết đọc được nó — ô "AI phân tích cái
+            gì" tự lùi về chỉ ảnh. Điền cả hai ô thì được cả hai.
             ⚠️ Zalo không giữ bản sao, nó vào lấy tệp từ máy bạn mỗi lần mở. Nên bật "Ghi đè
             ảnh cũ" ở mục 3 thì mở lại tin Zalo cũ sẽ thấy đoạn phim MỚI NHẤT chứ không phải
             đoạn của đúng tin đó; tắt ghi đè thì xem lại đúng, đổi lại mỗi lượt để lại một tệp
-            trong /config/www/canh_bao_camera nên thỉnh thoảng phải dọn.
+            nên thỉnh thoảng phải dọn.
+          default: ""
+          selector:
+            text: {}
+
+        duong_media_cong_khai:
+          name: 📂 Đường công khai tới thư mục media
+          description: |
+            👉 Chỉ điền khi bạn đã tự mở thư mục media ra ngoài, bằng cách mount nó thêm một
+            lần nữa vào trong /config/www. Ví dụ với Home Assistant chạy Docker:
+            `- /opt/homeassistant/media:/config/www/media:ro` — điền vào đây là `/local/media`
+            ✅ Điền vào thì đoạn video Ở LẠI /media như ảnh, nên AI vẫn đọc được nó, mà Zalo
+            vẫn lấy được để hiện đúng dạng video. Được cả hai.
+            ⚠️ Bỏ trống thì blueprint tự dời video sang /config/www/canh_bao_camera, đổi lại
+            AI hết đọc được video.
+            ⚠️ Mở thư mục media ra ngoài là ai biết tên tệp cũng tải được ảnh camera nhà bạn,
+            không cần đăng nhập. Mount chế độ chỉ đọc (`:ro`) và đừng để tệp riêng tư ở đó.
           default: ""
           selector:
             text: {}
@@ -1002,7 +1019,15 @@ variables:
   # được đúng lúc đó, ở đúng trong nhà — ra khỏi nhà hoặc mở lại sau là hỏng.
   # Đo trên máy thật 21/08: gửi bằng liên kết LAN thì không mở nổi; gửi bằng
   # https qua tên miền thì phát ngay trong khung chat.
-  video_ra_web: "{{ dia_chi_ngoai | length > 0 and bat_nhanh_video }}"
+  media_cong_khai_raw: !input duong_media_cong_khai
+  media_cong_khai: "{{ media_cong_khai_raw | trim | regex_replace('/+$', '') }}"
+
+  # Zalo nhận đoạn phim bằng liên kết, nên phải có ảnh bìa và một địa chỉ https.
+  zalo_lien_ket: "{{ dia_chi_ngoai | length > 0 and bat_nhanh_video }}"
+  # Chỉ phải DỜI video ra /config/www khi chưa có đường công khai nào tới /media.
+  # Có đường rồi thì để yên nó ở /media/snapshots cạnh mấy tấm ảnh — AI đọc được
+  # tiếp, mà Zalo vẫn lấy được.
+  video_ra_web: "{{ zalo_lien_ket and media_cong_khai | length == 0 }}"
   thu_muc_video: >-
     {{ '/config/www/canh_bao_camera' if video_ra_web else '/media/snapshots' }}
 
@@ -1606,8 +1631,9 @@ action:
             {% if not bat_nhanh_video %}Lý do: nhánh video chưa bật ở mục 5.
             {%- elif video_ra_web %}Lý do: ô "Địa chỉ Home Assistant nhìn từ Internet"
             ở mục 10 đang có giá trị, nên đoạn video được lưu ở /config/www để Zalo
-            lấy được — AI thì chỉ đọc được tệp nằm trong /media. Muốn AI đọc video thì
-            xoá ô địa chỉ đó, đổi lại video sẽ tới Zalo dưới dạng tệp đính kèm.
+            lấy được — AI thì chỉ đọc được tệp nằm trong /media. Cách được cả hai: mở
+            thư mục media ra ngoài (mount thêm nó vào /config/www) rồi điền ô "Đường
+            công khai tới thư mục media" ngay dưới ô địa chỉ.
             {%- elif not video_dung_duoc %}Lý do: {{ provider_video_that }} không gửi
             được tệp video. Chỉ tích hợp Google Generative AI và Local OpenAI bản
             luuquangvu làm được — khai một AI Task của chúng vào ô "AI Task dùng khi
@@ -1758,7 +1784,7 @@ action:
               # nơi. Chụp trước khi bấm máy nên nó là khung đầu của đoạn phim.
               - if:
                   - condition: template
-                    value_template: "{{ video_ra_web }}"
+                    value_template: "{{ zalo_lien_ket }}"
                 then:
                   - continue_on_error: true
                     action: camera.snapshot
@@ -1852,8 +1878,12 @@ action:
         {% if video_ra_web %}/local/canh_bao_camera/{{ duong_dan }}_video.mp4
         {%- else %}/media/local/snapshots/{{ duong_dan }}_video.mp4{% endif %}
       # Hai đường https đầy đủ, chỉ Zalo dùng — máy chủ của họ tự vào lấy tệp.
-      url_video_ngoai: "{{ dia_chi_ngoai }}/local/canh_bao_camera/{{ duong_dan }}_video.mp4"
-      url_thumb_ngoai: "{{ dia_chi_ngoai }}/local/canh_bao_camera/{{ duong_dan }}_thumb.jpg"
+      url_video_ngoai: >-
+        {% if video_ra_web %}{{ dia_chi_ngoai }}/local/canh_bao_camera/{{ duong_dan }}_video.mp4
+        {%- else %}{{ dia_chi_ngoai }}{{ media_cong_khai }}/snapshots/{{ duong_dan }}_video.mp4{% endif %}
+      url_thumb_ngoai: >-
+        {% if video_ra_web %}{{ dia_chi_ngoai }}/local/canh_bao_camera/{{ duong_dan }}_thumb.jpg
+        {%- else %}{{ dia_chi_ngoai }}{{ media_cong_khai }}/snapshots/{{ duong_dan }}_thumb.jpg{% endif %}
       anh_comma: "{{ duong_dan_anh | join(',') }}"
 
   # ============================================================
@@ -2074,14 +2104,14 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            action: "{{ 'zalo_bot.send_video' if zalo_lien_ket else 'zalo_bot.send_file' }}"
             data: >
               {% set d = {'account_selection': zalo_custom_account,
                           'thread_id': zalo_custom_thread_id,
                           'type': '1',
                           'message': zalo_custom_initial_caption,
                           'ttl': zalo_custom_ttl} %}
-              {% if video_ra_web %}
+              {% if zalo_lien_ket %}
                 {% set d = dict(d, video_path_or_url=url_video_ngoai,
                                 thumbnail_url=url_thumb_ngoai) %}
               {% else %}
@@ -2099,14 +2129,14 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            action: "{{ 'zalo_bot.send_video' if zalo_lien_ket else 'zalo_bot.send_file' }}"
             data: >
               {% set d = {'account_selection': zalo_custom_account,
                           'thread_id': zalo_custom_user_id,
                           'type': '0',
                           'message': zalo_custom_initial_caption,
                           'ttl': zalo_custom_ttl} %}
-              {% if video_ra_web %}
+              {% if zalo_lien_ket %}
                 {% set d = dict(d, video_path_or_url=url_video_ngoai,
                                 thumbnail_url=url_thumb_ngoai) %}
               {% else %}
@@ -2644,14 +2674,14 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            action: "{{ 'zalo_bot.send_video' if zalo_lien_ket else 'zalo_bot.send_file' }}"
             data: >
               {% set d = {'account_selection': zalo_custom_account,
                           'thread_id': zalo_custom_thread_id,
                           'type': '1',
                           'message': chu_kem if gop_vao_video else zalo_custom_initial_caption,
                           'ttl': zalo_custom_ttl} %}
-              {% if video_ra_web %}
+              {% if zalo_lien_ket %}
                 {% set d = dict(d, video_path_or_url=url_video_ngoai,
                                 thumbnail_url=url_thumb_ngoai) %}
               {% else %}
@@ -2669,14 +2699,14 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            action: "{{ 'zalo_bot.send_video' if zalo_lien_ket else 'zalo_bot.send_file' }}"
             data: >
               {% set d = {'account_selection': zalo_custom_account,
                           'thread_id': zalo_custom_user_id,
                           'type': '0',
                           'message': chu_kem if gop_vao_video else zalo_custom_initial_caption,
                           'ttl': zalo_custom_ttl} %}
-              {% if video_ra_web %}
+              {% if zalo_lien_ket %}
                 {% set d = dict(d, video_path_or_url=url_video_ngoai,
                                 thumbnail_url=url_thumb_ngoai) %}
               {% else %}
