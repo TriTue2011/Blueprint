@@ -584,7 +584,7 @@ blueprint:
         ai_provider_video:
           name: 🎬 AI Task dùng khi có video
           description: |
-            👉 Chỉ dùng khi ô "AI phân tích cái gì" có chọn video.
+            👉 Chỉ dùng khi ô "AI đọc VIDEO theo chế độ nào" ở mục 5 khác "Không phân tích".
             ✅ Đây là chỗ khai provider đám mây đọc được mp4, trong khi phần còn lại vẫn chạy model
             tại nhà.
             ✅ Bỏ trống là dùng chung ô AI Task ở trên.
@@ -2852,7 +2852,6 @@ action:
       # bên nào báo động là mất an ninh. Bỏ sót đáng sợ hơn báo thừa.
       #
       # AI hỏng, quá giờ, hoặc bị tắt thì coi như có người, cùng lẽ đó.
-      ai_hong: "{{ not bat_ai or bo_kq | length == 0 }}"
       co_nguoi: >
         {% if not bat_ai or bo_kq | length == 0 %}true
         {%- else %}
@@ -2931,9 +2930,18 @@ action:
           {%- set st = kq.get('animals_detected', 0) | int(0) -%}
           {%- set nn = kq.get('security_suspicious', false)
                 in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] -%}
-          {%- set gk = phan_tich_video_gui_khi if b.tu == 'video' else phan_tich_gui_khi -%}
-          {%- set dat = true if gk == 'di_kem'
-                        else (sn > 0 or st > 0 if gk == 'co_nguoi' else nn) -%}
+          {#- Tin gộp nói thay cho cả hai bên, nên gửi khi BẤT KỲ bên nào đạt
+              điều kiện của bên đó. Hai ô đặt khác nhau vẫn ra đúng một tin. -#}
+          {%- set ds_gk = [phan_tich_gui_khi, phan_tich_video_gui_khi] if b.tu == 'gop'
+                          else ([phan_tich_video_gui_khi] if b.tu == 'video'
+                                else [phan_tich_gui_khi]) -%}
+          {%- set nsd = namespace(dat=false) -%}
+          {%- for gk in ds_gk -%}
+            {%- if gk == 'di_kem' %}{% set nsd.dat = true %}
+            {%- elif gk == 'co_nguoi' and (sn > 0 or st > 0) %}{% set nsd.dat = true %}
+            {%- elif gk == 'an_ninh' and nn %}{% set nsd.dat = true %}{% endif -%}
+          {%- endfor -%}
+          {%- set dat = nsd.dat -%}
           {%- if dat and da_gui_gi_do and bat_ai -%}
             {%- set nhan = '' if bo_kq | length == 1
                            else ('📸 Ảnh — ' if b.tu == 'anh' else '🎥 Phim — ') -%}
@@ -3049,7 +3057,7 @@ action:
         {% set n = namespace(anh='', video='', rieng=[]) %}
         {% if cac_tin | length > 1 %}
           {% if tin_tu_anh | length > 0 %}
-            {% if muon_gui_anh %}{% set n.anh = tin_tu_anh %}
+            {% if muon_gui_anh and not muon_nhieu_anh %}{% set n.anh = tin_tu_anh %}
             {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
           {% endif %}
           {% if tin_tu_video | length > 0 %}
@@ -3057,7 +3065,7 @@ action:
             {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
           {% endif %}
         {% elif cac_tin | length == 1 %}
-          {% if muon_gui_anh %}{% set n.anh = cac_tin[0].chu %}
+          {% if muon_gui_anh and not muon_nhieu_anh %}{% set n.anh = cac_tin[0].chu %}
           {% elif muon_gui_video %}{% set n.video = cac_tin[0].chu %}
           {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
         {% endif %}
