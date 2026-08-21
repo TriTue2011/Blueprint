@@ -2979,35 +2979,84 @@ action:
   # Thứ tự thử: kèm vào ảnh trước — chữ tới sớm hơn vì không phải đợi quay
   # xong; không được thì kèm vào video; không được nữa mới tách tin riêng.
   - variables:
-      phan_bo: >
-        {% set kenh = [
-             {'ten': 'tg', 'kem_anh': muon_gui_anh, 'kem_video': muon_gui_video},
-             {'ten': 'zl', 'kem_anh': muon_gui_anh and not muon_nhieu_anh,
-              'kem_video': muon_gui_video},
-             {'ten': 'zb', 'kem_anh': muon_gui_anh and not muon_nhieu_anh,
-              'kem_video': false},
-             {'ten': 'mb', 'kem_anh': muon_gui_anh, 'kem_video': muon_gui_video}
-           ] %}
-        {% set ns = namespace(kq={}) %}
-        {% for k in kenh %}
-          {% set n = namespace(anh='', video='', rieng=[]) %}
-          {% if cac_tin | length > 1 %}
-            {% if tin_tu_anh | length > 0 %}
-              {% if k.kem_anh %}{% set n.anh = tin_tu_anh %}
-              {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
-            {% endif %}
-            {% if tin_tu_video | length > 0 %}
-              {% if k.kem_video %}{% set n.video = tin_tu_video %}
-              {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
-            {% endif %}
-          {% elif cac_tin | length == 1 %}
-            {% if k.kem_anh %}{% set n.anh = cac_tin[0].chu %}
-            {% elif k.kem_video %}{% set n.video = cac_tin[0].chu %}
-            {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
+      # Bốn kênh, bốn bảng, vì khả năng gắn chú thích không giống nhau: Telegram
+      # gắn được vào cả chùm ảnh (chú thích nằm ở tấm đầu), Zalo cá nhân thì
+      # dịch vụ gửi chùm không có ô nhắn nên chỉ gắn được khi gửi đúng một tấm,
+      # còn Zalo Bot thì không gửi video.
+      #
+      # Thứ tự thử: kèm vào ảnh trước — chữ tới sớm hơn vì không phải đợi quay
+      # xong; không được thì kèm vào video; không được nữa mới tách tin riêng.
+      pb_tg: >
+        {% set n = namespace(anh='', video='', rieng=[]) %}
+        {% if cac_tin | length > 1 %}
+          {% if tin_tu_anh | length > 0 %}
+            {% if muon_gui_anh %}{% set n.anh = tin_tu_anh %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
           {% endif %}
-          {% set _ = ns.kq.update({k.ten: {'anh': n.anh, 'video': n.video, 'rieng': n.rieng}}) %}
-        {% endfor %}
-        {{ ns.kq }}
+          {% if tin_tu_video | length > 0 %}
+            {% if muon_gui_video %}{% set n.video = tin_tu_video %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
+          {% endif %}
+        {% elif cac_tin | length == 1 %}
+          {% if muon_gui_anh %}{% set n.anh = cac_tin[0].chu %}
+          {% elif muon_gui_video %}{% set n.video = cac_tin[0].chu %}
+          {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
+        {% endif %}
+        {{ {'anh': n.anh, 'video': n.video, 'rieng': n.rieng} }}
+
+      pb_zl: >
+        {% set n = namespace(anh='', video='', rieng=[]) %}
+        {% if cac_tin | length > 1 %}
+          {% if tin_tu_anh | length > 0 %}
+            {% if muon_gui_anh and not muon_nhieu_anh %}{% set n.anh = tin_tu_anh %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
+          {% endif %}
+          {% if tin_tu_video | length > 0 %}
+            {% if muon_gui_video %}{% set n.video = tin_tu_video %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
+          {% endif %}
+        {% elif cac_tin | length == 1 %}
+          {% if muon_gui_anh and not muon_nhieu_anh %}{% set n.anh = cac_tin[0].chu %}
+          {% elif muon_gui_video %}{% set n.video = cac_tin[0].chu %}
+          {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
+        {% endif %}
+        {{ {'anh': n.anh, 'video': n.video, 'rieng': n.rieng} }}
+
+      pb_zb: >
+        {% set n = namespace(anh='', video='', rieng=[]) %}
+        {% if cac_tin | length > 1 %}
+          {% if tin_tu_anh | length > 0 %}
+            {% if muon_gui_anh and not muon_nhieu_anh %}{% set n.anh = tin_tu_anh %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
+          {% endif %}
+          {% if tin_tu_video | length > 0 %}
+            {% if false %}{% set n.video = tin_tu_video %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
+          {% endif %}
+        {% elif cac_tin | length == 1 %}
+          {% if muon_gui_anh and not muon_nhieu_anh %}{% set n.anh = cac_tin[0].chu %}
+          {% elif false %}{% set n.video = cac_tin[0].chu %}
+          {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
+        {% endif %}
+        {{ {'anh': n.anh, 'video': n.video, 'rieng': n.rieng} }}
+
+      pb_mb: >
+        {% set n = namespace(anh='', video='', rieng=[]) %}
+        {% if cac_tin | length > 1 %}
+          {% if tin_tu_anh | length > 0 %}
+            {% if muon_gui_anh %}{% set n.anh = tin_tu_anh %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
+          {% endif %}
+          {% if tin_tu_video | length > 0 %}
+            {% if muon_gui_video %}{% set n.video = tin_tu_video %}
+            {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
+          {% endif %}
+        {% elif cac_tin | length == 1 %}
+          {% if muon_gui_anh %}{% set n.anh = cac_tin[0].chu %}
+          {% elif muon_gui_video %}{% set n.video = cac_tin[0].chu %}
+          {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
+        {% endif %}
+        {{ {'anh': n.anh, 'video': n.video, 'rieng': n.rieng} }}
 
   # ============================================================
   # BƯỚC 10: GỬI MUỘN — ẢNH, VIDEO, VÀ PHÂN TÍCH
@@ -3025,7 +3074,7 @@ action:
             data: >
               {% set d = {'config_entry_id': telegram_config_entry,
                           'file': anh_chon,
-                          'caption': phan_bo.tg.anh if phan_bo.tg.anh | length > 0
+                          'caption': pb_tg.anh if pb_tg.anh | length > 0
                                      else telegram_initial_caption} %}
               {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
               {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
@@ -3043,7 +3092,7 @@ action:
               {%- for p in duong_dan_anh[:10] -%}
                 {% if loop.first %}
                   {% set ns.m = ns.m + [{'media_type':'photo','file':p,
-                                       'caption': phan_bo.tg.anh if phan_bo.tg.anh | length > 0
+                                       'caption': pb_tg.anh if pb_tg.anh | length > 0
                                                   else telegram_initial_caption}] %}
                 {% else %}
                   {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
@@ -3064,7 +3113,7 @@ action:
         data: >
           {% set d = {'config_entry_id': telegram_config_entry,
                       'file': duong_dan_video,
-                      'caption': phan_bo.tg.video if phan_bo.tg.video | length > 0
+                      'caption': pb_tg.video if pb_tg.video | length > 0
                                      else telegram_initial_caption} %}
           {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
           {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
@@ -3073,10 +3122,10 @@ action:
   # --- Telegram: tin chữ riêng ---
   - if:
       - condition: template
-        value_template: "{{ include_telegram_notify and phan_bo.tg.rieng | length > 0 }}"
+        value_template: "{{ include_telegram_notify and pb_tg.rieng | length > 0 }}"
     then:
       - repeat:
-          for_each: "{{ phan_bo.tg.rieng }}"
+          for_each: "{{ pb_tg.rieng }}"
           sequence:
             - continue_on_error: true
               action: telegram_bot.send_message
@@ -3115,16 +3164,16 @@ action:
               chat_id: "{{ zalo_bot_chat_id }}"
               file_path: "{{ anh_chon }}"
               caption: >-
-                {{ phan_bo.zb.anh if phan_bo.zb.anh | length > 0
+                {{ pb_zb.anh if pb_zb.anh | length > 0
                    else zalo_bot_initial_caption }}
             response_variable: zalo_bot_photo_response
 
   - if:
       - condition: template
-        value_template: "{{ enable_zalo_bot and phan_bo.zb.rieng | length > 0 }}"
+        value_template: "{{ enable_zalo_bot and pb_zb.rieng | length > 0 }}"
     then:
       - repeat:
-          for_each: "{{ phan_bo.zb.rieng }}"
+          for_each: "{{ pb_zb.rieng }}"
           sequence:
             - continue_on_error: true
               action: pyscript.send_zalo_message
@@ -3165,7 +3214,7 @@ action:
                   type: "1"
                   image_path: "{{ anh_chon }}"
                   message: >-
-                    {{ phan_bo.zl.anh if phan_bo.zl.anh | length > 0
+                    {{ pb_zl.anh if pb_zl.anh | length > 0
                        else zalo_custom_initial_caption }}
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
@@ -3200,7 +3249,7 @@ action:
                   type: "0"
                   image_path: "{{ anh_chon }}"
                   message: >-
-                    {{ phan_bo.zl.anh if phan_bo.zl.anh | length > 0
+                    {{ pb_zl.anh if pb_zl.anh | length > 0
                        else zalo_custom_initial_caption }}
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
@@ -3225,7 +3274,7 @@ action:
               video_path_or_url: "{{ duong_dan_video }}"
               thumbnail_url: "{{ duong_dan_thumb }}"
               message: >-
-                {{ phan_bo.zl.video if phan_bo.zl.video | length > 0
+                {{ pb_zl.video if pb_zl.video | length > 0
                    else zalo_custom_initial_caption }}
               ttl: !input zalo_custom_ttl
 
@@ -3247,7 +3296,7 @@ action:
               video_path_or_url: "{{ duong_dan_video }}"
               thumbnail_url: "{{ duong_dan_thumb }}"
               message: >-
-                {{ phan_bo.zl.video if phan_bo.zl.video | length > 0
+                {{ pb_zl.video if pb_zl.video | length > 0
                    else zalo_custom_initial_caption }}
               ttl: !input zalo_custom_ttl
 
@@ -3257,13 +3306,13 @@ action:
         conditions:
           - condition: template
             value_template: >
-              {{ enable_zalo_custom and phan_bo.zl.rieng | length > 0
+              {{ enable_zalo_custom and pb_zl.rieng | length > 0
                  and zalo_custom_receiver_type == '1'
                  and zalo_custom_thread_id | length > 0
                  and zalo_custom_account | length > 0 }}
         sequence:
           - repeat:
-              for_each: "{{ phan_bo.zl.rieng }}"
+              for_each: "{{ pb_zl.rieng }}"
               sequence:
                 - continue_on_error: true
                   action: zalo_bot.send_message
@@ -3278,13 +3327,13 @@ action:
         conditions:
           - condition: template
             value_template: >
-              {{ enable_zalo_custom and phan_bo.zl.rieng | length > 0
+              {{ enable_zalo_custom and pb_zl.rieng | length > 0
                  and zalo_custom_receiver_type != '1'
                  and zalo_custom_user_id | length > 0
                  and zalo_custom_account | length > 0 }}
         sequence:
           - repeat:
-              for_each: "{{ phan_bo.zl.rieng }}"
+              for_each: "{{ pb_zl.rieng }}"
               sequence:
                 - continue_on_error: true
                   action: zalo_bot.send_message
@@ -3314,7 +3363,7 @@ action:
                     data:
                       title: !input notify_title
                       message: >
-                        {{ phan_bo.mb.anh if phan_bo.mb.anh | length > 0
+                        {{ pb_mb.anh if pb_mb.anh | length > 0
                            else telegram_initial_caption }}
                       data: >
                         {% set chung = {'image': anh_nay,
@@ -3342,7 +3391,7 @@ action:
               data:
                 title: !input notify_title
                 message: >-
-                  {{ phan_bo.mb.video if phan_bo.mb.video | length > 0
+                  {{ pb_mb.video if pb_mb.video | length > 0
                      else telegram_initial_caption }}
                 data:
                   video: "{{ duong_dan_video_media }}"
@@ -3355,7 +3404,7 @@ action:
       - condition: template
         value_template: >
           {{ include_notify and filtered_devices | length > 0
-             and phan_bo.mb.rieng | length > 0 }}
+             and pb_mb.rieng | length > 0 }}
     then:
       - repeat:
           for_each: "{{ filtered_devices }}"
@@ -3364,7 +3413,7 @@ action:
               action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
               data:
                 title: !input notify_title
-                message: "{{ phan_bo.mb.rieng | join('\n\n') }}"
+                message: "{{ pb_mb.rieng | join('\n\n') }}"
                 data: >
                   {% set chung = {'url': tap_navigate,
                                   'clickAction': tap_navigate,
