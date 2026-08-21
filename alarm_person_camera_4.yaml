@@ -2971,9 +2971,11 @@ action:
           {%- endfor -%}
           {%- set dat = nsd.dat -%}
           {%- if dat and da_gui_gi_do and bat_ai -%}
-            {%- set nhan = '' if bo_kq | length == 1
+            {#- Một tin thì khỏi nhãn. Hai tin thì nhãn thay luôn biểu tượng chung,
+                chứ hai emoji dính nhau ở đầu dòng đọc rất rối. -#}
+            {%- set nhan = '📊  ' if bo_kq | length == 1
                            else ('📸 Ảnh — ' if b.tu == 'anh' else '🎥 Phim — ') -%}
-            {%- set cau = '📊  ' ~ nhan ~ camera_name -%}
+            {%- set cau = nhan ~ camera_name -%}
             {%- if dt == 'security' -%}
               {%- set cau = cau ~ '\n🚶: ' ~ sn ~ ' người' -%}
               {%- set ha = kq.get('human_action', '') -%}
