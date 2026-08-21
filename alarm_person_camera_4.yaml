@@ -614,6 +614,19 @@ blueprint:
                   value: an_ninh
               multiple: false
 
+        bao_khi_ai_loi:
+          name: 🚨 Nhắn khi AI lỗi
+          description: |
+            👉 Lượt nào có lời gọi AI không trả về kết quả thì nhắn một tin ngắn, nói rõ chỗ
+            nào hỏng: lọc ảnh, đọc ảnh, hay đọc phim.
+            ✅ Đáng bật, vì AI hỏng KHÔNG làm automation im lặng — nó coi như có người và cứ
+            báo cho chắc. Không có tin này thì bạn chỉ thấy báo động lúc cửa trống mà không
+            hiểu vì sao, phải mở nhật ký mới biết.
+            👉 Tin đi theo đúng những kênh bạn đã bật ở mục Telegram và Zalo cá nhân.
+          default: true
+          selector:
+            boolean: {}
+
         hop_nhat_bang_ai:
           name: 🔀 Gộp hai kết quả bằng AI
           description: |
@@ -1022,6 +1035,7 @@ variables:
   ai_provider_video: !input ai_provider_video
   phan_tich_gui_khi_raw: !input phan_tich_gui_khi
   hop_nhat_bang_ai: !input hop_nhat_bang_ai
+  bao_khi_ai_loi: !input bao_khi_ai_loi
 
   # Camera thật sự dùng ở từng nhánh. Bỏ trống ô sau thì dùng lại ô trước, để
   # người chỉ có một camera khỏi phải khai ba lần.
@@ -2771,6 +2785,90 @@ action:
           {{ r | regex_replace('```json\\s*', '') | regex_replace('```\\s*', '')
                | trim | from_json(default={}) }}
         {%- else %}{{ r }}{% endif %}
+
+  # ============================================================
+  # BƯỚC 7C: LỜI GỌI NÀO KHÔNG TRẢ VỀ GÌ
+  # ============================================================
+  # Đọc được `ket_qua_loc_raw` ở đây là có lý do: `response_variable` đặt biến ở
+  # scope của cả script nên nó thoát ra khỏi nhánh choose, khác hẳn `variables`
+  # chỉ sống trong nhánh — chính chỗ khác nhau đó từng làm cửa lọc mất tác dụng.
+  #
+  # Vì sao phải nhắn: AI hỏng KHÔNG làm automation im lặng, nó coi như có người
+  # và cứ báo cho chắc. Không có tin này thì chủ nhà chỉ thấy báo động lúc cửa
+  # trống mà không hiểu vì sao.
+  - variables:
+      loi_ai: >
+        {% set ns = namespace(ds=[]) %}
+        {% if bat_cua_loc and bat_ai
+              and (ket_qua_loc_raw is not defined or ket_qua_loc_raw.data is not defined) %}
+          {% set ns.ds = ns.ds + ['AI lọc ảnh đang lỗi'] %}
+        {% endif %}
+        {% if bat_ai_anh and kq_anh | length == 0 %}
+          {% set ns.ds = ns.ds + ['AI phân tích ảnh đang lỗi'] %}
+        {% endif %}
+        {% if bat_ai_video and kq_video | length == 0 %}
+          {% set ns.ds = ns.ds + ['AI phân tích video đang lỗi'] %}
+        {% endif %}
+        {{ ns.ds }}
+      tin_loi_ai: >-
+        {%- set thu = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] -%}
+        ⚠️ {{ camera_name }}: {{ loi_ai | join(', ') }}.
+        Automation vẫn báo động cho chắc, nhưng kết quả lượt này không tin được.
+        🕒 {{ now().strftime('%H:%M:%S') }} {{ thu[now().weekday()] }}
+        Ngày {{ now().strftime('%d') }} Tháng {{ now().strftime('%m') }}
+
+  - if:
+      - condition: template
+        value_template: "{{ bao_khi_ai_loi and loi_ai | length > 0 }}"
+    then:
+      - alias: "Nhắn lỗi qua Telegram"
+        if:
+          - condition: template
+            value_template: "{{ include_telegram_notify }}"
+        then:
+          - continue_on_error: true
+            action: telegram_bot.send_message
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'message': tin_loi_ai,
+                          'parse_mode': 'plain_text'} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+      - alias: "Nhắn lỗi qua Zalo cá nhân"
+        choose:
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ enable_zalo_custom and zalo_custom_receiver_type == '1'
+                     and zalo_custom_thread_id | length > 0
+                     and zalo_custom_account | length > 0 }}
+            sequence:
+              - continue_on_error: true
+                action: zalo_bot.send_message
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_thread_id
+                  type: "1"
+                  message: "{{ tin_loi_ai }}"
+                  ttl: !input zalo_custom_ttl
+
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ enable_zalo_custom and zalo_custom_receiver_type != '1'
+                     and zalo_custom_user_id | length > 0
+                     and zalo_custom_account | length > 0 }}
+            sequence:
+              - continue_on_error: true
+                action: zalo_bot.send_message
+                data:
+                  account_selection: !input zalo_custom_account
+                  thread_id: !input zalo_custom_user_id
+                  type: "0"
+                  message: "{{ tin_loi_ai }}"
+                  ttl: !input zalo_custom_ttl
 
   # ============================================================
   # BƯỚC 8: GỘP HAI KẾT QUẢ
