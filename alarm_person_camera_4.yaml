@@ -827,6 +827,10 @@ blueprint:
             mới xem được.
             ⚠️ Khi điền, đoạn video được lưu ở /config/www thay vì /media, nên AI không đọc
             được nó nữa — ô "AI phân tích cái gì" tự lùi về chỉ ảnh.
+            ⚠️ Zalo không giữ bản sao, nó vào lấy tệp từ máy bạn mỗi lần mở. Nên bật "Ghi đè
+            ảnh cũ" ở mục 3 thì mở lại tin Zalo cũ sẽ thấy đoạn phim MỚI NHẤT chứ không phải
+            đoạn của đúng tin đó; tắt ghi đè thì xem lại đúng, đổi lại mỗi lượt để lại một tệp
+            trong /config/www/canh_bao_camera nên thỉnh thoảng phải dọn.
           default: ""
           selector:
             text: {}
