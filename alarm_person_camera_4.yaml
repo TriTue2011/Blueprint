@@ -434,29 +434,6 @@ blueprint:
               unit_of_measurement: seconds
               mode: slider
 
-        khi_nao_quay:
-          name: 🎬 Bấm máy lúc nào
-          description: |
-            👉 Cùng lúc chụp ảnh: quay ngay sau khi qua cửa lọc. Bắt được khoảnh khắc người
-            ta vừa vào khung, nhưng lượt nào cũng quay kể cả lượt vô hại.
-            👉 Sau khi đọc ảnh: chờ AI đọc xong chuỗi ảnh, đạt đúng điều kiện ở ô "Gửi video
-            khi nào" ngay dưới thì mới bấm máy.
-            ✅ Chọn đường thứ hai nếu bạn cần phim ghi lại HÀNH VI: kẻ nán lại, quay đi quay
-            lại, thử cửa. Người chỉ đi ngang qua thì không tốn giây phim nào.
-            ⚠️ Đường thứ hai bấm máy muộn hơn khoảng mười giây, nên ai đến rồi đi ngay sẽ
-            không có trong phim — mấy tấm ảnh vẫn giữ được họ.
-            ⚠️ Đường thứ hai không đi cùng lựa chọn "Gửi mọi lượt" ở ô dưới được: gửi mọi lượt
-            thì chẳng còn gì để chờ, nên blueprint tự quay về "cùng lúc chụp ảnh".
-          default: cung_luc
-          selector:
-            select:
-              options:
-                - label: 📸 Cùng lúc chụp ảnh
-                  value: cung_luc
-                - label: 🕵️ Sau khi đọc ảnh, chỉ khi đạt điều kiện
-                  value: sau_khi_doc_anh
-              multiple: false
-
         video_gui_khi:
           name: 📤 Gửi video khi nào
           description: |
@@ -1029,7 +1006,6 @@ variables:
   thoi_luong_video: !input thoi_luong_video
   lay_truoc_video: !input lay_truoc_video
   video_gui_khi_raw: !input video_gui_khi
-  khi_nao_quay_raw: !input khi_nao_quay
   doi_tuong_video_raw: !input doi_tuong_video
   phan_tich_video_gui_khi_raw: !input phan_tich_video_gui_khi
   # Zalo đòi ảnh bìa cho mỗi đoạn video: gửi kèm ảnh bìa rỗng thì máy chủ của họ
@@ -1083,10 +1059,6 @@ variables:
     {% if not bat_ai %}ngay
     {%- elif video_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
     {%- else %}{{ video_gui_khi_raw }}{% endif %}
-  # Chờ đọc ảnh xong mới bấm máy chỉ có nghĩa khi có cái để chờ. Tắt AI, hoặc
-  # đặt gửi mọi lượt, thì không còn điều kiện nào — quay luôn cho sớm.
-  quay_muon: >-
-    {{ khi_nao_quay_raw == 'sau_khi_doc_anh' and bat_ai and video_gui_khi != 'ngay' }}
   phan_tich_gui_khi: >-
     {% if phan_tich_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
     {%- else %}{{ phan_tich_gui_khi_raw }}{% endif %}
@@ -2122,8 +2094,7 @@ action:
         sequence:
           - if:
               - condition: template
-                value_template: >
-                  {{ bat_nhanh_video and camera_video | length > 0 and not quay_muon }}
+                value_template: "{{ bat_nhanh_video and camera_video | length > 0 }}"
             then:
               # Ảnh bìa, chỉ cần khi gửi Zalo bằng đường liên kết: thiếu nó thì
               # máy chủ Zalo trả "Tham số không hợp lệ" và đoạn video không tới
@@ -2230,7 +2201,7 @@ action:
   # ============================================================
   - variables:
       som_gui_anh: "{{ bat_nhanh_anh and anh_gui_khi == 'ngay' and duong_dan_anh | length > 0 }}"
-      som_gui_video: "{{ bat_nhanh_video and video_gui_khi == 'ngay' and not quay_muon }}"
+      som_gui_video: "{{ bat_nhanh_video and video_gui_khi == 'ngay' }}"
       som_nhieu_anh: "{{ som_gui_anh and anh_gui_may_tam == 'tat_ca' and duong_dan_anh | length > 1 }}"
 
   # --- Telegram: ảnh ---
@@ -2666,70 +2637,10 @@ action:
                   attachments: "{{ anh_cho_ai }}"
                 response_variable: tra_ve_anh
 
-  # --- Đọc xong ảnh thì đưa về một hình dạng, để bước sau dựa vào ---
-  - variables:
-      kq_anh: >
-        {% set r = tra_ve_anh.data if tra_ve_anh is defined and tra_ve_anh.data is defined else none %}
-        {% if r is none %}{{ {} }}
-        {%- elif r is string %}
-          {{ r | regex_replace('```json\\s*', '') | regex_replace('```\\s*', '')
-               | trim | from_json(default={}) }}
-        {%- else %}{{ r }}{% endif %}
-
-  # ============================================================
-  # BƯỚC 7B: BẤM MÁY MUỘN, KHI ẢNH ĐÃ CHO THẤY ĐIỀU ĐÁNG QUAY
-  # ============================================================
-  # Quay ở đây thay vì lúc nãy là để phim ghi lại HÀNH VI chứ không phải
-  # khoảnh khắc bước vào khung: kẻ nán lại trước cửa, quay đi quay lại, thử tay
-  # nắm. Người chỉ đi ngang qua thì lượt này không tốn giây phim nào.
-  #
-  # Cái giá là bấm máy muộn hơn khoảng mười giây, nên ai đến rồi đi ngay sẽ
-  # không có trong phim — mấy tấm ảnh chụp lúc nãy vẫn giữ được họ.
-  - variables:
-      dat_dk_quay: >
-        {% set sn = kq_anh.get('humans_detected', 0) | int(0) %}
-        {% set st = kq_anh.get('animals_detected', 0) | int(0) %}
-        {% set nn = kq_anh.get('security_suspicious', false)
-              in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
-        {% if not quay_muon %}true
-        {%- elif kq_anh | length == 0 %}true
-        {%- elif video_gui_khi == 'co_nguoi' %}{{ sn > 0 or st > 0 }}
-        {%- else %}{{ nn }}{% endif %}
-
-  - if:
-      - condition: template
-        value_template: >
-          {{ quay_muon and bat_nhanh_video and camera_video | length > 0 and dat_dk_quay }}
-    then:
-      - if:
-          - condition: template
-            value_template: "{{ can_anh_bia }}"
-        then:
-          - continue_on_error: true
-            action: camera.snapshot
-            data:
-              filename: "/media/snapshots/{{ duong_dan }}_thumb.jpg"
-            target:
-              entity_id: "{{ camera_video }}"
-
-      - continue_on_error: true
-        action: camera.record
-        data:
-          filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
-          duration: "{{ thoi_luong_video }}"
-          lookback: "{{ lay_truoc_video }}"
-        target:
-          entity_id: "{{ camera_video }}"
-
-  - variables:
-      # Lượt chờ đọc ảnh mà không đạt điều kiện thì chẳng có tệp nào để đọc,
-      # cũng chẳng có gì để gửi.
-      co_video_that: "{{ bat_nhanh_video and (not quay_muon or dat_dk_quay) }}"
-
   # --- Đọc phim ---
   - if:
       - condition: template
-        value_template: "{{ bat_ai_video and co_video_that }}"
+        value_template: "{{ bat_ai_video }}"
     then:
       - choose:
           - alias: "Phim, kết quả có cấu trúc — người, động vật, cả hai"
@@ -2846,6 +2757,13 @@ action:
   # khi còn bọc trong rào ```json. Gom về một chỗ để mọi bước sau chỉ phải đọc
   # một kiểu dữ liệu.
   - variables:
+      kq_anh: >
+        {% set r = tra_ve_anh.data if tra_ve_anh is defined and tra_ve_anh.data is defined else none %}
+        {% if r is none %}{{ {} }}
+        {%- elif r is string %}
+          {{ r | regex_replace('```json\\s*', '') | regex_replace('```\\s*', '')
+               | trim | from_json(default={}) }}
+        {%- else %}{{ r }}{% endif %}
       kq_video: >
         {% set r = tra_ve_video.data if tra_ve_video is defined and tra_ve_video.data is defined else none %}
         {% if r is none %}{{ {} }}
@@ -3027,13 +2945,9 @@ action:
 
   - variables:
       muon_gui_anh: "{{ bat_nhanh_anh and anh_gui_khi != 'ngay' and dat_dk_anh }}"
-      # co_video_that: lượt chờ đọc ảnh mà không đạt điều kiện thì không có tệp
-      # nào cả. Thiếu vế này là gửi nhầm đoạn phim của lượt TRƯỚC, vì tên tệp
-      # dùng lại khi bật ghi đè.
-      muon_gui_video: >
-        {{ co_video_that and video_gui_khi != 'ngay' and dat_dk_video }}
+      muon_gui_video: "{{ bat_nhanh_video and video_gui_khi != 'ngay' and dat_dk_video }}"
       da_gui_gi_do: >
-        {{ (bat_nhanh_anh and dat_dk_anh) or (co_video_that and dat_dk_video) }}
+        {{ (bat_nhanh_anh and dat_dk_anh) or (bat_nhanh_video and dat_dk_video) }}
       muon_nhieu_anh: >
         {{ bat_nhanh_anh and anh_gui_khi != 'ngay' and dat_dk_anh
            and anh_gui_may_tam == 'tat_ca' and duong_dan_anh | length > 1 }}
