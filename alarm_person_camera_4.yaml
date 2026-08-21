@@ -815,6 +815,22 @@ blueprint:
                   value: "1"
               multiple: false
 
+        dia_chi_ngoai:
+          name: 🌐 Địa chỉ Home Assistant nhìn từ Internet
+          description: |
+            👉 Điền vào thì đoạn video hiện trong Zalo ĐÚNG DẠNG VIDEO: có ảnh bìa, bấm phát
+            ngay trong khung chat.
+            ✅ Chính địa chỉ bạn gõ khi ở ngoài nhà, ví dụ https://ha.abc.duckdns.org
+            ✅ Phải mở được từ Internet thật — máy chủ Zalo tự vào lấy tệp. Địa chỉ LAN kiểu
+            http://192.168.1.x:8123 thì không dùng được.
+            ⚠️ Bỏ trống thì video vẫn tới nơi, nhưng dưới dạng TỆP ĐÍNH KÈM phải bấm tải về
+            mới xem được.
+            ⚠️ Khi điền, đoạn video được lưu ở /config/www thay vì /media, nên AI không đọc
+            được nó nữa — ô "AI phân tích cái gì" tự lùi về chỉ ảnh.
+          default: ""
+          selector:
+            text: {}
+
         zalo_custom_ttl:
           name: ⏳ Message TTL
           description: |
@@ -968,6 +984,23 @@ variables:
   lay_truoc_video: !input lay_truoc_video
   video_gui_khi_raw: !input video_gui_khi
   nguon_phan_tich_raw: !input nguon_phan_tich
+  dia_chi_ngoai_raw: !input dia_chi_ngoai
+  # Bỏ dấu gạch chéo cuối để nối đường dẫn khỏi thành hai gạch.
+  dia_chi_ngoai: "{{ dia_chi_ngoai_raw | trim | regex_replace('/+$', '') }}"
+
+  # Có địa chỉ ngoài thì đoạn video đi đường khác hẳn: quay thẳng vào /config/www
+  # để Home Assistant phục vụ nó tại /local/... không cần đăng nhập, rồi đưa cho
+  # Zalo đúng đường dẫn https đó.
+  #
+  # Vì sao phải vòng thế: dịch vụ zalo_bot.send_video KHÔNG tải tệp lên máy chủ
+  # Zalo, nó chỉ nhắn kèm một đường liên kết và máy điện thoại tự vào lấy. Tích
+  # hợp tự dựng một máy chủ tạm ở địa chỉ LAN sống 90 giây, nên đoạn video xem
+  # được đúng lúc đó, ở đúng trong nhà — ra khỏi nhà hoặc mở lại sau là hỏng.
+  # Đo trên máy thật 21/08: gửi bằng liên kết LAN thì không mở nổi; gửi bằng
+  # https qua tên miền thì phát ngay trong khung chat.
+  video_ra_web: "{{ dia_chi_ngoai | length > 0 and bat_nhanh_video }}"
+  thu_muc_video: >-
+    {{ '/config/www/canh_bao_camera' if video_ra_web else '/media/snapshots' }}
 
   # --- AI ---
   bat_ai: !input bat_ai
@@ -1041,8 +1074,13 @@ variables:
   #
   # Kiểm trước ở đây thì blueprint chạy với MỌI provider: cái nào gửi được video
   # thì dùng video, cái nào không thì tự lùi về ảnh thay vì để lượt báo động chết.
+  #
+  # Điều kiện thứ hai: đoạn video phải nằm trong /media. Khai địa chỉ ngoài là
+  # nó chuyển sang /config/www để Zalo lấy được, mà media_source không với tới
+  # thư mục đó nên AI hết đường đọc.
   video_dung_duoc: >-
-    {{ provider_video_that in (integration_entities('google_generative_ai_conversation')
+    {{ not video_ra_web
+       and provider_video_that in (integration_entities('google_generative_ai_conversation')
        + integration_entities('local_openai')) }}
 
   nguon_phan_tich: >-
@@ -1562,6 +1600,10 @@ action:
             Ô "AI phân tích cái gì" đang đặt "{{ nguon_phan_tich_raw }}" nhưng không
             dùng được, nên blueprint tạm chạy "{{ nguon_phan_tich }}".
             {% if not bat_nhanh_video %}Lý do: nhánh video chưa bật ở mục 5.
+            {%- elif video_ra_web %}Lý do: ô "Địa chỉ Home Assistant nhìn từ Internet"
+            ở mục 10 đang có giá trị, nên đoạn video được lưu ở /config/www để Zalo
+            lấy được — AI thì chỉ đọc được tệp nằm trong /media. Muốn AI đọc video thì
+            xoá ô địa chỉ đó, đổi lại video sẽ tới Zalo dưới dạng tệp đính kèm.
             {%- elif not video_dung_duoc %}Lý do: {{ provider_video_that }} không gửi
             được tệp video. Chỉ tích hợp Google Generative AI và Local OpenAI bản
             luuquangvu làm được — khai một AI Task của chúng vào ô "AI Task dùng khi
@@ -1707,10 +1749,24 @@ action:
               - condition: template
                 value_template: "{{ bat_nhanh_video and camera_video | length > 0 }}"
             then:
+              # Ảnh bìa, chỉ cần khi gửi Zalo bằng đường liên kết: thiếu nó thì
+              # máy chủ Zalo trả "Tham số không hợp lệ" và đoạn video không tới
+              # nơi. Chụp trước khi bấm máy nên nó là khung đầu của đoạn phim.
+              - if:
+                  - condition: template
+                    value_template: "{{ video_ra_web }}"
+                then:
+                  - continue_on_error: true
+                    action: camera.snapshot
+                    data:
+                      filename: "{{ thu_muc_video }}/{{ duong_dan }}_thumb.jpg"
+                    target:
+                      entity_id: "{{ camera_video }}"
+
               - continue_on_error: true
                 action: camera.record
                 data:
-                  filename: "/media/snapshots/{{ duong_dan }}_video.mp4"
+                  filename: "{{ thu_muc_video }}/{{ duong_dan }}_video.mp4"
                   duration: "{{ thoi_luong_video }}"
                   lookback: "{{ lay_truoc_video }}"
                 target:
@@ -1785,8 +1841,15 @@ action:
       video_cho_ai: >
         {{ [{'media_content_id': 'media-source://media_source/local/snapshots/' ~ duong_dan ~ '_video.mp4',
              'media_content_type': 'video/mp4'}] }}
-      duong_dan_video: "/media/snapshots/{{ duong_dan }}_video.mp4"
-      duong_dan_video_media: "/media/local/snapshots/{{ duong_dan }}_video.mp4"
+      duong_dan_video: "{{ thu_muc_video }}/{{ duong_dan }}_video.mp4"
+      # Đường bấm vào từ thông báo điện thoại. Để tương đối là có chủ đích: ứng
+      # dụng tự nối nó với máy chủ đã gửi thông báo, LAN ra LAN, ngoài ra tên miền.
+      duong_dan_video_media: >-
+        {% if video_ra_web %}/local/canh_bao_camera/{{ duong_dan }}_video.mp4
+        {%- else %}/media/local/snapshots/{{ duong_dan }}_video.mp4{% endif %}
+      # Hai đường https đầy đủ, chỉ Zalo dùng — máy chủ của họ tự vào lấy tệp.
+      url_video_ngoai: "{{ dia_chi_ngoai }}/local/canh_bao_camera/{{ duong_dan }}_video.mp4"
+      url_thumb_ngoai: "{{ dia_chi_ngoai }}/local/canh_bao_camera/{{ duong_dan }}_thumb.jpg"
       anh_comma: "{{ duong_dan_anh | join(',') }}"
 
   # ============================================================
@@ -1987,12 +2050,15 @@ action:
                 response_variable: zalo_anh_response
 
   # --- Zalo cá nhân: video ---
-  # Gửi bằng zalo_bot.send_file chứ không phải send_video, dù có sẵn dịch vụ tên
-  # đúng hơn. Lý do đo được trên máy thật 21/08: send_video chỉ đưa cho Zalo một
-  # ĐƯỜNG LIÊN KẾT tới tệp, mà liên kết đó là địa chỉ LAN của Home Assistant trên
-  # một cổng tạm sống 90 giây — điện thoại bấm vào sau đó, hoặc bấm khi đang ở
-  # ngoài nhà, đều không tải nổi. send_file thì máy chủ Zalo tải tệp về rồi giữ
-  # lại, y như đường ảnh vẫn chạy tốt lâu nay, nên đoạn video xem được mãi.
+  # Hai đường, chọn theo ô "Địa chỉ Home Assistant nhìn từ Internet" ở mục 10.
+  #
+  # Có địa chỉ → send_video với liên kết https qua tên miền: đoạn phim hiện đúng
+  # dạng video, có ảnh bìa, bấm phát ngay trong khung chat.
+  #
+  # Không có → send_file: máy chủ Zalo tải tệp về rồi giữ lại, xem được mãi
+  # nhưng dưới dạng tệp đính kèm phải bấm tải. Vẫn hơn send_video ở chế độ mặc
+  # định, vì lúc đó tích hợp chỉ đưa cho Zalo một liên kết LAN sống 90 giây —
+  # đo trên máy thật 21/08: gửi kiểu đó thì điện thoại không mở nổi.
   - choose:
       - alias: "Zalo cá nhân sớm — video NHÓM"
         conditions:
@@ -2004,14 +2070,20 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_file
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_thread_id
-              type: "1"
-              file_path_or_url: "{{ duong_dan_video }}"
-              message: !input zalo_custom_initial_caption
-              ttl: !input zalo_custom_ttl
+            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            data: >
+              {% set d = {'account_selection': zalo_custom_account,
+                          'thread_id': zalo_custom_thread_id,
+                          'type': '1',
+                          'message': zalo_custom_initial_caption,
+                          'ttl': zalo_custom_ttl} %}
+              {% if video_ra_web %}
+                {% set d = dict(d, video_path_or_url=url_video_ngoai,
+                                thumbnail_url=url_thumb_ngoai) %}
+              {% else %}
+                {% set d = dict(d, file_path_or_url=duong_dan_video) %}
+              {% endif %}
+              {{ d }}
 
       - alias: "Zalo cá nhân sớm — video CÁ NHÂN"
         conditions:
@@ -2023,14 +2095,20 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_file
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_user_id
-              type: "0"
-              file_path_or_url: "{{ duong_dan_video }}"
-              message: !input zalo_custom_initial_caption
-              ttl: !input zalo_custom_ttl
+            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            data: >
+              {% set d = {'account_selection': zalo_custom_account,
+                          'thread_id': zalo_custom_user_id,
+                          'type': '0',
+                          'message': zalo_custom_initial_caption,
+                          'ttl': zalo_custom_ttl} %}
+              {% if video_ra_web %}
+                {% set d = dict(d, video_path_or_url=url_video_ngoai,
+                                thumbnail_url=url_thumb_ngoai) %}
+              {% else %}
+                {% set d = dict(d, file_path_or_url=duong_dan_video) %}
+              {% endif %}
+              {{ d }}
 
   # --- Điện thoại: ảnh ---
   # Đường dẫn để tương đối là có chủ đích. Ứng dụng nối nó với đúng máy chủ đã
@@ -2562,14 +2640,20 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_file
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_thread_id
-              type: "1"
-              file_path_or_url: "{{ duong_dan_video }}"
-              message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
-              ttl: !input zalo_custom_ttl
+            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            data: >
+              {% set d = {'account_selection': zalo_custom_account,
+                          'thread_id': zalo_custom_thread_id,
+                          'type': '1',
+                          'message': chu_kem if gop_vao_video else zalo_custom_initial_caption,
+                          'ttl': zalo_custom_ttl} %}
+              {% if video_ra_web %}
+                {% set d = dict(d, video_path_or_url=url_video_ngoai,
+                                thumbnail_url=url_thumb_ngoai) %}
+              {% else %}
+                {% set d = dict(d, file_path_or_url=duong_dan_video) %}
+              {% endif %}
+              {{ d }}
 
       - alias: "Zalo cá nhân muộn — video CÁ NHÂN"
         conditions:
@@ -2581,14 +2665,20 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_file
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_user_id
-              type: "0"
-              file_path_or_url: "{{ duong_dan_video }}"
-              message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
-              ttl: !input zalo_custom_ttl
+            action: "{{ 'zalo_bot.send_video' if video_ra_web else 'zalo_bot.send_file' }}"
+            data: >
+              {% set d = {'account_selection': zalo_custom_account,
+                          'thread_id': zalo_custom_user_id,
+                          'type': '0',
+                          'message': chu_kem if gop_vao_video else zalo_custom_initial_caption,
+                          'ttl': zalo_custom_ttl} %}
+              {% if video_ra_web %}
+                {% set d = dict(d, video_path_or_url=url_video_ngoai,
+                                thumbnail_url=url_thumb_ngoai) %}
+              {% else %}
+                {% set d = dict(d, file_path_or_url=duong_dan_video) %}
+              {% endif %}
+              {{ d }}
 
   # --- Zalo cá nhân: tin chữ riêng ---
   - choose:
