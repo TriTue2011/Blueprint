@@ -1133,6 +1133,24 @@ variables:
     No markdown, no code fences, no explanation.
 
   # ============================================================
+  # LUẬT CHỮ, DÙNG CHUNG CHO MỌI PROMPT
+  # ============================================================
+  # Vì sao phải cấm thẳng chữ Hán: model chạy tại nhà là Qwen, do một nhóm Trung
+  # Quốc huấn luyện, nên thỉnh thoảng nó rơi đúng một từ tiếng Trung vào giữa câu
+  # tiếng Việt — thật sự gặp 21/08, tin báo về đọc là "Đi qua khu vực走廊". Nói
+  # "viết tiếng Việt có dấu" thôi thì chưa chặn được, vì với model đó một từ Hán
+  # vẫn là đang viết tiếng Việt.
+  luat_chu_viet: >
+    LANGUAGE RULE, applies to every text value you return:
+    - Write ONLY in Vietnamese, with full diacritics.
+    - NEVER output a Chinese, Japanese or Korean character. Not even one, not
+      even inside a Vietnamese sentence.
+    - If a word comes to mind in Chinese, write the Vietnamese word instead:
+      hành lang, sảnh, cổng, cửa, sân, cầu thang, thang máy, bãi xe.
+    - Do not mix English words in either, except brand names printed on things
+      you can actually see.
+
+  # ============================================================
   # PHẦN MỞ ĐẦU DÙNG CHUNG CHO MỌI PROMPT PHÂN TÍCH
   # ============================================================
   # Vì sao có đoạn này: các khung được gửi liền nhau nên model dễ coi chúng là
@@ -1153,6 +1171,8 @@ variables:
       Never describe more subjects than you counted.
     - Prefer what changes across the sequence: approaching, moving away, moving
       sideways, standing still, turning back, arriving then leaving.
+
+    {{ luat_chu_viet }}
 
   # ============================================================
   # PROMPT PHÂN TÍCH — 8 TRƯỜNG HỢP
@@ -1381,6 +1401,8 @@ variables:
     - Prefer what develops over time: approaching, moving away, passing by,
       stopping, turning back, arriving then leaving, lingering.
 
+    {{ luat_chu_viet }}
+
   # ============================================================
   # PROMPT ĐỌC PHIM — 8 TRƯỜNG HỢP
   # ============================================================
@@ -1586,6 +1608,7 @@ variables:
   # MÔ TẢ TỪNG Ô CỦA KẾT QUẢ CÓ CẤU TRÚC
   # ============================================================
   mo_ta_o_nguoi: >
+    {{ luat_chu_viet }}
     {% if che_do_ket_qua == 'co_cau_truc' and doi_tuong in ['humans', 'both'] %}
     Describe each DISTINCT person in concise natural Vietnamese: adult or child
     and apparent gender only when visually clear, clothing type and main
@@ -1600,6 +1623,7 @@ variables:
     {% endif %}
 
   mo_ta_o_dong_vat: >
+    {{ luat_chu_viet }}
     {% if che_do_ket_qua == 'co_cau_truc' and doi_tuong in ['animals', 'both'] %}
     Describe each DISTINCT animal in concise natural Vietnamese: species when
     clear, visible colour and markings, relative size, what it is doing, and how
@@ -1611,6 +1635,7 @@ variables:
     {% endif %}
 
   mo_ta_o_hanh_dong: >
+    {{ luat_chu_viet }}
     Describe in ONE concise natural Vietnamese sentence what the DISTINCT people
     do across the whole sequence, and how that develops: passing, approaching,
     leaving, waiting, returning, pacing, looking around repeatedly, watching a
@@ -1645,6 +1670,7 @@ variables:
   # rằng người đi ra rồi vào lại vẫn là một người, và câu trả về khi trống cũng
   # phải nói "đoạn phim" để chữ hiện trong tin nhắn khớp thứ vừa được xem.
   mo_ta_o_nguoi_video: >
+    {{ luat_chu_viet }}
     {% if doi_tuong_video in ['humans', 'both'] %}
     Describe each DISTINCT person in concise natural Vietnamese: adult or child
     and apparent gender only when visually clear, clothing type and main
@@ -1660,6 +1686,7 @@ variables:
     {% endif %}
 
   mo_ta_o_dong_vat_video: >
+    {{ luat_chu_viet }}
     {% if doi_tuong_video in ['animals', 'both'] %}
     Describe each DISTINCT animal in concise natural Vietnamese: species when
     clear, visible colour and markings, relative size, what it is doing, and how
@@ -1685,6 +1712,7 @@ variables:
     unsure, answer false.
 
   mo_ta_o_hanh_dong_video: >
+    {{ luat_chu_viet }}
     Describe in ONE concise natural Vietnamese sentence what the DISTINCT people
     do during the clip, and how that develops: passing, approaching, leaving,
     waiting, returning, pacing, looking around repeatedly, watching a door or
