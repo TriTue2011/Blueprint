@@ -455,29 +455,50 @@ blueprint:
                   value: an_ninh
               multiple: false
 
-        nguon_phan_tich:
-          name: 🧠 AI phân tích cái gì
+        doi_tuong_video:
+          name: 🧠 AI đọc VIDEO theo chế độ nào
           description: |
-            👉 Chỉ ảnh: AI đọc chuỗi ảnh. Nhanh nhất, chạy với mọi provider kể cả model tại nhà.
-            👉 Chỉ video: AI đọc đoạn phim, thấy được chuyển động liên tục thay vì vài khoảnh khắc rời.
-            👉 Cả hai: gửi ảnh lẫn video trong cùng một lời gọi, AI có đủ cả nét lẫn diễn tiến.
-            ⚠️ Hai lựa chọn có video CHỈ chạy với provider đọc được tệp mp4, hiện là Google Gemini.
-            Tích hợp Local OpenAI từ chối thẳng tệp video (lỗi unsupported_attachment_type), nên
-            model chạy tại nhà phải để ở "Chỉ ảnh".
-            ⚠️ Video ăn token gấp nhiều lần ảnh: đo trên máy tại nhà, ba ảnh luồng phụ tốn 978 token
-            còn mười giây video tốn 7 025 token.
-            ✅ Chọn video mà quên bật nhánh video thì blueprint tự quay về chỉ ảnh và ghi một dòng
-            vào nhật ký.
-          default: anh
+            👉 Đoạn phim được phân tích RIÊNG, bằng một lời gọi của nó, không dính gì tới
+            lời gọi đọc ảnh ở mục 6.
+            👉 Chọn "Không phân tích" thì video chỉ để gửi đi cho bạn xem, không tốn lời gọi nào.
+            ✅ Đặt cùng chế độ với ô "AI đọc ẢNH" ở mục 6 thì hai kết quả được gộp thành MỘT tin;
+            đặt khác nhau thì mỗi bên gửi tin của mình.
+            ⚠️ Chỉ chạy với provider đọc được tệp mp4: Google Gemini, hoặc Local OpenAI bản
+            luuquangvu. Model tại nhà qua Ollama từ chối tệp video.
+            ⚠️ Video ăn token gấp nhiều lần ảnh — đo trên máy tại nhà: ba ảnh luồng phụ tốn 978
+            token, mười giây video tốn 7 025 token.
+          default: khong
           selector:
             select:
               options:
-                - label: 📸 Chỉ ảnh
-                  value: anh
-                - label: 🎥 Chỉ video
-                  value: video
-                - label: 📸🎥 Cả hai, trong cùng một lời gọi
-                  value: ca_hai
+                - label: 🚫 Không phân tích, chỉ gửi phim
+                  value: khong
+                - label: 🚶 Chỉ người
+                  value: humans
+                - label: 🐾 Chỉ động vật
+                  value: animals
+                - label: 🚶🐾 Cả người và động vật
+                  value: both
+                - label: 🛡️ An ninh
+                  value: security
+              multiple: false
+
+        phan_tich_video_gui_khi:
+          name: 📤 Gửi phân tích VIDEO khi nào
+          description: |
+            👉 Ba đường như mọi thứ khác, nhưng dựa vào kết quả đọc PHIM.
+            ⚠️ Phần chữ không bao giờ đi một mình: lượt nào không gửi ảnh lẫn video thì cũng
+            không gửi chữ, dù bạn chọn "Đi kèm".
+          default: an_ninh
+          selector:
+            select:
+              options:
+                - label: Đi kèm, cứ có ảnh hoặc video là gửi
+                  value: di_kem
+                - label: Chỉ khi có người
+                  value: co_nguoi
+                - label: Chỉ khi mất an ninh
+                  value: an_ninh
               multiple: false
 
     # ============================================================
@@ -514,13 +535,15 @@ blueprint:
               multiple: false
 
         doi_tuong:
-          name: 🔍 Phân tích cái gì
+          name: 🔍 AI đọc ẢNH theo chế độ nào
           description: |
             ✅ Chỉ người: đếm và tả người.
             ✅ Chỉ động vật: đếm và tả chó, mèo, chim.
             ✅ Cả hai: tả cả người lẫn động vật.
             ✅ An ninh: đếm người, tả hành động, và chấm một câu có đáng ngờ hay không.
             ⚠️ Chỉ chế độ An ninh mới mở khoá được các đường gửi "chỉ khi mất an ninh".
+            👉 Đoạn phim có ô chế độ riêng ở mục 5. Đặt hai ô giống nhau thì hai kết quả được
+            gộp thành MỘT tin; đặt khác nhau thì mỗi bên gửi tin của mình.
           default: humans
           selector:
             select:
@@ -572,7 +595,7 @@ blueprint:
               multiple: false
 
         phan_tich_gui_khi:
-          name: 📤 Gửi kết quả phân tích khi nào
+          name: 📤 Gửi phân tích ẢNH khi nào
           description: |
             👉 Đi kèm: gửi bất cứ khi nào ảnh hoặc video được gửi.
             👉 Chỉ khi có người: có người mới gửi phần chữ.
@@ -590,6 +613,21 @@ blueprint:
                 - label: Chỉ khi mất an ninh
                   value: an_ninh
               multiple: false
+
+        hop_nhat_bang_ai:
+          name: 🔀 Gộp hai kết quả bằng AI
+          description: |
+            👉 Chỉ dùng khi ô "AI đọc ẢNH" và ô "AI đọc VIDEO" đặt CÙNG một chế độ.
+            👉 BẬT: thêm một lời gọi ngắn chỉ có chữ, không kèm ảnh hay phim, để AI trộn hai
+            kết quả thành một mô tả đầy đủ — ảnh cho chi tiết như màu áo và vật cầm tay, phim
+            cho hành vi. Lời gọi này rất nhanh vì không có tệp đính kèm.
+            👉 TẮT: lấy nguyên tin của bên đếm được nhiều đối tượng hơn, hoà thì lấy bên phim.
+            Không tốn thêm lời gọi nào.
+            ⚠️ Chế độ An ninh không dùng ô này: hai kết quả gộp bằng luật cố định — đáng ngờ nếu
+            bất kỳ bên nào báo đáng ngờ, số người lấy số lớn hơn.
+          default: true
+          selector:
+            boolean: {}
     notification_section:
       name: 7 · Thông báo điện thoại
       icon: mdi:bell
@@ -968,7 +1006,8 @@ variables:
   thoi_luong_video: !input thoi_luong_video
   lay_truoc_video: !input lay_truoc_video
   video_gui_khi_raw: !input video_gui_khi
-  nguon_phan_tich_raw: !input nguon_phan_tich
+  doi_tuong_video_raw: !input doi_tuong_video
+  phan_tich_video_gui_khi_raw: !input phan_tich_video_gui_khi
   # Zalo đòi ảnh bìa cho mỗi đoạn video: gửi kèm ảnh bìa rỗng thì máy chủ của họ
   # trả "Tham số không hợp lệ" và tin không đi (đo trên máy thật 21/08). Nên lượt
   # nào có gửi Zalo là chụp thêm một tấm làm bìa.
@@ -982,6 +1021,7 @@ variables:
   ai_provider_loc: !input ai_provider_loc
   ai_provider_video: !input ai_provider_video
   phan_tich_gui_khi_raw: !input phan_tich_gui_khi
+  hop_nhat_bang_ai: !input hop_nhat_bang_ai
 
   # Camera thật sự dùng ở từng nhánh. Bỏ trống ô sau thì dùng lại ô trước, để
   # người chỉ có một camera khỏi phải khai ba lần.
@@ -1009,7 +1049,8 @@ variables:
   #
   # Tắt phân tích AI cũng vậy: không có kết quả nào để dựa vào, nên mọi đường
   # đều thành "gửi mọi lượt".
-  co_danh_gia_an_ninh: "{{ bat_ai and doi_tuong == 'security' }}"
+  co_danh_gia_an_ninh: >-
+    {{ bat_ai and (doi_tuong == 'security' or doi_tuong_video_raw == 'security') }}
   anh_gui_khi: >-
     {% if not bat_ai %}ngay
     {%- elif anh_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
@@ -1021,9 +1062,13 @@ variables:
   phan_tich_gui_khi: >-
     {% if phan_tich_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
     {%- else %}{{ phan_tich_gui_khi_raw }}{% endif %}
+  phan_tich_video_gui_khi: >-
+    {% if phan_tich_video_gui_khi_raw == 'an_ninh' and not co_danh_gia_an_ninh %}co_nguoi
+    {%- else %}{{ phan_tich_video_gui_khi_raw }}{% endif %}
   da_ha_cap: >-
     {{ bat_ai and not co_danh_gia_an_ninh
-       and 'an_ninh' in [anh_gui_khi_raw, video_gui_khi_raw, phan_tich_gui_khi_raw] }}
+       and 'an_ninh' in [anh_gui_khi_raw, video_gui_khi_raw,
+                         phan_tich_gui_khi_raw, phan_tich_video_gui_khi_raw] }}
 
   # NGUỒN PHÂN TÍCH SAU KHI HẠ CẤP.
   #
@@ -1041,28 +1086,33 @@ variables:
   #   - local_openai bản luuquangvu: cho phép 159 loại tệp trong đó có video/mp4,
   #     gửi theo dạng {"type":"file", ...}. Bản skye-harris thì CHẶN mọi thứ
   #     không phải image/ ngay trong mã (entity.py:287) nên video không rời nổi
-  #     Home Assistant — nếu bạn dùng bản đó, để ô nguồn phân tích ở "chỉ ảnh".
+  #     Home Assistant — nếu bạn dùng bản đó, để ô đọc phim ở "Không phân tích".
   #   - ollama: trả thẳng "only supports image attachments", không dùng được.
   #
-  # Kiểm trước ở đây thì blueprint chạy với MỌI provider: cái nào gửi được video
-  # thì dùng video, cái nào không thì tự lùi về ảnh thay vì để lượt báo động chết.
+  # Kiểm trước ở đây thì blueprint chạy với MỌI provider: cái nào đọc được phim
+  # thì đọc, cái nào không thì bỏ hẳn lời gọi phim thay vì để lượt báo động chết.
   video_dung_duoc: >-
     {{ provider_video_that in (integration_entities('google_generative_ai_conversation')
        + integration_entities('local_openai')) }}
 
-  nguon_phan_tich: >-
-    {% if nguon_phan_tich_raw in ['video', 'ca_hai'] and not bat_nhanh_video %}anh
-    {%- elif nguon_phan_tich_raw in ['video', 'ca_hai'] and not video_dung_duoc %}anh
-    {%- elif nguon_phan_tich_raw == 'ca_hai' and not bat_nhanh_anh %}video
-    {%- else %}{{ nguon_phan_tich_raw }}{% endif %}
-  co_video_cho_ai: "{{ nguon_phan_tich in ['video', 'ca_hai'] }}"
-  ha_cap_nguon: "{{ nguon_phan_tich != nguon_phan_tich_raw }}"
+  # HAI LỜI GỌI ĐỘC LẬP.
+  #
+  # Ảnh và phim nay được đọc riêng, mỗi bên một lời gọi và một chế độ của mình.
+  # Trước đây gộp chung một lời gọi, nhưng như thế prompt phải nói nước đôi về
+  # thứ nó đang xem, và cùng một người có mặt trong cả ảnh lẫn phim rất dễ bị
+  # đếm thành hai.
+  bat_ai_anh: "{{ bat_ai and bat_nhanh_anh }}"
+  bat_ai_video: >-
+    {{ bat_ai and doi_tuong_video_raw != 'khong'
+       and bat_nhanh_video and video_dung_duoc }}
+  # Sau khi hạ: ô chế độ phim chỉ còn giá trị thật khi lời gọi phim thực sự chạy.
+  doi_tuong_video: "{{ doi_tuong_video_raw if bat_ai_video else 'khong' }}"
+  ha_cap_video: >-
+    {{ bat_ai and doi_tuong_video_raw != 'khong' and not bat_ai_video }}
 
-  # Lời gọi có video thì đi bằng provider khai riêng, vì model tại nhà không
-  # đọc được mp4 còn provider đám mây thì đọc được.
-  provider_phan_tich: >-
-    {% if co_video_cho_ai and ai_provider_video | length > 0 %}{{ ai_provider_video }}
-    {%- else %}{{ ai_provider }}{% endif %}
+  # Cùng chế độ thì hai kết quả nói về cùng một thứ, nên gộp thành MỘT tin. Khác
+  # chế độ thì chúng trả lời hai câu hỏi khác nhau, để riêng mới đúng.
+  cung_che_do: "{{ bat_ai_anh and bat_ai_video and doi_tuong == doi_tuong_video }}"
 
   # ============================================================
   # PROMPT CỬA LỌC
@@ -1311,6 +1361,228 @@ variables:
     {% endif %}
 
   # ============================================================
+  # PHẦN MỞ ĐẦU DÙNG CHUNG CHO MỌI PROMPT ĐỌC PHIM
+  # ============================================================
+  # Khác bản ảnh ở cái bẫy phải chặn. Chuỗi ảnh hay bị tả một người thành hai vì
+  # model coi hai khung liền nhau là hai cảnh; đoạn phim thì ngược lại, hay bị
+  # đếm lại một người mỗi lần họ ra khỏi khung rồi quay vào, hoặc bị cột che mất
+  # một lúc. Hai luật đó không thay thế nhau được nên phải viết riêng.
+  mo_dau_video: >
+    You are given a SHORT VIDEO CLIP recorded continuously by one home security
+    camera. It is a single scene lasting a few seconds, not several scenes.
+
+    Rules for reading the clip:
+    - A person may LEAVE the frame and come back, or be hidden for a moment.
+      That is still the SAME person, not a new one.
+    - Count DISTINCT people, not appearances.
+    - Describe SUBJECTS, not moments. Merge everything you see of one subject
+      during the whole clip into one description of that subject.
+    - The number of subjects you describe MUST equal the count you report.
+    - Prefer what develops over time: approaching, moving away, passing by,
+      stopping, turning back, arriving then leaving, lingering.
+
+  # ============================================================
+  # PROMPT ĐỌC PHIM — 8 TRƯỜNG HỢP
+  # ============================================================
+  # Không có ô khung_ro_nhat như bản ảnh: đoạn phim không có khung đánh số, mà
+  # model cũng không nhìn thấy mấy tấm ảnh để chọn hộ.
+  prompt_phan_tich_video: >
+    {% if che_do_ket_qua == 'json' %}
+
+      {% if doi_tuong_video == 'humans' %}
+    {{ mo_dau_video }}
+
+    Analyze HUMANS ONLY. Ignore animals unless one is needed to explain what a
+    person is doing. The camera may face an apartment corridor, a lobby, a unit
+    entrance, or a house porch, gate, driveway, yard or doorway.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":""}
+
+    Field rules:
+    humans_detected: integer, how many DISTINCT people appear in the whole clip.
+    0 if nobody is visible.
+    humans_detected_summary: short Vietnamese summary such as "1 phụ nữ, 2 trẻ
+    em". Empty string if nobody is visible.
+    humans_detected_description: concise Vietnamese description of each distinct
+    person — adult or child and apparent gender only when visually clear;
+    clothing type and main colours; what they are doing; anything clearly being
+    carried; and how they move during the clip. State a clearly visible
+    dangerous object such as a knife, gun or club plainly, without guessing why.
+    Only say someone enters or leaves a home when a doorway or gate is actually
+    crossed on camera.
+    If humans_detected is 0, humans_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có người trong đoạn phim".
+
+    Output rules:
+    - Every text value MUST be natural Vietnamese with full diacritics.
+    - Use only what is visible. Do not identify anyone, and do not guess
+      occupation, relationship, ethnicity, health or intent.
+    - Raw JSON only. No markdown, no code fences, no extra text.
+
+      {% elif doi_tuong_video == 'animals' %}
+    {{ mo_dau_video }}
+
+    Analyze ANIMALS ONLY.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"animals_detected":0,"animals_detected_summary":"","animals_detected_description":""}
+
+    Field rules:
+    animals_detected: integer, how many DISTINCT animals appear in the whole
+    clip. 0 if none.
+    animals_detected_summary: short Vietnamese summary by species and visible
+    colour such as "1 con chó vàng, 2 con mèo đen". Empty string if none.
+    animals_detected_description: concise Vietnamese description of each animal —
+    species when clear, visible colour and markings, relative size, what it is
+    doing, and how it moves during the clip.
+    If animals_detected is 0, animals_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có động vật trong đoạn phim".
+
+    Output rules:
+    - Every text value MUST be natural Vietnamese with full diacritics.
+    - Do not invent a breed or species you cannot actually see.
+    - Raw JSON only. No markdown, no code fences, no extra text.
+
+      {% elif doi_tuong_video == 'both' %}
+    {{ mo_dau_video }}
+
+    Analyze HUMANS and ANIMALS.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"humans_detected":0,"humans_detected_summary":"","humans_detected_description":"","animals_detected":0,"animals_detected_summary":"","animals_detected_description":""}
+
+    Count DISTINCT people and DISTINCT animals in the whole clip. Describe
+    people with clothing, action, anything carried and movement; describe
+    animals with species, colour, size, action and movement. All Vietnamese
+    with full diacritics.
+    If humans_detected is 0, humans_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có người trong đoạn phim".
+    If animals_detected is 0, animals_detected_description MUST be exactly:
+    "Đã phát hiện chuyển động tuy nhiên không có động vật trong đoạn phim".
+
+    A vehicle may be mentioned briefly inside the human description when it
+    clearly relates to what a person does. Never count a vehicle as a person or
+    an animal.
+
+    Output rules:
+    - Raw JSON only. No markdown, no code fences, no extra text.
+
+      {% else %}
+    {{ mo_dau_video }}
+
+    You are watching a home security camera. Answer three things only: how many
+    people are there, what they are doing, and whether what you actually see
+    deserves security attention.
+
+    Return raw JSON only, on one line, with exactly this shape:
+    {"humans_detected":0,"human_action":"","security_suspicious":false}
+
+    Field rules:
+    humans_detected: integer, how many DISTINCT people in the whole clip.
+    human_action: one concise Vietnamese sentence about what the people actually
+    do during the clip — passing by, approaching, leaving, waiting, coming back,
+    pacing, looking around repeatedly, watching a door or window, delivering or
+    picking something up, touching or testing a door or gate, working at a lock,
+    handling property, climbing, or carrying something clearly dangerous.
+    security_suspicious: true only when what you SEE reasonably deserves
+    attention.
+
+    How to judge, with context:
+    - In apartment buildings, shared corridors and lobbies normally carry
+      neighbours, visitors and deliveries. Walking past, waiting briefly,
+      checking a door number, or making a delivery is NOT suspicious by itself.
+    - At houses, the street and pavement outside normally carry passers-by.
+      Approaching the gate, waiting, calling at the door, delivering, or simply
+      going in and out is NOT suspicious by itself.
+    - Suspicion comes from behaviour building up over time: lingering at the
+      same entrance, walking away then returning, inspecting one door or window
+      or lock repeatedly, pulling or testing a handle, working at a lock,
+      reaching through an opening, climbing into somewhere clearly private,
+      tampering with or taking property, hiding or dodging the camera together
+      with other worrying actions, threatening behaviour, or a dangerous object
+      used in a clearly worrying way.
+    - One glance around, looking at the camera, ordinary clothes, a helmet or a
+      mask on its own, or standing near an entrance for a moment is NOT enough.
+    - THE CLIP IS ONLY A FEW SECONDS LONG. Do not build a story out of it. If
+      the clip is too short to show behaviour actually repeating, or an ordinary
+      explanation fits what you see, set security_suspicious to false.
+    - Never guess intent, identity, job, relationship or motive. Never mark
+      someone suspicious for how they look.
+    If humans_detected is 0, human_action MUST be exactly:
+    "Không phát hiện người trong đoạn phim." and security_suspicious MUST be false.
+
+    Output rules:
+    - human_action MUST be natural Vietnamese with full diacritics, short enough
+      to read on a phone notification.
+    - Raw JSON only. No markdown, no code fences, no extra text.
+      {% endif %}
+
+    {% else %}
+
+      {% if doi_tuong_video == 'humans' %}
+    {{ mo_dau_video }}
+
+    Analyze HUMANS ONLY in the whole clip. Count distinct people, describe what
+    they look like and what they do, and say how they move. Use apartment or
+    house entrance context only when it actually helps. Never identify anyone
+    and never guess intent.
+    Fill only the requested fields. Every text field MUST be natural Vietnamese
+    with full diacritics, short enough for a phone notification.
+    For the animal fields, return exactly the fixed values their descriptions
+    ask for, because animals are not being analysed this time.
+
+      {% elif doi_tuong_video == 'animals' %}
+    {{ mo_dau_video }}
+
+    Analyze ANIMALS ONLY in the whole clip. Count distinct animals and describe
+    species, visible colour and markings, relative size, what they do and how
+    they move. Use only what you can actually see.
+    Fill only the requested fields. Every text field MUST be natural Vietnamese
+    with full diacritics, short enough for a phone notification.
+    For the human fields, return exactly the fixed values their descriptions ask
+    for, because people are not being analysed this time.
+
+      {% elif doi_tuong_video == 'both' %}
+    {{ mo_dau_video }}
+
+    Analyze HUMANS and ANIMALS in the whole clip. Count each distinct subject
+    once. Describe what they do and how they move, never who they are or why. A
+    vehicle may be mentioned briefly when it clearly relates to what a person
+    does.
+    Fill only the requested fields. Every text field MUST be natural Vietnamese
+    with full diacritics, short enough for a phone notification.
+
+      {% else %}
+    {{ mo_dau_video }}
+
+    You are watching a home security camera. Answer three things only: how many
+    DISTINCT people are visible, what they are doing, and whether what you
+    actually see deserves security attention.
+
+    Judge with context:
+    - In apartment buildings, ordinary corridor, lobby, visitor and delivery
+      traffic is normal.
+    - At houses, ordinary street traffic, brief waiting, calling at the door,
+      deliveries, and going in and out are normal.
+    - Call it suspicious only when behaviour during the clip supports it:
+      lingering or walking away then returning, inspecting one door or window or
+      lock again and again, testing or working at an entrance, climbing
+      somewhere clearly private, tampering with or taking property, threatening
+      behaviour, or a dangerous object in a clearly worrying situation.
+    - One glance around, looking at the camera, clothing, a helmet or mask
+      alone, or a moment near an entrance is not enough.
+    - THE CLIP IS ONLY A FEW SECONDS LONG. If it is too short to show behaviour
+      actually repeating, or an ordinary explanation fits, say it is not
+      suspicious.
+    - Never guess identity, motive, job or relationship.
+    Fill only the requested fields. The action field MUST be concise natural
+    Vietnamese with full diacritics.
+      {% endif %}
+
+    {% endif %}
+
+  # ============================================================
   # MÔ TẢ TỪNG Ô CỦA KẾT QUẢ CÓ CẤU TRÚC
   # ============================================================
   mo_ta_o_nguoi: >
@@ -1348,11 +1620,80 @@ variables:
     traffic does not read as alarming. Never guess identity or motive. If nobody
     is visible, return EXACTLY: "Không phát hiện người trong chuỗi ảnh.".
 
+  mo_ta_o_nghi_ngo: >
+    True only when what you actually SEE deserves security attention at a home.
+    Ordinary living counts as normal: residents and their children coming and
+    going, guests, neighbours, a delivery or a courier, someone dropping
+    leaflets, cleaning or maintenance work. Suspicion needs behaviour that
+    builds across the frames — lingering at an entrance, coming back again and
+    again, checking one door or window or lock repeatedly, testing a handle,
+    working at a lock, reaching through an opening, climbing somewhere clearly
+    private, taking or tampering with property, or something clearly dangerous
+    being carried in a worrying way. Clothing, a mask, a helmet or a glance at
+    the camera is never enough on its own. When unsure, answer false.
+
   mo_ta_o_khung: >
     Which frame shows the subjects most clearly, counting from 1 for the first
     frame. This picks the single photo worth sending when only one is wanted, so
     prefer a frame where faces, clothing or the action are easiest to make out.
     Return 1 when nothing is visible.
+
+  # ============================================================
+  # MÔ TẢ TỪNG Ô CỦA KẾT QUẢ CÓ CẤU TRÚC — BẢN ĐỌC PHIM
+  # ============================================================
+  # Cùng ý với bản ảnh, khác ba chỗ: nói "đoạn phim" thay vì "chuỗi ảnh", nhắc
+  # rằng người đi ra rồi vào lại vẫn là một người, và câu trả về khi trống cũng
+  # phải nói "đoạn phim" để chữ hiện trong tin nhắn khớp thứ vừa được xem.
+  mo_ta_o_nguoi_video: >
+    {% if doi_tuong_video in ['humans', 'both'] %}
+    Describe each DISTINCT person in concise natural Vietnamese: adult or child
+    and apparent gender only when visually clear, clothing type and main
+    colours, what they are doing, anything clearly being carried, and how they
+    move during the clip. Someone who leaves the frame and comes back is the
+    same person — never describe them twice. State a clearly visible dangerous
+    object plainly without guessing why. Only say someone enters or leaves a
+    home when a doorway or gate is actually crossed on camera. If nobody is
+    visible, return EXACTLY: "Đã phát hiện chuyển động tuy nhiên không có người
+    trong đoạn phim".
+    {% else %}
+    People are not being analysed this time. Return EXACTLY: "Không phân tích người theo yêu cầu".
+    {% endif %}
+
+  mo_ta_o_dong_vat_video: >
+    {% if doi_tuong_video in ['animals', 'both'] %}
+    Describe each DISTINCT animal in concise natural Vietnamese: species when
+    clear, visible colour and markings, relative size, what it is doing, and how
+    it moves during the clip. An animal that leaves the frame and comes back is
+    the same animal — never describe it twice. If none are visible, return
+    EXACTLY: "Đã phát hiện chuyển động tuy nhiên không có động vật trong đoạn phim".
+    {% else %}
+    Animals are not being analysed this time. Return EXACTLY: "Không phân tích động vật theo yêu cầu".
+    {% endif %}
+
+  mo_ta_o_nghi_ngo_video: >
+    True only when what you actually SEE deserves security attention at a home.
+    Ordinary living counts as normal: residents and their children coming and
+    going, guests, neighbours, a delivery or a courier, someone dropping
+    leaflets, cleaning or maintenance work. Suspicion needs behaviour that
+    builds during the clip — lingering at an entrance, walking away then
+    returning, checking one door or window or lock repeatedly, testing a handle,
+    working at a lock, reaching through an opening, climbing somewhere clearly
+    private, taking or tampering with property, or something clearly dangerous
+    being carried in a worrying way. Clothing, a mask, a helmet or a glance at
+    the camera is never enough on its own. The clip lasts only a few seconds, so
+    if it is too short to show behaviour actually repeating, answer false. When
+    unsure, answer false.
+
+  mo_ta_o_hanh_dong_video: >
+    Describe in ONE concise natural Vietnamese sentence what the DISTINCT people
+    do during the clip, and how that develops: passing, approaching, leaving,
+    waiting, returning, pacing, looking around repeatedly, watching a door or
+    window, delivering or collecting something, touching or testing an entrance,
+    working at a lock, handling property, climbing, or carrying something
+    clearly dangerous. Use apartment or house context so ordinary traffic does
+    not read as alarming. The clip lasts only a few seconds, so do not build a
+    story out of it. Never guess identity or motive. If nobody is visible,
+    return EXACTLY: "Không phát hiện người trong đoạn phim.".
 
   # --- Thông báo điện thoại ---
   include_notify: !input include_notify
@@ -1557,21 +1898,20 @@ action:
   # ============================================================
   - if:
       - condition: template
-        value_template: "{{ ha_cap_nguon }}"
+        value_template: "{{ ha_cap_video }}"
     then:
       - action: system_log.write
         data:
           level: warning
           logger: blueprint.canh_bao_camera_ai
           message: >
-            Ô "AI phân tích cái gì" đang đặt "{{ nguon_phan_tich_raw }}" nhưng không
-            dùng được, nên blueprint tạm chạy "{{ nguon_phan_tich }}".
+            Ô "AI đọc VIDEO" đang đặt "{{ doi_tuong_video_raw }}" nhưng lượt này
+            không chạy được, nên chỉ có phân tích ảnh.
             {% if not bat_nhanh_video %}Lý do: nhánh video chưa bật ở mục 5.
-            {%- elif not video_dung_duoc %}Lý do: {{ provider_video_that }} không gửi
-            được tệp video. Chỉ tích hợp Google Generative AI và Local OpenAI bản
-            luuquangvu làm được — khai một AI Task của chúng vào ô "AI Task dùng khi
-            có video" ở mục 5.
-            {%- else %}Lý do: nhánh ảnh chưa bật ở mục 4.{% endif %}
+            {%- else %}Lý do: {{ provider_video_that }} không gửi được tệp video.
+            Chỉ tích hợp Google Generative AI và Local OpenAI bản luuquangvu làm
+            được — khai một AI Task của chúng vào ô "AI Task dùng khi có video"
+            ở mục 5.{% endif %}
 
   - if:
       - condition: template
@@ -2112,22 +2452,25 @@ action:
                   tag: "{{ tag }}_video"
 
   # ============================================================
-  # BƯỚC 7: PHÂN TÍCH AI
+  # BƯỚC 7: PHÂN TÍCH AI — HAI LỜI GỌI ĐỘC LẬP
   # ============================================================
-  - variables:
-      # `attachments` vốn là danh sách, nên "cả hai" chỉ là nối hai danh sách lại
-      # rồi gửi trong CÙNG một lời gọi — không phải chạy hai lượt rồi gộp kết quả.
-      dinh_kem_ai: >
-        {% if nguon_phan_tich == 'video' %}{{ video_cho_ai }}
-        {%- elif nguon_phan_tich == 'ca_hai' %}{{ anh_cho_ai + video_cho_ai }}
-        {%- else %}{{ anh_cho_ai }}{% endif %}
+  # Ảnh một lời gọi, phim một lời gọi, mỗi bên một chế độ và một prompt riêng.
+  #
+  # Vì sao không gộp chung như trước: prompt phải nói cho model biết nó đang xem
+  # cái gì, mà một lời gọi ôm cả ảnh lẫn phim thì không nói thẳng được. Tệ hơn,
+  # cùng một người có mặt trong cả ảnh lẫn phim rất dễ bị đếm thành hai — đúng
+  # kiểu lỗi đã phải chữa cho riêng chuỗi ảnh hồi tháng trước.
+  #
+  # Tách ra thì mỗi prompt sạch, và hai kết quả được gộp lại ở bước sau bằng
+  # đúng luật mình chọn, thay vì phó mặc cho model tự xoay xở.
 
+  # --- Đọc ảnh ---
   - if:
       - condition: template
-        value_template: "{{ bat_ai }}"
+        value_template: "{{ bat_ai_anh }}"
     then:
       - choose:
-          - alias: "Kết quả có cấu trúc — người, động vật, cả hai"
+          - alias: "Ảnh, kết quả có cấu trúc — người, động vật, cả hai"
             conditions:
               - condition: template
                 value_template: "{{ che_do_ket_qua == 'co_cau_truc' and doi_tuong != 'security' }}"
@@ -2135,10 +2478,10 @@ action:
               - continue_on_error: true
                 action: ai_task.generate_data
                 data:
-                  task_name: Phan tich camera khi co chuyen dong
+                  task_name: Phan tich anh camera
                   instructions: "{{ prompt_phan_tich }}"
-                  entity_id: "{{ provider_phan_tich if provider_phan_tich | length > 0 else omit }}"
-                  attachments: "{{ dinh_kem_ai }}"
+                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  attachments: "{{ anh_cho_ai }}"
                   structure:
                     humans_detected:
                       description: >
@@ -2192,9 +2535,9 @@ action:
                         number:
                           min: 1
                           max: 5
-                response_variable: ket_qua_ai
+                response_variable: tra_ve_anh
 
-          - alias: "Kết quả có cấu trúc — an ninh"
+          - alias: "Ảnh, kết quả có cấu trúc — an ninh"
             conditions:
               - condition: template
                 value_template: "{{ che_do_ket_qua == 'co_cau_truc' and doi_tuong == 'security' }}"
@@ -2202,10 +2545,10 @@ action:
               - continue_on_error: true
                 action: ai_task.generate_data
                 data:
-                  task_name: Danh gia an ninh tu camera
+                  task_name: Danh gia an ninh tu anh
                   instructions: "{{ prompt_phan_tich }}"
-                  entity_id: "{{ provider_phan_tich if provider_phan_tich | length > 0 else omit }}"
-                  attachments: "{{ dinh_kem_ai }}"
+                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  attachments: "{{ anh_cho_ai }}"
                   structure:
                     humans_detected:
                       description: >
@@ -2223,21 +2566,7 @@ action:
                       selector:
                         text:
                     security_suspicious:
-                      description: >
-                        True only when what you actually SEE deserves security
-                        attention at a home. Ordinary living counts as normal:
-                        residents and their children coming and going, guests,
-                        neighbours, a delivery or a courier, someone dropping
-                        leaflets, cleaning or maintenance work. Suspicion needs
-                        behaviour that builds across the frames — lingering at
-                        an entrance, coming back again and again, checking one
-                        door or window or lock repeatedly, testing a handle,
-                        working at a lock, reaching through an opening, climbing
-                        somewhere clearly private, taking or tampering with
-                        property, or something clearly dangerous being carried
-                        in a worrying way. Clothing, a mask, a helmet or a
-                        glance at the camera is never enough on its own. When
-                        unsure, answer false.
+                      description: "{{ mo_ta_o_nghi_ngo }}"
                       required: true
                       selector:
                         boolean:
@@ -2248,9 +2577,9 @@ action:
                         number:
                           min: 1
                           max: 5
-                response_variable: ket_qua_ai
+                response_variable: tra_ve_anh
 
-          - alias: "Kết quả JSON thô"
+          - alias: "Ảnh, kết quả JSON thô"
             conditions:
               - condition: template
                 value_template: "{{ che_do_ket_qua == 'json' }}"
@@ -2258,64 +2587,303 @@ action:
               - continue_on_error: true
                 action: ai_task.generate_data
                 data:
-                  task_name: Phan tich camera khi co chuyen dong
+                  task_name: Phan tich anh camera
                   instructions: "{{ prompt_phan_tich }}"
-                  entity_id: "{{ provider_phan_tich if provider_phan_tich | length > 0 else omit }}"
-                  attachments: "{{ dinh_kem_ai }}"
-                response_variable: ket_qua_ai_raw
-              - variables:
-                  ket_qua_ai: >
-                    {% if ket_qua_ai_raw is defined and ket_qua_ai_raw.data is defined %}
-                      {% set p = (ket_qua_ai_raw.data
-                        | regex_replace('```json\\s*', '')
-                        | regex_replace('```\\s*', '')
-                        | trim | from_json(default={})) %}
-                      {{ {'data': {
-                        'humans_detected':              p.get('humans_detected', 0),
-                        'humans_detected_summary':      p.get('humans_detected_summary', ''),
-                        'humans_detected_description':  p.get('humans_detected_description', ''),
-                        'animals_detected':             p.get('animals_detected', 0),
-                        'animals_detected_summary':     p.get('animals_detected_summary', ''),
-                        'animals_detected_description': p.get('animals_detected_description', ''),
-                        'human_action':                 p.get('human_action', ''),
-                        'security_suspicious':          p.get('security_suspicious', false),
-                        'khung_ro_nhat':                p.get('khung_ro_nhat', 1)
-                      }} }}
-                    {% else %}
-                      {{ {'data': {}} }}
-                    {% endif %}
+                  entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+                  attachments: "{{ anh_cho_ai }}"
+                response_variable: tra_ve_anh
+
+  # --- Đọc phim ---
+  - if:
+      - condition: template
+        value_template: "{{ bat_ai_video }}"
+    then:
+      - choose:
+          - alias: "Phim, kết quả có cấu trúc — người, động vật, cả hai"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'co_cau_truc' and doi_tuong_video != 'security' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Phan tich video camera
+                  instructions: "{{ prompt_phan_tich_video }}"
+                  entity_id: "{{ provider_video_that if provider_video_that | length > 0 else omit }}"
+                  attachments: "{{ video_cho_ai }}"
+                  structure:
+                    humans_detected:
+                      description: >
+                        How many DISTINCT people appear in the whole clip.
+                        Someone who leaves the frame and comes back is the same
+                        person. 0 when nobody is visible or people are not being
+                        analysed this time.
+                      required: true
+                      selector:
+                        number:
+                          min: 0
+                          max: 50
+                    humans_detected_summary:
+                      description: >
+                        Short Vietnamese count summary such as "1 phụ nữ, 2 trẻ
+                        em". Empty string when nobody is visible.
+                      required: false
+                      selector:
+                        text:
+                    humans_detected_description:
+                      description: "{{ mo_ta_o_nguoi_video }}"
+                      required: false
+                      selector:
+                        text:
+                    animals_detected:
+                      description: >
+                        How many DISTINCT animals appear in the whole clip. 0
+                        when none are visible or animals are not being analysed
+                        this time.
+                      required: true
+                      selector:
+                        number:
+                          min: 0
+                          max: 50
+                    animals_detected_summary:
+                      description: >
+                        Short Vietnamese summary by species and visible colour
+                        such as "1 con chó vàng". Empty string when none.
+                      required: false
+                      selector:
+                        text:
+                    animals_detected_description:
+                      description: "{{ mo_ta_o_dong_vat_video }}"
+                      required: false
+                      selector:
+                        text:
+                response_variable: tra_ve_video
+
+          - alias: "Phim, kết quả có cấu trúc — an ninh"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'co_cau_truc' and doi_tuong_video == 'security' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Danh gia an ninh tu video
+                  instructions: "{{ prompt_phan_tich_video }}"
+                  entity_id: "{{ provider_video_that if provider_video_that | length > 0 else omit }}"
+                  attachments: "{{ video_cho_ai }}"
+                  structure:
+                    humans_detected:
+                      description: >
+                        How many DISTINCT people appear in the whole clip.
+                        Someone who leaves the frame and comes back is the same
+                        person. 0 when nobody is visible.
+                      required: true
+                      selector:
+                        number:
+                          min: 0
+                          max: 50
+                    human_action:
+                      description: "{{ mo_ta_o_hanh_dong_video }}"
+                      required: true
+                      selector:
+                        text:
+                    security_suspicious:
+                      description: "{{ mo_ta_o_nghi_ngo_video }}"
+                      required: true
+                      selector:
+                        boolean:
+                response_variable: tra_ve_video
+
+          - alias: "Phim, kết quả JSON thô"
+            conditions:
+              - condition: template
+                value_template: "{{ che_do_ket_qua == 'json' }}"
+            sequence:
+              - continue_on_error: true
+                action: ai_task.generate_data
+                data:
+                  task_name: Phan tich video camera
+                  instructions: "{{ prompt_phan_tich_video }}"
+                  entity_id: "{{ provider_video_that if provider_video_that | length > 0 else omit }}"
+                  attachments: "{{ video_cho_ai }}"
+                response_variable: tra_ve_video
+
+  # --- Đưa hai kết quả về cùng một hình dạng ---
+  # Chế độ "có cấu trúc" trả sẵn một từ điển, chế độ JSON trả về chuỗi chữ, có
+  # khi còn bọc trong rào ```json. Gom về một chỗ để mọi bước sau chỉ phải đọc
+  # một kiểu dữ liệu.
+  - variables:
+      kq_anh: >
+        {% set r = tra_ve_anh.data if tra_ve_anh is defined and tra_ve_anh.data is defined else none %}
+        {% if r is none %}{{ {} }}
+        {%- elif r is string %}
+          {{ r | regex_replace('```json\\s*', '') | regex_replace('```\\s*', '')
+               | trim | from_json(default={}) }}
+        {%- else %}{{ r }}{% endif %}
+      kq_video: >
+        {% set r = tra_ve_video.data if tra_ve_video is defined and tra_ve_video.data is defined else none %}
+        {% if r is none %}{{ {} }}
+        {%- elif r is string %}
+          {{ r | regex_replace('```json\\s*', '') | regex_replace('```\\s*', '')
+               | trim | from_json(default={}) }}
+        {%- else %}{{ r }}{% endif %}
 
   # ============================================================
-  # BƯỚC 8: ĐỌC KẾT QUẢ, QUYẾT ĐỊNH GỬI GÌ
+  # BƯỚC 8: GỘP HAI KẾT QUẢ
   # ============================================================
   - variables:
-      kq: "{{ ket_qua_ai.data if ket_qua_ai is defined and ket_qua_ai.data is defined else {} }}"
-      so_nguoi: "{{ kq.get('humans_detected', 0) | int(0) }}"
-      so_thu: "{{ kq.get('animals_detected', 0) | int(0) }}"
-      mo_ta_nguoi: "{{ kq.get('humans_detected_description', '') }}"
-      mo_ta_thu: "{{ kq.get('animals_detected_description', '') }}"
-      tom_tat_nguoi: "{{ kq.get('humans_detected_summary', '') }}"
-      tom_tat_thu: "{{ kq.get('animals_detected_summary', '') }}"
-      hanh_dong: "{{ kq.get('human_action', '') }}"
-      nghi_ngo: >
-        {{ kq.get('security_suspicious', false)
-           in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] }}
-      # Khung nào rõ nhất, kẹp vào khoảng ảnh thật sự có. Model đếm sai hoặc
-      # bỏ trống thì lấy tấm đầu.
-      khung_chon: >
-        {% set k = kq.get('khung_ro_nhat', 1) | int(1) %}
-        {{ [[k, 1] | max, so_anh_that | int(1)] | min }}
+      co_kq_anh: "{{ kq_anh | length > 0 }}"
+      co_kq_video: "{{ kq_video | length > 0 }}"
+      # Chỉ gộp khi hai bên cùng trả lời một câu hỏi. Khác chế độ thì chúng nói
+      # về hai thứ khác nhau, ép vào một tin là bịa.
+      gop_duoc: "{{ cung_che_do and co_kq_anh and co_kq_video }}"
+      dem_anh: >
+        {{ (kq_anh.get('humans_detected', 0) | int(0))
+           + (kq_anh.get('animals_detected', 0) | int(0)) }}
+      dem_video: >
+        {{ (kq_video.get('humans_detected', 0) | int(0))
+           + (kq_video.get('animals_detected', 0) | int(0)) }}
+
+  # Lời gọi gộp: chỉ có chữ, không kèm ảnh hay phim, nên nó nhanh hơn hẳn hai
+  # lời gọi trước. Ràng buộc quan trọng nhất nằm ở câu "không thêm dữ kiện mới"
+  # — model chỉ nhìn thấy hai bản mô tả, không có hình để tưởng tượng thêm.
+  - if:
+      - condition: template
+        value_template: >
+          {{ gop_duoc and doi_tuong != 'security' and hop_nhat_bang_ai }}
+    then:
+      - continue_on_error: true
+        action: ai_task.generate_data
+        data:
+          task_name: Gop hai ket qua phan tich
+          entity_id: "{{ ai_provider if ai_provider | length > 0 else omit }}"
+          instructions: >
+            Two independent reports describe THE SAME scene at THE SAME moment,
+            from one camera. Report A comes from still photos, so it reads
+            detail best: clothing colours, objects carried, faces. Report B
+            comes from a video clip, so it reads behaviour best: direction,
+            pace, arriving and leaving.
+
+            Merge them into ONE report.
+
+            Rules:
+            - Anyone or anything appearing in BOTH reports is the SAME subject.
+              Never add their counts together.
+            - For each count field, use the LARGER of the two numbers.
+            - Use ONLY facts stated in the two reports. Do not add any detail
+              that is not in them. Do not guess.
+            - Where the two disagree on a detail, prefer report A for
+              appearance and report B for movement.
+            - Keep every text field in natural Vietnamese with full diacritics,
+              short enough to read on a phone notification.
+
+            Report A (from photos):
+            {{ kq_anh | to_json }}
+
+            Report B (from the video clip):
+            {{ kq_video | to_json }}
+
+            Return raw JSON only, on one line, with exactly the same field names
+            the two reports use. No markdown, no code fences, no extra text.
+        response_variable: tra_ve_gop
 
   - variables:
-      # AI hỏng, quá giờ, hoặc bị tắt thì coi như có người: thà báo thừa còn
-      # hơn nuốt mất một lần có người thật.
-      ai_hong: "{{ not bat_ai or kq | length == 0 }}"
+      # Ba đường ra, theo đúng thứ tự ưu tiên.
+      kq_gop: >
+        {% if not gop_duoc %}
+          {{ {} }}
+        {%- elif doi_tuong == 'security' %}
+          {# An ninh không cần AI nào gộp hộ: đáng ngờ nếu bất kỳ bên nào báo
+             đáng ngờ, số người lấy số lớn hơn, câu mô tả lấy của bên đang báo
+             động — cả hai cùng báo thì lấy bên phim vì nó thấy diễn biến. #}
+          {% set nn_a = kq_anh.get('security_suspicious', false)
+             in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
+          {% set nn_v = kq_video.get('security_suspicious', false)
+             in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
+          {% set cau = kq_video.get('human_action', '') if nn_v
+                       else (kq_anh.get('human_action', '') if nn_a
+                             else kq_video.get('human_action', '')) %}
+          {{ {'humans_detected': [kq_anh.get('humans_detected', 0) | int(0),
+                                  kq_video.get('humans_detected', 0) | int(0)] | max,
+              'human_action': cau,
+              'security_suspicious': nn_a or nn_v,
+              'khung_ro_nhat': kq_anh.get('khung_ro_nhat', 1)} }}
+        {%- elif hop_nhat_bang_ai and tra_ve_gop is defined
+                 and tra_ve_gop.data is defined %}
+          {% set r = tra_ve_gop.data %}
+          {% if r is string %}
+            {{ r | regex_replace('```json\s*', '') | regex_replace('```\s*', '')
+                 | trim | from_json(default={}) }}
+          {%- else %}{{ r }}{% endif %}
+        {%- else %}
+          {# Không gộp bằng AI: lấy nguyên bên đếm được nhiều hơn, hoà thì lấy
+             bên phim vì nó đọc được hành vi. #}
+          {{ kq_anh if (dem_anh | int(0)) > (dem_video | int(0)) else kq_video }}
+        {%- endif %}
+
+  # ============================================================
+  # BƯỚC 9: BỘ KẾT QUẢ NÀO SẼ THÀNH TIN
+  # ============================================================
+  # Gộp được thì đúng một bộ. Không gộp được thì mỗi bên một bộ, và bên nào
+  # đạt điều kiện gửi của bên đó mới thành tin.
+  - variables:
+      bo_kq: >
+        {% set ns = namespace(ds=[]) %}
+        {% if gop_duoc and kq_gop | length > 0 %}
+          {% set ns.ds = [{'tu': 'gop', 'che_do': doi_tuong, 'kq': kq_gop}] %}
+        {% else %}
+          {% if co_kq_anh %}
+            {% set ns.ds = ns.ds + [{'tu': 'anh', 'che_do': doi_tuong, 'kq': kq_anh}] %}
+          {% endif %}
+          {% if co_kq_video %}
+            {% set ns.ds = ns.ds + [{'tu': 'video', 'che_do': doi_tuong_video, 'kq': kq_video}] %}
+          {% endif %}
+        {% endif %}
+        {{ ns.ds }}
+
+  - variables:
+      # Điều kiện gửi ẢNH và VIDEO dựa vào TẤT CẢ những gì AI thấy được lượt
+      # này, bất kể thấy từ ảnh hay từ phim: bên nào thấy người là có người,
+      # bên nào báo động là mất an ninh. Bỏ sót đáng sợ hơn báo thừa.
+      #
+      # AI hỏng, quá giờ, hoặc bị tắt thì coi như có người, cùng lẽ đó.
+      ai_hong: "{{ not bat_ai or bo_kq | length == 0 }}"
       co_nguoi: >
-        {% if ai_hong %}true
-        {%- elif doi_tuong == 'animals' %}{{ so_thu > 0 }}
-        {%- elif doi_tuong == 'both' %}{{ so_nguoi > 0 or so_thu > 0 }}
-        {%- else %}{{ so_nguoi > 0 }}{% endif %}
-      dat_an_ninh: "{{ nghi_ngo if not ai_hong else true }}"
+        {% if not bat_ai or bo_kq | length == 0 %}true
+        {%- else %}
+          {% set ns = namespace(co=false) %}
+          {% for b in bo_kq %}
+            {% if b.che_do == 'animals' %}
+              {% if (b.kq.get('animals_detected', 0) | int(0)) > 0 %}{% set ns.co = true %}{% endif %}
+            {% elif b.che_do == 'both' %}
+              {% if (b.kq.get('humans_detected', 0) | int(0)) > 0
+                    or (b.kq.get('animals_detected', 0) | int(0)) > 0 %}{% set ns.co = true %}{% endif %}
+            {% else %}
+              {% if (b.kq.get('humans_detected', 0) | int(0)) > 0 %}{% set ns.co = true %}{% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.co }}
+        {%- endif %}
+      dat_an_ninh: >
+        {% if not bat_ai or bo_kq | length == 0 %}true
+        {%- else %}
+          {% set ns = namespace(nn=false) %}
+          {% for b in bo_kq %}
+            {% if b.kq.get('security_suspicious', false)
+                  in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
+              {% set ns.nn = true %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.nn }}
+        {%- endif %}
+      # Tấm ảnh nét nhất chỉ bên đọc ảnh mới chỉ được. Không có thì lấy tấm giữa.
+      khung_chon: >
+        {% if kq_anh.get('khung_ro_nhat', 0) | int(0) > 0 %}
+          {% set k = kq_anh.get('khung_ro_nhat', 1) | int(1) %}
+        {% else %}
+          {% set k = ((so_anh_that | int(1)) + 1) // 2 %}
+        {% endif %}
+        {{ [[k, 1] | max, so_anh_that | int(1)] | min }}
 
   - variables:
       dat_dk_anh: >
@@ -2326,72 +2894,120 @@ action:
         {% if video_gui_khi == 'ngay' %}true
         {%- elif video_gui_khi == 'co_nguoi' %}{{ co_nguoi }}
         {%- else %}{{ dat_an_ninh }}{% endif %}
-      dat_dk_phan_tich: >
-        {% if phan_tich_gui_khi == 'di_kem' %}true
-        {%- elif phan_tich_gui_khi == 'co_nguoi' %}{{ co_nguoi }}
-        {%- else %}{{ dat_an_ninh }}{% endif %}
 
   - variables:
       muon_gui_anh: "{{ bat_nhanh_anh and anh_gui_khi != 'ngay' and dat_dk_anh }}"
       muon_gui_video: "{{ bat_nhanh_video and video_gui_khi != 'ngay' and dat_dk_video }}"
       da_gui_gi_do: >
         {{ (bat_nhanh_anh and dat_dk_anh) or (bat_nhanh_video and dat_dk_video) }}
-      # Kết quả phân tích không bao giờ đi một mình. Lượt nào không gửi ảnh lẫn
-      # video thì cũng không gửi chữ, kể cả khi ô phân tích đặt "đi kèm".
-      gui_phan_tich: "{{ bat_ai and dat_dk_phan_tich and da_gui_gi_do and kq | length > 0 }}"
-
-  - variables:
-      muon_nhieu_anh: "{{ muon_gui_anh and anh_gui_may_tam == 'tat_ca' and duong_dan_anh | length > 1 }}"
-      # Tấm được chọn để gửi khi chỉ gửi một ảnh: tấm AI nói là rõ nhất.
+      muon_nhieu_anh: >
+        {{ bat_nhanh_anh and anh_gui_khi != 'ngay' and dat_dk_anh
+           and anh_gui_may_tam == 'tat_ca' and duong_dan_anh | length > 1 }}
       anh_chon: "{{ duong_dan_anh[khung_chon | int(1) - 1] }}"
       anh_chon_media: "{{ duong_dan_anh_media[khung_chon | int(1) - 1] }}"
 
   # ============================================================
-  # BƯỚC 9: DỰNG CÂU THÔNG BÁO
+  # BƯỚC 9B: DỰNG CÂU CHO TỪNG BỘ KẾT QUẢ
   # ============================================================
+  # Ra một danh sách 0, 1 hoặc 2 tin. Hai tin chỉ xảy ra khi ảnh và phim đặt
+  # khác chế độ — lúc đó mỗi tin mang một nhãn để người đọc biết nó nói về đâu.
   - variables:
-      loi_nhan: >-
+      cac_tin: >
         {%- set thu = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'] -%}
-        {%- set ns = namespace(d=[]) -%}
-        {%- set ns.d = ns.d + ['📊  ' ~ camera_name] -%}
-        {%- if doi_tuong == 'security' -%}
-          {%- set ns.d = ns.d + ['🚶: ' ~ so_nguoi ~ ' người'] -%}
-          {%- set ns.d = ns.d + ['👉 ' ~ (hanh_dong if hanh_dong | length > 0 else 'Không có mô tả hành động.')] -%}
-          {%- set ns.d = ns.d + ['🛡️ Khả nghi: ' ~ ('CÓ' if nghi_ngo else 'KHÔNG')] -%}
-        {%- else -%}
-          {%- if doi_tuong in ['humans', 'both'] -%}
-            {%- set ns.d = ns.d + ['🚶: ' ~ (tom_tat_nguoi if tom_tat_nguoi | length > 0 else so_nguoi | string)] -%}
-            {%- set ns.d = ns.d + ['👉 ' ~ mo_ta_nguoi] -%}
-          {%- endif -%}
-          {%- if doi_tuong in ['animals', 'both'] -%}
-            {%- set ns.d = ns.d + ['🐾: ' ~ (tom_tat_thu if tom_tat_thu | length > 0 else so_thu | string)] -%}
-            {%- set ns.d = ns.d + ['👉 ' ~ mo_ta_thu] -%}
-          {%- endif -%}
-        {%- endif -%}
         {%- set gio = '🕒 ' ~ now().strftime('%H:%M:%S') ~ ' ' ~ thu[now().weekday()]
               ~ ' Ngày ' ~ now().strftime('%d') ~ ' Tháng ' ~ now().strftime('%m')
               ~ ' Năm ' ~ now().strftime('%Y')
               ~ (' ' ~ notification_time if notification_time != '' else '') -%}
-        {%- set ns.d = ns.d + [gio] -%}
-        {{ ns.d | join('\n') }}
-
-      # Chú thích đi kèm ảnh hoặc video gửi muộn. Gộp được thì gộp — người
-      # nhận thấy một tin có cả hình lẫn lời, thay vì hai tin rời nhau.
-      chu_kem: >
-        {% if gui_phan_tich %}{{ loi_nhan }}{% else %}{{ telegram_initial_caption }}{% endif %}
+        {%- set ns = namespace(ds=[]) -%}
+        {%- for b in bo_kq -%}
+          {%- set kq = b.kq -%}
+          {%- set dt = b.che_do -%}
+          {%- set sn = kq.get('humans_detected', 0) | int(0) -%}
+          {%- set st = kq.get('animals_detected', 0) | int(0) -%}
+          {%- set nn = kq.get('security_suspicious', false)
+                in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] -%}
+          {%- set gk = phan_tich_video_gui_khi if b.tu == 'video' else phan_tich_gui_khi -%}
+          {%- set dat = true if gk == 'di_kem'
+                        else (sn > 0 or st > 0 if gk == 'co_nguoi' else nn) -%}
+          {%- if dat and da_gui_gi_do and bat_ai -%}
+            {%- set nhan = '' if bo_kq | length == 1
+                           else ('📸 Ảnh — ' if b.tu == 'anh' else '🎥 Phim — ') -%}
+            {%- set cau = '📊  ' ~ nhan ~ camera_name -%}
+            {%- if dt == 'security' -%}
+              {%- set cau = cau ~ '\n🚶: ' ~ sn ~ ' người' -%}
+              {%- set ha = kq.get('human_action', '') -%}
+              {%- set cau = cau ~ '\n👉 ' ~ (ha if ha | length > 0 else 'Không có mô tả hành động.') -%}
+              {%- set cau = cau ~ '\n🛡️ Khả nghi: ' ~ ('CÓ' if nn else 'KHÔNG') -%}
+            {%- else -%}
+              {%- if dt in ['humans', 'both'] -%}
+                {%- set tt = kq.get('humans_detected_summary', '') -%}
+                {%- set cau = cau ~ '\n🚶: ' ~ (tt if tt | length > 0 else sn | string) -%}
+                {%- set cau = cau ~ '\n👉 ' ~ kq.get('humans_detected_description', '') -%}
+              {%- endif -%}
+              {%- if dt in ['animals', 'both'] -%}
+                {%- set tt = kq.get('animals_detected_summary', '') -%}
+                {%- set cau = cau ~ '\n🐾: ' ~ (tt if tt | length > 0 else st | string) -%}
+                {%- set cau = cau ~ '\n👉 ' ~ kq.get('animals_detected_description', '') -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- set ns.ds = ns.ds + [{'tu': b.tu, 'chu': cau ~ '\n' ~ gio}] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {{ ns.ds }}
 
   - variables:
-      # Phân tích gộp vào thứ gửi muộn ĐẦU TIÊN. Một ảnh thì gộp vào ảnh; nhiều
-      # ảnh thì không gộp được vì service gửi chùm không có tham số chú thích;
-      # không có ảnh muộn thì gộp vào video.
-      gop_vao_anh: "{{ gui_phan_tich and muon_gui_anh and not muon_nhieu_anh }}"
-      # Không gộp được vào ảnh thì gộp vào video — kể cả lượt đó có gửi cả chùm
-      # ảnh. Chữ tới chậm hơn ảnh vài giây vì phải đợi quay xong, nhưng đổi lại
-      # người nhận thấy hình và lời giải thích trong cùng một tin, thay vì một
-      # tin chữ trơ trọi bên dưới.
-      gop_vao_video: >-
-        {{ gui_phan_tich and not gop_vao_anh and muon_gui_video }}
-      can_tin_chu_rieng: "{{ gui_phan_tich and not gop_vao_anh and not gop_vao_video }}"
+      gui_phan_tich: "{{ cac_tin | length > 0 }}"
+      # Câu để đọc ra loa và để làm chú thích khi chỉ có một tin.
+      loi_nhan: "{{ cac_tin[0].chu if cac_tin | length > 0 else '' }}"
+      # Tin của bên ảnh và bên phim, tách sẵn cho bước phân chú thích.
+      tin_tu_anh: >
+        {% set ns = namespace(c='') %}
+        {% for t in cac_tin %}{% if t.tu != 'video' %}{% set ns.c = t.chu %}{% endif %}{% endfor %}
+        {{ ns.c }}
+      tin_tu_video: >
+        {% set ns = namespace(c='') %}
+        {% for t in cac_tin %}{% if t.tu == 'video' %}{% set ns.c = t.chu %}{% endif %}{% endfor %}
+        {{ ns.c }}
+
+  # ============================================================
+  # BƯỚC 9C: TIN NÀO KÈM VÀO ĐÂU, THEO TỪNG KÊNH
+  # ============================================================
+  # Khả năng gắn chú thích không giống nhau giữa các kênh: Telegram gắn được
+  # vào cả chùm ảnh (chú thích nằm ở tấm đầu), Zalo cá nhân thì dịch vụ gửi
+  # chùm không có ô nhắn nên chỉ gắn được khi gửi đúng một tấm.
+  #
+  # Thứ tự thử: kèm vào ảnh trước — chữ tới sớm hơn vì không phải đợi quay
+  # xong; không được thì kèm vào video; không được nữa mới tách tin riêng.
+  - variables:
+      phan_bo: >
+        {% set kenh = [
+             {'ten': 'tg', 'kem_anh': muon_gui_anh, 'kem_video': muon_gui_video},
+             {'ten': 'zl', 'kem_anh': muon_gui_anh and not muon_nhieu_anh,
+              'kem_video': muon_gui_video},
+             {'ten': 'zb', 'kem_anh': muon_gui_anh and not muon_nhieu_anh,
+              'kem_video': false},
+             {'ten': 'mb', 'kem_anh': muon_gui_anh, 'kem_video': muon_gui_video}
+           ] %}
+        {% set ns = namespace(kq={}) %}
+        {% for k in kenh %}
+          {% set n = namespace(anh='', video='', rieng=[]) %}
+          {% if cac_tin | length > 1 %}
+            {% if tin_tu_anh | length > 0 %}
+              {% if k.kem_anh %}{% set n.anh = tin_tu_anh %}
+              {% else %}{% set n.rieng = n.rieng + [tin_tu_anh] %}{% endif %}
+            {% endif %}
+            {% if tin_tu_video | length > 0 %}
+              {% if k.kem_video %}{% set n.video = tin_tu_video %}
+              {% else %}{% set n.rieng = n.rieng + [tin_tu_video] %}{% endif %}
+            {% endif %}
+          {% elif cac_tin | length == 1 %}
+            {% if k.kem_anh %}{% set n.anh = cac_tin[0].chu %}
+            {% elif k.kem_video %}{% set n.video = cac_tin[0].chu %}
+            {% else %}{% set n.rieng = [cac_tin[0].chu] %}{% endif %}
+          {% endif %}
+          {% set _ = ns.kq.update({k.ten: {'anh': n.anh, 'video': n.video, 'rieng': n.rieng}}) %}
+        {% endfor %}
+        {{ ns.kq }}
 
   # ============================================================
   # BƯỚC 10: GỬI MUỘN — ẢNH, VIDEO, VÀ PHÂN TÍCH
@@ -2409,7 +3025,8 @@ action:
             data: >
               {% set d = {'config_entry_id': telegram_config_entry,
                           'file': anh_chon,
-                          'caption': chu_kem if gop_vao_anh else telegram_initial_caption} %}
+                          'caption': phan_bo.tg.anh if phan_bo.tg.anh | length > 0
+                                     else telegram_initial_caption} %}
               {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
               {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
               {{ d }}
@@ -2425,7 +3042,9 @@ action:
               {% set ns = namespace(m=[]) %}
               {%- for p in duong_dan_anh[:10] -%}
                 {% if loop.first %}
-                  {% set ns.m = ns.m + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
+                  {% set ns.m = ns.m + [{'media_type':'photo','file':p,
+                                       'caption': phan_bo.tg.anh if phan_bo.tg.anh | length > 0
+                                                  else telegram_initial_caption}] %}
                 {% else %}
                   {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
                 {% endif %}
@@ -2445,7 +3064,8 @@ action:
         data: >
           {% set d = {'config_entry_id': telegram_config_entry,
                       'file': duong_dan_video,
-                      'caption': chu_kem if gop_vao_video else telegram_initial_caption} %}
+                      'caption': phan_bo.tg.video if phan_bo.tg.video | length > 0
+                                     else telegram_initial_caption} %}
           {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
           {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
           {{ d }}
@@ -2453,17 +3073,20 @@ action:
   # --- Telegram: tin chữ riêng ---
   - if:
       - condition: template
-        value_template: "{{ include_telegram_notify and can_tin_chu_rieng }}"
+        value_template: "{{ include_telegram_notify and phan_bo.tg.rieng | length > 0 }}"
     then:
-      - continue_on_error: true
-        action: telegram_bot.send_message
-        data: >
-          {% set d = {'config_entry_id': telegram_config_entry,
-                      'message': loi_nhan,
-                      'parse_mode': 'plain_text'} %}
-          {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-          {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-          {{ d }}
+      - repeat:
+          for_each: "{{ phan_bo.tg.rieng }}"
+          sequence:
+            - continue_on_error: true
+              action: telegram_bot.send_message
+              data: >
+                {% set d = {'config_entry_id': telegram_config_entry,
+                            'message': repeat.item,
+                            'parse_mode': 'plain_text'} %}
+                {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                {{ d }}
 
   # --- Zalo Bot (Pyscript): ảnh muộn rồi tới chữ ---
   - if:
@@ -2491,21 +3114,24 @@ action:
             data:
               chat_id: "{{ zalo_bot_chat_id }}"
               file_path: "{{ anh_chon }}"
-              caption: "{{ chu_kem if gop_vao_anh else zalo_bot_initial_caption }}"
+              caption: >-
+                {{ phan_bo.zb.anh if phan_bo.zb.anh | length > 0
+                   else zalo_bot_initial_caption }}
             response_variable: zalo_bot_photo_response
 
   - if:
       - condition: template
-        value_template: >
-          {{ enable_zalo_bot and gui_phan_tich
-             and not (gop_vao_anh and muon_gui_anh) }}
+        value_template: "{{ enable_zalo_bot and phan_bo.zb.rieng | length > 0 }}"
     then:
-      - continue_on_error: true
-        action: pyscript.send_zalo_message
-        data:
-          chat_id: "{{ zalo_bot_chat_id }}"
-          message: "{{ loi_nhan }}"
-        response_variable: zalo_bot_message_response
+      - repeat:
+          for_each: "{{ phan_bo.zb.rieng }}"
+          sequence:
+            - continue_on_error: true
+              action: pyscript.send_zalo_message
+              data:
+                chat_id: "{{ zalo_bot_chat_id }}"
+                message: "{{ repeat.item }}"
+              response_variable: zalo_bot_message_response
 
   # --- Zalo cá nhân: ảnh muộn ---
   - choose:
@@ -2538,7 +3164,9 @@ action:
                   thread_id: !input zalo_custom_thread_id
                   type: "1"
                   image_path: "{{ anh_chon }}"
-                  message: "{{ chu_kem if gop_vao_anh else zalo_custom_initial_caption }}"
+                  message: >-
+                    {{ phan_bo.zl.anh if phan_bo.zl.anh | length > 0
+                       else zalo_custom_initial_caption }}
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
 
@@ -2571,7 +3199,9 @@ action:
                   thread_id: !input zalo_custom_user_id
                   type: "0"
                   image_path: "{{ anh_chon }}"
-                  message: "{{ chu_kem if gop_vao_anh else zalo_custom_initial_caption }}"
+                  message: >-
+                    {{ phan_bo.zl.anh if phan_bo.zl.anh | length > 0
+                       else zalo_custom_initial_caption }}
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
 
@@ -2594,7 +3224,9 @@ action:
               type: "1"
               video_path_or_url: "{{ duong_dan_video }}"
               thumbnail_url: "{{ duong_dan_thumb }}"
-              message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
+              message: >-
+                {{ phan_bo.zl.video if phan_bo.zl.video | length > 0
+                   else zalo_custom_initial_caption }}
               ttl: !input zalo_custom_ttl
 
       - alias: "Zalo cá nhân muộn — video CÁ NHÂN"
@@ -2614,7 +3246,9 @@ action:
               type: "0"
               video_path_or_url: "{{ duong_dan_video }}"
               thumbnail_url: "{{ duong_dan_thumb }}"
-              message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
+              message: >-
+                {{ phan_bo.zl.video if phan_bo.zl.video | length > 0
+                   else zalo_custom_initial_caption }}
               ttl: !input zalo_custom_ttl
 
   # --- Zalo cá nhân: tin chữ riêng ---
@@ -2623,37 +3257,43 @@ action:
         conditions:
           - condition: template
             value_template: >
-              {{ enable_zalo_custom and can_tin_chu_rieng
+              {{ enable_zalo_custom and phan_bo.zl.rieng | length > 0
                  and zalo_custom_receiver_type == '1'
                  and zalo_custom_thread_id | length > 0
                  and zalo_custom_account | length > 0 }}
         sequence:
-          - continue_on_error: true
-            action: zalo_bot.send_message
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_thread_id
-              type: "1"
-              message: "{{ loi_nhan }}"
-              ttl: !input zalo_custom_ttl
+          - repeat:
+              for_each: "{{ phan_bo.zl.rieng }}"
+              sequence:
+                - continue_on_error: true
+                  action: zalo_bot.send_message
+                  data:
+                    account_selection: !input zalo_custom_account
+                    thread_id: !input zalo_custom_thread_id
+                    type: "1"
+                    message: "{{ repeat.item }}"
+                    ttl: !input zalo_custom_ttl
 
       - alias: "Zalo cá nhân — chữ riêng CÁ NHÂN"
         conditions:
           - condition: template
             value_template: >
-              {{ enable_zalo_custom and can_tin_chu_rieng
+              {{ enable_zalo_custom and phan_bo.zl.rieng | length > 0
                  and zalo_custom_receiver_type != '1'
                  and zalo_custom_user_id | length > 0
                  and zalo_custom_account | length > 0 }}
         sequence:
-          - continue_on_error: true
-            action: zalo_bot.send_message
-            data:
-              account_selection: !input zalo_custom_account
-              thread_id: !input zalo_custom_user_id
-              type: "0"
-              message: "{{ loi_nhan }}"
-              ttl: !input zalo_custom_ttl
+          - repeat:
+              for_each: "{{ phan_bo.zl.rieng }}"
+              sequence:
+                - continue_on_error: true
+                  action: zalo_bot.send_message
+                  data:
+                    account_selection: !input zalo_custom_account
+                    thread_id: !input zalo_custom_user_id
+                    type: "0"
+                    message: "{{ repeat.item }}"
+                    ttl: !input zalo_custom_ttl
 
   # --- Điện thoại: ảnh muộn ---
   - if:
@@ -2674,7 +3314,8 @@ action:
                     data:
                       title: !input notify_title
                       message: >
-                        {{ chu_kem if gop_vao_anh else telegram_initial_caption }}
+                        {{ phan_bo.mb.anh if phan_bo.mb.anh | length > 0
+                           else telegram_initial_caption }}
                       data: >
                         {% set chung = {'image': anh_nay,
                                         'url': anh_nay,
@@ -2700,7 +3341,9 @@ action:
               action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
               data:
                 title: !input notify_title
-                message: "{{ chu_kem if gop_vao_video else telegram_initial_caption }}"
+                message: >-
+                  {{ phan_bo.mb.video if phan_bo.mb.video | length > 0
+                     else telegram_initial_caption }}
                 data:
                   video: "{{ duong_dan_video_media }}"
                   url: "{{ duong_dan_video_media }}"
@@ -2710,7 +3353,9 @@ action:
   # --- Điện thoại: tin chữ riêng ---
   - if:
       - condition: template
-        value_template: "{{ include_notify and filtered_devices | length > 0 and can_tin_chu_rieng }}"
+        value_template: >
+          {{ include_notify and filtered_devices | length > 0
+             and phan_bo.mb.rieng | length > 0 }}
     then:
       - repeat:
           for_each: "{{ filtered_devices }}"
@@ -2719,7 +3364,7 @@ action:
               action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
               data:
                 title: !input notify_title
-                message: "{{ loi_nhan }}"
+                message: "{{ phan_bo.mb.rieng | join('\n\n') }}"
                 data: >
                   {% set chung = {'url': tap_navigate,
                                   'clickAction': tap_navigate,
@@ -2772,19 +3417,32 @@ action:
             {%- if tts_viet_lai and cau_doc_ai is defined and cau_doc_ai.data is defined
                   and cau_doc_ai.data | string | trim | length > 0 -%}
               {{ cau_doc_ai.data | string | trim }}
-            {%- elif doi_tuong == 'security' -%}
-              Camera {{ camera_name }} phát hiện {{ so_nguoi }} người.
-              {{ hanh_dong }}.
-              Đánh giá an ninh: {{ 'khả nghi' if nghi_ngo else 'không khả nghi' }}.
+            {%- elif bo_kq | length > 0 -%}
+              {#- Không nhờ AI viết lại thì đọc bộ kết quả đầu, dựng thành câu
+                  trơn: câu gửi lên màn hình đầy emoji và dấu hai chấm, đọc
+                  nguyên văn ra loa nghe rất kỳ. -#}
+              {%- set b = bo_kq[0] -%}
+              {%- set kq = b.kq -%}
+              {%- set sn = kq.get('humans_detected', 0) | int(0) -%}
+              {%- set st = kq.get('animals_detected', 0) | int(0) -%}
+              {%- if b.che_do == 'security' -%}
+                {%- set nn = kq.get('security_suspicious', false)
+                      in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] -%}
+                Camera {{ camera_name }} phát hiện {{ sn }} người.
+                {{ kq.get('human_action', '') }}.
+                Đánh giá an ninh: {{ 'khả nghi' if nn else 'không khả nghi' }}.
+              {%- else -%}
+                {%- set ns = namespace(p=[]) -%}
+                {%- if b.che_do in ['humans', 'both'] and sn > 0 -%}
+                  {%- set ns.p = ns.p + [kq.get('humans_detected_description', '')] -%}
+                {%- endif -%}
+                {%- if b.che_do in ['animals', 'both'] and st > 0 -%}
+                  {%- set ns.p = ns.p + [kq.get('animals_detected_description', '')] -%}
+                {%- endif -%}
+                Camera {{ camera_name }}. {{ ns.p | join(' ') }}
+              {%- endif -%}
             {%- else -%}
-              {%- set ns = namespace(p=[]) -%}
-              {%- if doi_tuong in ['humans', 'both'] and so_nguoi > 0 -%}
-                {%- set ns.p = ns.p + [mo_ta_nguoi] -%}
-              {%- endif -%}
-              {%- if doi_tuong in ['animals', 'both'] and so_thu > 0 -%}
-                {%- set ns.p = ns.p + [mo_ta_thu] -%}
-              {%- endif -%}
-              Camera {{ camera_name }}. {{ ns.p | join(' ') }}
+              Camera {{ camera_name }} phát hiện chuyển động.
             {%- endif -%}
 
       - repeat:
