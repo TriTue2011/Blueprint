@@ -1028,14 +1028,19 @@ variables:
     {% if ai_provider_video | length > 0 %}{{ ai_provider_video }}
     {%- else %}{{ ai_provider }}{% endif %}
 
-  # Chỉ tích hợp Google Generative AI chịu nhận tệp mp4. Ollama trả thẳng "only
-  # supports image attachments", còn các tích hợp OpenAI-compatible ném
-  # unsupported_attachment_type ngay trong mã của chúng — gói tin không bao giờ
-  # rời Home Assistant, nên máy chủ phía sau có đọc được video hay không cũng
-  # chẳng cứu được. Kiểm trước ở đây thì blueprint chạy với MỌI provider: cái
-  # nào đọc được video thì dùng video, cái nào không thì tự lùi về ảnh.
+  # Hai tích hợp gửi được tệp video, kiểm chứng 20-21/08 trên máy thật:
+  #   - google_generative_ai_conversation: nhận thẳng mp4.
+  #   - local_openai bản luuquangvu: cho phép 159 loại tệp trong đó có video/mp4,
+  #     gửi theo dạng {"type":"file", ...}. Bản skye-harris thì CHẶN mọi thứ
+  #     không phải image/ ngay trong mã (entity.py:287) nên video không rời nổi
+  #     Home Assistant — nếu bạn dùng bản đó, để ô nguồn phân tích ở "chỉ ảnh".
+  #   - ollama: trả thẳng "only supports image attachments", không dùng được.
+  #
+  # Kiểm trước ở đây thì blueprint chạy với MỌI provider: cái nào gửi được video
+  # thì dùng video, cái nào không thì tự lùi về ảnh thay vì để lượt báo động chết.
   video_dung_duoc: >-
-    {{ provider_video_that in integration_entities('google_generative_ai_conversation') }}
+    {{ provider_video_that in (integration_entities('google_generative_ai_conversation')
+       + integration_entities('local_openai')) }}
 
   nguon_phan_tich: >-
     {% if nguon_phan_tich_raw in ['video', 'ca_hai'] and not bat_nhanh_video %}anh
@@ -1554,9 +1559,10 @@ action:
             Ô "AI phân tích cái gì" đang đặt "{{ nguon_phan_tich_raw }}" nhưng không
             dùng được, nên blueprint tạm chạy "{{ nguon_phan_tich }}".
             {% if not bat_nhanh_video %}Lý do: nhánh video chưa bật ở mục 5.
-            {%- elif not video_dung_duoc %}Lý do: {{ provider_video_that }} không nhận
-            được tệp video. Chỉ tích hợp Google Generative AI làm được việc đó — khai
-            một AI Task của Google vào ô "AI Task dùng khi có video" ở mục 5.
+            {%- elif not video_dung_duoc %}Lý do: {{ provider_video_that }} không gửi
+            được tệp video. Chỉ tích hợp Google Generative AI và Local OpenAI bản
+            luuquangvu làm được — khai một AI Task của chúng vào ô "AI Task dùng khi
+            có video" ở mục 5.
             {%- else %}Lý do: nhánh ảnh chưa bật ở mục 4.{% endif %}
 
   - if:
