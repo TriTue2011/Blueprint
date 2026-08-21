@@ -440,6 +440,9 @@ blueprint:
             👉 Ba đường giống hệt nhánh ảnh, nhưng đặt riêng.
             ✅ Kiểu dùng hay gặp: ảnh gửi mọi lượt cho nhanh, video chỉ gửi khi thật sự đáng ngờ.
             ⚠️ Video luôn tới sau ảnh vì phải quay xong mới gửi được.
+            ⚠️ Chọn "Gửi mọi lượt" là video rời đi TRƯỚC khi AI đọc xong, nên nó chỉ mang
+            được câu chú thích bạn tự đặt. Muốn kết quả phân tích nằm ngay dưới đoạn video
+            thì chọn "Chỉ khi có người" hoặc "Chỉ khi mất an ninh".
           default: an_ninh
           selector:
             select:
@@ -1704,18 +1707,6 @@ action:
               - condition: template
                 value_template: "{{ bat_nhanh_video and camera_video | length > 0 }}"
             then:
-              # Ảnh bìa cho đoạn video. Zalo BẮT BUỘC có ảnh bìa: gửi kèm
-              # thumbnailUrl rỗng thì máy chủ Zalo trả "Tham số không hợp lệ" và
-              # đoạn video không bao giờ tới nơi (đo trên máy thật 21/08).
-              # Chụp ở đây thay vì mượn tấm của nhánh ảnh, để nhánh video vẫn
-              # gửi được khi nhánh ảnh tắt hẳn.
-              - continue_on_error: true
-                action: camera.snapshot
-                data:
-                  filename: "/media/snapshots/{{ duong_dan }}_thumb.jpg"
-                target:
-                  entity_id: "{{ camera_video }}"
-
               - continue_on_error: true
                 action: camera.record
                 data:
@@ -1795,7 +1786,6 @@ action:
         {{ [{'media_content_id': 'media-source://media_source/local/snapshots/' ~ duong_dan ~ '_video.mp4',
              'media_content_type': 'video/mp4'}] }}
       duong_dan_video: "/media/snapshots/{{ duong_dan }}_video.mp4"
-      duong_dan_thumb: "/media/snapshots/{{ duong_dan }}_thumb.jpg"
       duong_dan_video_media: "/media/local/snapshots/{{ duong_dan }}_video.mp4"
       anh_comma: "{{ duong_dan_anh | join(',') }}"
 
@@ -1997,6 +1987,12 @@ action:
                 response_variable: zalo_anh_response
 
   # --- Zalo cá nhân: video ---
+  # Gửi bằng zalo_bot.send_file chứ không phải send_video, dù có sẵn dịch vụ tên
+  # đúng hơn. Lý do đo được trên máy thật 21/08: send_video chỉ đưa cho Zalo một
+  # ĐƯỜNG LIÊN KẾT tới tệp, mà liên kết đó là địa chỉ LAN của Home Assistant trên
+  # một cổng tạm sống 90 giây — điện thoại bấm vào sau đó, hoặc bấm khi đang ở
+  # ngoài nhà, đều không tải nổi. send_file thì máy chủ Zalo tải tệp về rồi giữ
+  # lại, y như đường ảnh vẫn chạy tốt lâu nay, nên đoạn video xem được mãi.
   - choose:
       - alias: "Zalo cá nhân sớm — video NHÓM"
         conditions:
@@ -2008,13 +2004,12 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_video
+            action: zalo_bot.send_file
             data:
               account_selection: !input zalo_custom_account
               thread_id: !input zalo_custom_thread_id
               type: "1"
-              video_path_or_url: "{{ duong_dan_video }}"
-              thumbnail_url: "{{ duong_dan_thumb }}"
+              file_path_or_url: "{{ duong_dan_video }}"
               message: !input zalo_custom_initial_caption
               ttl: !input zalo_custom_ttl
 
@@ -2028,13 +2023,12 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_video
+            action: zalo_bot.send_file
             data:
               account_selection: !input zalo_custom_account
               thread_id: !input zalo_custom_user_id
               type: "0"
-              video_path_or_url: "{{ duong_dan_video }}"
-              thumbnail_url: "{{ duong_dan_thumb }}"
+              file_path_or_url: "{{ duong_dan_video }}"
               message: !input zalo_custom_initial_caption
               ttl: !input zalo_custom_ttl
 
@@ -2366,12 +2360,12 @@ action:
       # ảnh thì không gộp được vì service gửi chùm không có tham số chú thích;
       # không có ảnh muộn thì gộp vào video.
       gop_vao_anh: "{{ gui_phan_tich and muon_gui_anh and not muon_nhieu_anh }}"
-      # Chỉ gộp vào video khi lượt đó KHÔNG gửi ảnh. Gộp trong khi vẫn gửi album
-      # ảnh thì phần chữ phải nằm đợi video quay xong mới tới — người nhận thấy
-      # ảnh trước cả chục giây rồi mới có lời giải thích, mà nếu video hỏng thì
-      # không bao giờ thấy chữ.
+      # Không gộp được vào ảnh thì gộp vào video — kể cả lượt đó có gửi cả chùm
+      # ảnh. Chữ tới chậm hơn ảnh vài giây vì phải đợi quay xong, nhưng đổi lại
+      # người nhận thấy hình và lời giải thích trong cùng một tin, thay vì một
+      # tin chữ trơ trọi bên dưới.
       gop_vao_video: >-
-        {{ gui_phan_tich and not gop_vao_anh and muon_gui_video and not muon_gui_anh }}
+        {{ gui_phan_tich and not gop_vao_anh and muon_gui_video }}
       can_tin_chu_rieng: "{{ gui_phan_tich and not gop_vao_anh and not gop_vao_video }}"
 
   # ============================================================
@@ -2556,7 +2550,7 @@ action:
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
 
-  # --- Zalo cá nhân: video muộn ---
+  # --- Zalo cá nhân: video muộn (cũng đi bằng send_file, xem lý do ở trên) ---
   - choose:
       - alias: "Zalo cá nhân muộn — video NHÓM"
         conditions:
@@ -2568,13 +2562,12 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_video
+            action: zalo_bot.send_file
             data:
               account_selection: !input zalo_custom_account
               thread_id: !input zalo_custom_thread_id
               type: "1"
-              video_path_or_url: "{{ duong_dan_video }}"
-              thumbnail_url: "{{ duong_dan_thumb }}"
+              file_path_or_url: "{{ duong_dan_video }}"
               message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
               ttl: !input zalo_custom_ttl
 
@@ -2588,13 +2581,12 @@ action:
                  and zalo_custom_account | length > 0 }}
         sequence:
           - continue_on_error: true
-            action: zalo_bot.send_video
+            action: zalo_bot.send_file
             data:
               account_selection: !input zalo_custom_account
               thread_id: !input zalo_custom_user_id
               type: "0"
-              video_path_or_url: "{{ duong_dan_video }}"
-              thumbnail_url: "{{ duong_dan_thumb }}"
+              file_path_or_url: "{{ duong_dan_video }}"
               message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
               ttl: !input zalo_custom_ttl
 
