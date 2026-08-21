@@ -1704,6 +1704,18 @@ action:
               - condition: template
                 value_template: "{{ bat_nhanh_video and camera_video | length > 0 }}"
             then:
+              # Ảnh bìa cho đoạn video. Zalo BẮT BUỘC có ảnh bìa: gửi kèm
+              # thumbnailUrl rỗng thì máy chủ Zalo trả "Tham số không hợp lệ" và
+              # đoạn video không bao giờ tới nơi (đo trên máy thật 21/08).
+              # Chụp ở đây thay vì mượn tấm của nhánh ảnh, để nhánh video vẫn
+              # gửi được khi nhánh ảnh tắt hẳn.
+              - continue_on_error: true
+                action: camera.snapshot
+                data:
+                  filename: "/media/snapshots/{{ duong_dan }}_thumb.jpg"
+                target:
+                  entity_id: "{{ camera_video }}"
+
               - continue_on_error: true
                 action: camera.record
                 data:
@@ -1783,6 +1795,7 @@ action:
         {{ [{'media_content_id': 'media-source://media_source/local/snapshots/' ~ duong_dan ~ '_video.mp4',
              'media_content_type': 'video/mp4'}] }}
       duong_dan_video: "/media/snapshots/{{ duong_dan }}_video.mp4"
+      duong_dan_thumb: "/media/snapshots/{{ duong_dan }}_thumb.jpg"
       duong_dan_video_media: "/media/local/snapshots/{{ duong_dan }}_video.mp4"
       anh_comma: "{{ duong_dan_anh | join(',') }}"
 
@@ -2001,6 +2014,7 @@ action:
               thread_id: !input zalo_custom_thread_id
               type: "1"
               video_path_or_url: "{{ duong_dan_video }}"
+              thumbnail_url: "{{ duong_dan_thumb }}"
               message: !input zalo_custom_initial_caption
               ttl: !input zalo_custom_ttl
 
@@ -2020,6 +2034,7 @@ action:
               thread_id: !input zalo_custom_user_id
               type: "0"
               video_path_or_url: "{{ duong_dan_video }}"
+              thumbnail_url: "{{ duong_dan_thumb }}"
               message: !input zalo_custom_initial_caption
               ttl: !input zalo_custom_ttl
 
@@ -2559,6 +2574,7 @@ action:
               thread_id: !input zalo_custom_thread_id
               type: "1"
               video_path_or_url: "{{ duong_dan_video }}"
+              thumbnail_url: "{{ duong_dan_thumb }}"
               message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
               ttl: !input zalo_custom_ttl
 
@@ -2578,6 +2594,7 @@ action:
               thread_id: !input zalo_custom_user_id
               type: "0"
               video_path_or_url: "{{ duong_dan_video }}"
+              thumbnail_url: "{{ duong_dan_thumb }}"
               message: "{{ chu_kem if gop_vao_video else zalo_custom_initial_caption }}"
               ttl: !input zalo_custom_ttl
 
