@@ -2800,9 +2800,14 @@ action:
              in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
           {% set nn_v = kq_video.get('security_suspicious', false)
              in [true, 'true', 'True', 'TRUE', 1, '1', 'yes', 'Yes', 'YES'] %}
-          {% set cau = kq_video.get('human_action', '') if nn_v
-                       else (kq_anh.get('human_action', '') if nn_a
-                             else kq_video.get('human_action', '')) %}
+          {# Câu mô tả lấy của bên đang báo động. Cả hai cùng im thì lấy bên nào
+             CÓ CHỮ — bên kia có thể trả rỗng, và một tin an ninh không có dòng
+             mô tả nào thì người nhận chẳng biết chuyện gì vừa xảy ra. #}
+          {% set cau_v = kq_video.get('human_action', '') %}
+          {% set cau_a = kq_anh.get('human_action', '') %}
+          {% set cau = cau_v if (nn_v and cau_v | length > 0)
+                       else (cau_a if (nn_a and cau_a | length > 0)
+                             else (cau_v if cau_v | length > 0 else cau_a)) %}
           {{ {'humans_detected': [kq_anh.get('humans_detected', 0) | int(0),
                                   kq_video.get('humans_detected', 0) | int(0)] | max,
               'human_action': cau,
