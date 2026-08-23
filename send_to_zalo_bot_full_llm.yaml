@@ -35,6 +35,47 @@ blueprint:
               step: 1
           default: 5
 
+    duong_gui_anh_settings:
+      name: Đường gửi ảnh
+      icon: mdi:image-move
+      description: >-
+        Zalo Bot chỉ nhận ảnh qua **URL công khai** — nó tự đi tải về, nên đường
+        dẫn trong mạng LAN không dùng được. Mặc định blueprint chép ảnh vào
+        `/config/www/zalo` rồi đưa URL đó cho Zalo, tức **Home Assistant phải mở
+        ra Internet**.
+
+
+        Ai đang chạy `zalo-server` (dự án chatgpt2api) thì chọn đường khác: đẩy
+        thẳng tệp lên server, server lưu vào kho ảnh công khai của nó rồi mới gọi
+        Zalo. Home Assistant **không cần mở ra Internet**, và server còn tự
+        chuyển ảnh không phải PNG sang PNG — Zalo trả sai content-type nếu byte
+        JPEG nằm trong tệp `.png`.
+
+
+        Chọn đường server thì phải khai trước một `shell_command` trong
+        `configuration.yaml`, rồi trỏ ô dưới vào nó:
+
+
+        ```
+
+        shell_command:
+          zalo_gui_anh: >
+            curl -s -m 30 -X POST http://172.16.10.38:3030/api/zalo-bot/send
+            -H "authorization: Bearer {{ token }}"
+            -F "text={{ text }}"
+            -F "photo=@{{ duong_dan }}"
+        ```
+      collapsed: true
+      input:
+        hanh_dong_gui_anh:
+          name: Hành động gửi ảnh
+          description: >-
+            Để trống = dùng pyscript như cũ (cần Home Assistant mở ra Internet).
+            Muốn đi qua zalo-server thì đặt vào đây lời gọi `shell_command` đã
+            khai, truyền `duong_dan` là đường dẫn ảnh và `text` là chú thích.
+          selector:
+            action:
+          default: []
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
@@ -46,11 +87,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Mandatory.
-            Short summary (<=10 words).
-            No emojis, markdown, or commentary.
-            If image, write concise caption.
-            Return plain text only.
+            <=10 words overview/caption. Plain text. Multiple items = multiple calls
 
         detail_prompt:
           name: Detail Prompt
@@ -58,10 +95,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional detail text.
-            No links, markdown, emojis.
-            Do not repeat summary.
-            Return plain text only.
+            Full details. No links/markdown/emojis/repeats. Plain text
 
         content_type_prompt:
           name: Content Type Prompt
@@ -69,8 +103,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Mandatory.
-            Return exactly one: information, location, image.
+            Exactly one: information, location, image. location=place/address/map, image=visual media
 
         location_prompt:
           name: Location Prompt
@@ -78,8 +111,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional. Use only when content_type is location.
-            Return address name only.
+            Address only. No commas or punctuation
 
         image_path_prompt:
           name: Image Path Prompt
@@ -87,9 +119,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional. Use only when content_type is image.
-            Provide existing local/ or /media/ path.
-            Do not guess.
+            Existing path (local/, /media/). No guessing
 
         chat_id_override_prompt:
           name: Chat ID Override Prompt
@@ -97,9 +127,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional.
-            Use only when user explicitly specifies another chat.
-            Return exact chat ID only.
+            Alternate chat ID. Digits only
 
 mode: queued
 max: 30
@@ -107,7 +135,8 @@ max_exceeded: silent
 description: Sends messages, locations, or images to Zalo through the official Zalo Bot
 
 variables:
-  version: 20251116
+  version: 20260823
+  hanh_dong_gui_anh: !input hanh_dong_gui_anh
 
 fields:
   summary:
@@ -239,15 +268,39 @@ sequence:
           - condition: template
             value_template: "{{ content_type == 'image' }}"
         sequence:
-          - action: pyscript.send_zalo_photo
-            data:
-              chat_id: "{{ chat_id_value }}"
-              file_path: "{{ image_path_resolved }}"
-              caption: |-
+          - variables:
+              chu_thich: |-
                 {{ summary }}{% if detail %}
 
                 {{ detail }}{% endif %}
-            response_variable: zalo_response
+          - if:
+              - condition: template
+                value_template: "{{ hanh_dong_gui_anh | count > 0 }}"
+            then:
+              # Đi qua zalo-server: HA không phải mở ra Internet. Hành động do
+              # người dùng khai nhận hai biến `duong_dan` và `text`.
+              - variables:
+                  duong_dan: "{{ image_path_resolved }}"
+                  text: "{{ chu_thich }}"
+              - sequence: !input hanh_dong_gui_anh
+              # Hành động do người dùng khai nên không lấy được kết quả trả về.
+              # Đừng bịa `ok: true` — nói đúng thứ biết được: đã gửi đi, chưa có
+              # xác nhận. Trợ lý thuật lại thế, người dùng không tưởng đã tới nơi.
+              - variables:
+                  zalo_response:
+                    sent_via: zalo-server
+                    confirmed: false
+                    note: >-
+                      Đã đẩy ảnh sang zalo-server. Không có xác nhận từ Zalo ở
+                      bước này — xem log của zalo-server nếu ảnh không tới.
+                    file: "{{ image_path_resolved }}"
+            else:
+              - action: pyscript.send_zalo_photo
+                data:
+                  chat_id: "{{ chat_id_value }}"
+                  file_path: "{{ image_path_resolved }}"
+                  caption: "{{ chu_thich }}"
+                response_variable: zalo_response
 
           - if:
               - condition: template

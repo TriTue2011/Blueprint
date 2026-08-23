@@ -16,7 +16,7 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [🌍 World Landmarks Image Generator](#-world-landmarks-image-generator)
 - **Cameras & Surveillance**
   - [📸 Smart Camera AI Analyzer (Voice)](#-smart-camera-ai-analyzer-voice)
-  - [📷 Capture Camera Snapshot (Voice)](#-capture-camera-snapshot-voice)
+  - [📷 Capture Camera Snapshot or Record Video (Voice)](#-capture-camera-snapshot-or-record-video-voice)
   - [🔍 File / Image Content Analyzer (LLM)](#-file--image-content-analyzer-llm)
   - [🚨 Person Detection Camera Alarm](#-person-detection-camera-alarm)
   - [🎥 Camera AI Alarm 4 — Filter Gate, Dual Snapshots, Video](#-camera-ai-alarm-4--filter-gate-dual-snapshots-video)
@@ -231,14 +231,14 @@ Use voice commands to ask AI to analyze your cameras — detecting people, pets,
 
 ---
 
-## 📷 Capture Camera Snapshot (Voice)
+## 📷 Capture Camera Snapshot or Record Video (Voice)
 
-Use voice commands to take a snapshot from any camera and save it as a file. Works best alongside the File Content Analyzer blueprint.
+Name a camera to take a snapshot, or **record a 1–60 second clip**. Returns the file path for another blueprint to pick up — pair it with [File / Image Content Analyzer](#-file--image-content-analyzer-llm) to get "capture it, then tell me what you see".
 
 | Info | Details |
 |------|---------|
 | **Type** | Script |
-| **HA minimum** | 2024.10.0 |
+| **HA minimum** | 2024.12.0 |
 | **Requires** | Alias sensor (see [guide](#️-create-the-assist-alias-sensor)), camera entities |
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcamera_snapshot_full_llm.yaml)
@@ -768,7 +768,7 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 3 | AI Weather Image | Automation | 2025.10.0 | Image matched to weather and time of day |
 | 4 | World Landmarks | Automation | 2025.10.0 | AI images of world landmarks |
 | 5 | Camera AI (Voice) | Script | 2025.8.0 | Analyze cameras by voice |
-| 6 | Camera Snapshot (Voice) | Script | 2024.10.0 | Capture a camera snapshot by voice |
+| 6 | Snapshot / Record (Voice) | Script | 2024.12.0 | Capture a snapshot or record a clip by voice |
 | 7 | File / Image Analyzer | Script | 2025.8.0 | Send a file to the LLM for analysis |
 | 8 | Person Camera Alarm (1–3) | Automation | 2025.7.0 | Person detection plus alerting |
 | 9 | Camera AI Alarm 4 | Automation | 2026.3.0 | Filter gate, dual snapshots, video branch |

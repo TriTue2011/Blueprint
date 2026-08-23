@@ -16,7 +16,7 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Tạo ảnh danh lam thắng cảnh](#-tạo-ảnh-danh-lam-thắng-cảnh)
 - **Camera & Giám sát**
   - [Kiểm tra camera bằng AI (Voice)](#-kiểm-tra-camera-bằng-ai-voice)
-  - [Chụp ảnh camera (Voice)](#-chụp-ảnh-camera-voice)
+  - [Chụp ảnh hoặc quay video camera (Voice)](#-chụp-ảnh-hoặc-quay-video-camera-voice)
   - [Phân tích file / ảnh (LLM)](#-phân-tích-file--ảnh-llm)
   - [Cảnh báo người qua camera bằng AI](#-cảnh-báo-người-qua-camera-bằng-ai)
   - [Cảnh báo camera AI 4 — cửa lọc, ảnh đôi, video](#-cảnh-báo-camera-ai-4--cửa-lọc-ảnh-đôi-video)
@@ -241,14 +241,14 @@ Dùng giọng nói để yêu cầu AI phân tích camera — phát hiện ngư�
 
 ---
 
-## 📷 Chụp ảnh camera (Voice)
+## 📷 Chụp ảnh hoặc quay video camera (Voice)
 
-Dùng giọng nói để ra lệnh chụp ảnh từ camera và lưu thành file. Dùng kết hợp với blueprint phân tích ảnh.
+Nói tên camera là chụp một tấm, hoặc **quay một đoạn 1–60 giây**. Trả về đường dẫn file để blueprint khác dùng tiếp — ghép với [Phân tích file / ảnh (LLM)](#-phân-tích-file--ảnh-llm) là thành "chụp rồi kể xem thấy gì".
 
 | Thông tin | Chi tiết |
 |-----------|----------|
 | **Loại** | Script |
-| **HA tối thiểu** | 2024.10.0 |
+| **HA tối thiểu** | 2024.12.0 |
 | **Yêu cầu** | Sensor alias (xem [hướng dẫn](#️-tạo-sensor-alias-cho-assist)), Camera entities |
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcamera_snapshot_full_llm.yaml)
@@ -503,6 +503,26 @@ Gửi tin nhắn đến Zalo qua bot chính thức bằng giọng nói. Địa �
 | **Loại** | Script |
 | **HA tối thiểu** | 2024.10.0 |
 | **Yêu cầu** | Zalo Bot integration (HACS) |
+
+> **Gửi ảnh không cần mở Home Assistant ra Internet.** Zalo Bot chỉ nhận ảnh qua URL công khai
+> — nó tự đi tải về — nên mặc định blueprint chép ảnh vào `/config/www/zalo` rồi đưa URL đó cho
+> Zalo, tức máy chủ HA của bạn phải ra được Internet. Ai đang chạy `zalo-server` của dự án
+> [chatgpt2api](https://github.com/TriTue2011/chatgpt2api) thì đặt ô **Hành động gửi ảnh** để đẩy
+> thẳng tệp lên server; server lưu vào kho ảnh công khai của nó rồi mới gọi Zalo. Khai trước một
+> `shell_command`:
+>
+> ```yaml
+> shell_command:
+>   zalo_gui_anh: >
+>     curl -s -m 30 -X POST http://172.16.10.38:3030/api/zalo-bot/send
+>     -H "authorization: Bearer {{ token }}"
+>     -F "text={{ text }}"
+>     -F "photo=@{{ duong_dan }}"
+> ```
+>
+> Đường này còn tự chuyển ảnh không phải PNG sang PNG, vì Zalo trả sai content-type khi byte
+> JPEG nằm trong tệp `.png`. Đổi lại: `shell_command` không trả kết quả về, nên blueprint báo
+> "đã gửi đi, chưa có xác nhận" chứ không dám nói đã tới nơi — xem log zalo-server nếu nghi ngờ.
 
 **Ví dụ lệnh giọng nói:**
 - "Tìm nhà hàng ngon ở Hà Nội và gửi lên Zalo"
@@ -1085,7 +1105,7 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 3 | Tạo ảnh thời tiết | Automation | 2025.10.0 | Ảnh AI theo thời tiết/buổi |
 | 4 | Danh lam thắng cảnh | Automation | 2025.10.0 | Ảnh AI danh lam thế giới |
 | 5 | Camera AI (Voice) | Script | 2025.8.0 | Phân tích camera bằng giọng nói |
-| 6 | Chụp camera (Voice) | Script | 2024.10.0 | Chụp ảnh camera bằng giọng nói |
+| 6 | Chụp / quay camera (Voice) | Script | 2024.12.0 | Chụp ảnh hoặc quay video bằng giọng nói |
 | 7 | Phân tích file/ảnh | Script | 2025.8.0 | Gửi file cho LLM phân tích |
 | 8 | Cảnh báo người camera (1–3) | Automation | 2025.7.0 | Phát hiện người + cảnh báo |
 | 9 | Cảnh báo camera AI 4 | Automation | 2026.3.0 | Cửa lọc, ảnh đôi, nhánh video |

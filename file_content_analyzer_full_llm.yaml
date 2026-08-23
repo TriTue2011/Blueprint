@@ -46,34 +46,28 @@ blueprint:
       input:
         instructions_prompt:
           name: Instructions Prompt
-          description: The prompt which will be used for the LLM can provide the request for the query.
+          description: The specific request or query for the AI to analyze the file content
           selector:
             text:
               multiline: true
-          default: |
-            This argument is mandatory and must always be included.
-            The tool can analyze and extract any type of information from an image, video, audio, or document, including text, numbers, objects, speech, and visual features.
-            Always specify exactly what data should be extracted.
-            This tool returns plain text only.
+          default: |-
+            Exact data to extract. Returns plain text. Do not invent
         file_path_prompt:
           name: File Path Prompt
-          description: The prompt which will be used for the LLM can provide the file path for the query.
+          description: The relative file path (local/*) of the document or media to analyze, provided by the AI
           selector:
             text:
               multiline: true
-          default: |
-            This argument is mandatory and must always be included.
-            Always specify a relative file path that starts with `local/`.
+          default: |-
+            Relative path (local/*). Precise
         mime_type_prompt:
           name: MIME Type Prompt
-          description: The prompt which will be used for the LLM can provide the MIME type of file for the query.
+          description: The MIME type (e.g., image/jpeg) of the file to analyze, determined by the AI
           selector:
             text:
               multiline: true
-          default: |
-            This argument is mandatory and must always be included.
-            Always specify the MIME type of the file.
-            Choose a value that matches the file contents (for example image/jpeg, video/mp4, audio/mp3, text/plain, or application/pdf).
+          default: |-
+            MIME type (e.g. image/jpeg). Must match content
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/file_content_analyzer_full_llm.yaml
 mode: parallel
 max_exceeded: silent

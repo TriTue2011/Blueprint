@@ -83,7 +83,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Mandatory. ≤10 words overview (person/object/location). If image, write caption. Plain text only. For multiple items, use separate tool calls.
+            <=10 words overview/caption. Plain text. Multiple items = multiple calls
         detail_prompt:
           name: Detail Prompt
           description: Prompt shown to the LLM to request optional supporting details for the message or image.
@@ -91,7 +91,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional. Full details. No links/markdown/emojis. Avoid repeating summary. Return plain text only.
+            Full details. No links/markdown/emojis/repeats. Plain text
         content_type_prompt:
           name: Content Type Prompt
           description: Prompt shown to the LLM to decide if the tool should send information, a location, or an image.
@@ -99,8 +99,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Mandatory. exactly one: information, location, image. location=place/address/map. image=visual media (+ image_path).
-            When submitting multiple items, use separate tool calls for each.
+            Exactly one: information, location, image. location=place/address/map, image=visual media
         location_prompt:
           name: Location Prompt
           description: Prompt shown to the LLM to request the location value when sending a place.
@@ -108,7 +107,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional for location. Address only. No commas/punctuation. Regular spaces.
+            Address only. No commas or punctuation
         image_path_prompt:
           name: Image Path Prompt
           description: Prompt shown to the LLM to request the media path when sending an image.
@@ -116,7 +115,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional for image. Existing path (local/ or /media/). Do not guess if unknown.
+            Existing path (local/, /media/). No guessing
         chat_id_override_prompt:
           name: Chat ID Override Prompt
           description: Prompt shown to the LLM to request an alternate chat when needed.
@@ -124,7 +123,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional. User-specified Telegram ID. Digits only (can be negative). No commentary.
+            Alternate chat ID. Digits only
         message_thread_id_override_prompt:
           name: Message Thread ID Override Prompt
           description: Prompt shown to the LLM to request a different topic when needed.
@@ -132,7 +131,7 @@ blueprint:
             text:
               multiline: true
           default: |-
-            Optional. User-specified numeric thread/topic ID. Digits only.
+            Alternate thread/topic ID. Digits only
 mode: queued
 max: 30
 max_exceeded: silent

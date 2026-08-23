@@ -1,93 +1,127 @@
 blueprint:
-  name: Voice - Capture Camera Snapshot
+  name: Voice - Chụp ảnh hoặc quay video camera
   author: TriTue2011 nguồn luuquangvu
-  description: >
-    Công cụ chụp ảnh camera cho Voice Assistant.
-    Yêu cầu template sensor lưu entity aliases trong configuration.yaml.
-    Hỗ trợ tìm camera theo friendly name và alias.
-    Nhớ expose camera và script cho Assist sau khi lưu.
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/camera_snapshot_full_llm.yaml
+  description: |-
+    # Chụp ảnh hoặc quay video từ camera bằng giọng nói
+
+    Nói tên camera là chụp một tấm, hoặc quay một đoạn 1–60 giây. Trả về đường
+    dẫn file để blueprint khác dùng tiếp — ghép với **Phân tích file / ảnh (LLM)**
+    là thành "chụp rồi kể xem thấy gì".
+
+    ## Bắt buộc
+
+    Cần một template sensor lưu biệt danh (alias) của các entity, khai trong
+    `config/configuration.yaml`. Thiếu nó thì tra camera theo tên **không chạy mà
+    cũng không báo lỗi gì**.
+
+    ⚠️ Đừng chép đoạn cấu hình cũ trên mạng: Home Assistant đã đổi khoá lưu biệt
+    danh từ `aliases` sang `aliases_v2`, mọi hướng dẫn viết trước tháng 6/2026
+    đều đọc khoá cũ nên trả về rỗng. Đoạn dưới đọc được cả hai.
+
+    ```
+    # File configuration.yaml
+    shell_command:
+      get_entity_alias: >-
+        jq '[.data.entities[] | select(.options.conversation.should_expose == true) | {entity_id, aliases: (if has("aliases_v2") then ((if (.aliases_v2 | type) == "array" then .aliases_v2 else [] end) | map(select(. != null and . != ""))) else (if (.aliases | type) == "array" then .aliases else [] end) end)} | select(.aliases | length > 0)]' ./.storage/core.entity_registry
+    template:
+      - triggers:
+          - trigger: homeassistant
+            event: start
+          - trigger: event
+            event_type: event_template_reloaded
+        actions:
+          - action: shell_command.get_entity_alias
+            response_variable: response
+        sensor:
+          - name: "Assist: Entity IDs and Aliases"
+            unique_id: entity_ids_and_aliases
+            icon: mdi:format-list-bulleted
+            device_class: timestamp
+            state: "{{ now().isoformat() }}"
+            attributes:
+              entities: "{{ response.stdout }}"
+    ```
+
+    Sensor này chỉ nạp lại lúc Home Assistant khởi động và lúc reload template
+    entities — đặt thêm alias cho camera xong thì phải reload.
+
+    Thư mục lưu file phải có sẵn (mặc định `/media`).
+
+    ## Lưu ý
+
+    - Nhớ expose camera VÀ script cho Assist sau khi lưu.
+    - Không đổi tên script mặc định.
+    - Tạo script xong, bấm ba chấm góc trên phải → "Edit in YAML" → xoá dòng
+      `description: ...` để khôi phục mô tả mặc định. Bước này quan trọng vì đó
+      là câu trợ lý đọc để biết khi nào nên gọi script này.
   domain: script
   homeassistant:
-    min_version: 2024.10.0
+    min_version: 2024.12.0
   input:
     entity_aliases_settings:
       name: Settings for Entity Aliases
       icon: mdi:format-list-bulleted
-      description: You can use these settings to configure a template sensor that
-        stores all information about entity aliases.
+      description: You can use these settings to configure a template sensor that stores all information about entity aliases.
       input:
         entity_aliases:
           name: Entity Aliases
           selector:
             entity:
               filter:
-              - domain:
-                - sensor
-                integration: template
-              multiple: false
-              reorder: false
+                - domain: sensor
+                  integration: template
     snapshot_settings:
       name: Settings for Snapshot Output
       icon: mdi:folder-image
-      description: Configure where snapshots should be stored and how filenames are
-        generated.
+      description: Configure where camera captures should be stored and how snapshot filenames are generated.
       collapsed: true
       input:
         snapshot_directory:
           name: Snapshot Directory
-          description: Absolute path where the snapshot will be stored (default is
-            `/media`).
+          description: Absolute path where the snapshot will be stored (default is `/media`).
           selector:
             text:
-              multiple: false
-              multiline: false
           default: /media
         snapshot_filename_prefix:
           name: Snapshot Filename Prefix
           description: Prefix used when generating the snapshot filename.
           selector:
             text:
-              multiple: false
-              multiline: false
           default: camera_snapshot_
         snapshot_file_extension:
           name: Snapshot File Extension
-          description: File extension to use for the snapshot (for example jpg or
-            png).
+          description: File extension to use for the snapshot (for example jpg or png).
           selector:
             text:
-              multiple: false
-              multiline: false
           default: jpg
     prompt_settings:
       name: Prompt settings for the LLM
       icon: mdi:robot
-      description: You can use these settings to finetune the prompts for your specific
-        LLM (model). In most cases the defaults should be fine.
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
       collapsed: true
       input:
         camera_name_prompt:
           name: Camera Name Prompt
-          description: The prompt which will be used for the LLM can provide the camera
-            name.
+          description: The friendly name of the camera to capture from, provided by the AI
           selector:
             text:
               multiline: true
-              multiple: false
-          default: 'This argument is mandatory and must always be included.
-
-            Specify the camera name to capture the snapshot from.
-
-            Use the friendly name that appears in Home Assistant (for example "Front
-            Door Camera").
-
-            The tool will return a local file path to the generated snapshot.'
-  source_url: https://github.com/TriTue2011/Blueprint/blob/main/camera_snapshot_full_llm.yaml
+          default: |-
+            Camera name. Multiple cameras = multiple calls
+        capture_type_prompt:
+          name: Capture Type Prompt
+          description: Whether to capture a snapshot or record a video
+          selector:
+            text:
+              multiline: true
+          default: |-
+            snapshot or record. Default: snapshot
 mode: parallel
 max_exceeded: silent
-description: Takes a snapshot from a specified camera.
+description: Captures a camera snapshot or records a video and returns the local file path
 variables:
-  version: 20251116
+  version: 20260821
 fields:
   camera_name:
     name: Camera Name
@@ -95,75 +129,164 @@ fields:
     selector:
       text:
     required: true
+  capture_type:
+    name: Capture Type
+    description: Select whether to capture a snapshot or record a video.
+    selector:
+      select:
+        options:
+          - snapshot
+          - record
+    default: snapshot
+  duration:
+    name: Recording Duration
+    description: Recording duration in seconds. Only used when capture type is record.
+    selector:
+      number:
+        min: 1
+        max: 60
+        step: 1
+    default: 10
 sequence:
-- variables:
-    entity_aliases: !input entity_aliases
-    camera_name: '{{ camera_name | default('''') | trim }}'
-    snapshot_directory_input: !input snapshot_directory
-    snapshot_directory: '{{ snapshot_directory_input | default(''/media'', true) |
-      trim }}'
-    snapshot_prefix_input: !input snapshot_filename_prefix
-    snapshot_prefix: '{{ snapshot_prefix_input | default(''camera_snapshot_'', true)
-      | trim }}'
-    snapshot_extension_input: !input snapshot_file_extension
-    snapshot_extension: '{{ snapshot_extension_input | default(''jpg'', true) | trim
-      | lower }}'
-- alias: Validate camera name
-  if:
-  - condition: template
-    value_template: '{% set friendly_match = states.camera | selectattr(''attributes.friendly_name'',
-      ''=='', camera_name) | list %} {% set alias_match = state_attr(entity_aliases,
-      ''entities'') | default([]) | selectattr(''entity_id'', ''match'', ''camera\.'')
-      | selectattr(''aliases'', ''contains'', camera_name) | list %} {{ not camera_name
-      or (friendly_match | length == 0 and alias_match | length == 0) }}'
-  then:
-  - alias: Set variable for error message
-    variables:
-      response:
-        error: Unable to capture a snapshot because the camera name is invalid.
-  - alias: Stop the script
-    stop: Unable to capture a snapshot because the camera name is invalid.
+  - variables:
+      entity_aliases: !input entity_aliases
+      camera_name: "{{ camera_name | default('') | trim }}"
+      capture_type: "{{ capture_type | default('snapshot', true) | trim | lower }}"
+      duration: "{{ duration | default(10, true) | int(10) }}"
+      snapshot_directory_input: !input snapshot_directory
+      snapshot_directory: "{{ snapshot_directory_input | default('/media', true) | trim }}"
+      snapshot_prefix_input: !input snapshot_filename_prefix
+      snapshot_prefix: "{{ snapshot_prefix_input | default('camera_snapshot_', true) | trim }}"
+      snapshot_extension_input: !input snapshot_file_extension
+      snapshot_extension: "{{ snapshot_extension_input | default('jpg', true) | trim | lower }}"
+  - alias: Validate camera name
+    if:
+      - condition: template
+        value_template: >-
+          {% set friendly_match = states.camera | selectattr('attributes.friendly_name', 'eq', camera_name) | list %}
+          {% set alias_match = state_attr(entity_aliases, 'entities') | default([], true) | selectattr('entity_id', 'defined') | selectattr('entity_id', 'match', '^camera\.') | selectattr('aliases', 'defined') | selectattr('aliases', 'contains', camera_name) | list %}
+          {{ not camera_name or (friendly_match | length == 0 and alias_match | length == 0) }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to capture a snapshot because the camera name is invalid.
+      - alias: Stop the script
+        stop: Unable to capture a snapshot because the camera name is invalid.
+        response_variable: response
+  - alias: Validate capture settings
+    if:
+      - condition: template
+        value_template: >-
+          {{ capture_type not in ['snapshot', 'record'] or duration < 1 or duration > 60 }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Capture type must be snapshot or record, and recording duration must be between 1 and 60 seconds.
+      - alias: Stop the script
+        stop: Capture type must be snapshot or record, and recording duration must be between 1 and 60 seconds.
+        response_variable: response
+  - alias: Validate snapshot settings
+    if:
+      - condition: template
+        value_template: >-
+          {{ not snapshot_directory }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to capture a snapshot because the snapshot directory is missing.
+      - alias: Stop the script
+        stop: Unable to capture a snapshot because the snapshot directory is missing.
+        response_variable: response
+  - variables:
+      camera_entity_id: >-
+        {%- set friendly_matches = states.camera | selectattr('attributes.friendly_name', 'eq', camera_name) | map(attribute='entity_id') | list -%}
+        {%- set alias_matches = state_attr(entity_aliases, 'entities') | default([], true) | selectattr('entity_id', 'defined') | selectattr('entity_id', 'match', '^camera\.') | selectattr('aliases', 'defined') | selectattr('aliases', 'contains', camera_name) | map(attribute='entity_id') | list -%}
+        {{- friendly_matches[0] if friendly_matches else (alias_matches[0] if alias_matches else '') -}}
+      sanitized_prefix: >-
+        {% if snapshot_prefix %}
+          {{ snapshot_prefix | regex_replace('[^0-9A-Za-z_-]', '_') }}
+        {% else %}
+          camera_snapshot_
+        {% endif %}
+      sanitized_extension: >-
+        {% if snapshot_extension %}
+          {% set ext = snapshot_extension | regex_replace('[^0-9a-z]', '') %}
+          {{ '.' ~ (ext if ext else 'jpg') }}
+        {% else %}
+          .jpg
+        {% endif %}
+      snapshot_directory_normalized: >-
+        {{ snapshot_directory.rstrip('/\\') or '/' }}
+      snapshot_random_suffix: "{{ '%05d' | format(range(0, 100000) | random) }}"
+      capture_prefix: >-
+        {% if capture_type == 'record' %}
+          camera_record_
+        {% else %}
+          {{ sanitized_prefix }}
+        {% endif %}
+      capture_extension: >-
+        {% if capture_type == 'record' %}
+          .mp4
+        {% else %}
+          {{ sanitized_extension }}
+        {% endif %}
+      capture_filename: >-
+        {{ (capture_prefix | trim) ~ now().strftime('%Y%m%d%H%M%S%f') ~ '_' ~ snapshot_random_suffix ~ (capture_extension | trim) }}
+      capture_full_path: "{{ ('/' ~ capture_filename) if snapshot_directory_normalized == '/' else (snapshot_directory_normalized ~ '/' ~ capture_filename) }}"
+      returned_media_path: >-
+        {% set prefix = '/media/' %}
+        {% if capture_full_path.startswith(prefix) %}
+          {{ 'local/' ~ capture_full_path[prefix | length:] }}
+        {% else %}
+          {{ capture_full_path }}
+        {% endif %}
+  - alias: Validate resolved camera entity
+    if:
+      - condition: template
+        value_template: >-
+          {{ not camera_entity_id or camera_entity_id not in (states.camera | map(attribute='entity_id') | list) }}
+    then:
+      - stop: >-
+          No active camera entity was found for "{{ camera_name }}".
+          Add the camera to the entity aliases sensor or use its exact friendly name.
+        error: true
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ capture_type == 'snapshot' }}"
+        sequence:
+          - action: camera.snapshot
+            target:
+              entity_id: "{{ camera_entity_id }}"
+            data:
+              filename: "{{ capture_full_path }}"
+          - variables:
+              response:
+                image_path: "{{ returned_media_path }}"
+                media_type: image
+      - conditions:
+          - condition: template
+            value_template: "{{ capture_type == 'record' }}"
+        sequence:
+          - action: camera.record
+            target:
+              entity_id: "{{ camera_entity_id }}"
+            data:
+              filename: "{{ capture_full_path }}"
+              duration: "{{ duration }}"
+          - variables:
+              response:
+                video_path: "{{ returned_media_path }}"
+                media_type: video
+    default:
+      - variables:
+          response:
+            error: "Unsupported capture type: {{ capture_type }}"
+  - variables:
+      response: >-
+        {{ dict(response, captured_at=now().strftime('%Y-%m-%d %H:%M:%S %z')) if response is mapping else response }}
+  - stop: ""
     response_variable: response
-- alias: Validate snapshot settings
-  if:
-  - condition: template
-    value_template: '{{ not snapshot_directory }}'
-  then:
-  - alias: Set variable for error message
-    variables:
-      response:
-        error: Unable to capture a snapshot because the snapshot directory is missing.
-  - alias: Stop the script
-    stop: Unable to capture a snapshot because the snapshot directory is missing.
-    response_variable: response
-- variables:
-    camera_entity_id: "{% set friendly_match = states.camera | selectattr('attributes.friendly_name',
-      '==', camera_name) | map(attribute='entity_id') | first %} {% if friendly_match
-      %}\n  {{ friendly_match }}\n{% else %}\n  {{ state_attr(entity_aliases, 'entities')
-      | default([]) | selectattr('entity_id', 'match', 'camera\\.') | selectattr('aliases',
-      'contains', camera_name) | map(attribute='entity_id') | first }}\n{% endif %}"
-    sanitized_prefix: "{% if snapshot_prefix %}\n  {{ snapshot_prefix | regex_replace('[^0-9A-Za-z_-]',
-      '_') }}\n{% else %}\n  camera_snapshot_\n{% endif %}"
-    sanitized_extension: "{% if snapshot_extension %}\n  {% set ext = snapshot_extension
-      | regex_replace('[^0-9a-z]', '') %}\n  {{ '.' ~ (ext if ext else 'jpg') }}\n{%
-      else %}\n  .jpg\n{% endif %}"
-    snapshot_directory_normalized: "{% if snapshot_directory %}\n  {{ snapshot_directory.rstrip('/\\\\')
-      }}\n{% else %}\n  /media\n{% endif %}"
-    snapshot_random_suffix: '{{ ''%05d'' | format(range(0, 100000) | random) }}'
-    snapshot_filename: '{{ sanitized_prefix ~ now().strftime(''%Y%m%d%H%M%S%f'') ~
-      ''_'' ~ snapshot_random_suffix ~ sanitized_extension }}'
-    snapshot_full_path: '{{ snapshot_directory_normalized ~ ''/'' ~ snapshot_filename
-      }}'
-    returned_image_path: "{% set prefix = '/media/' %} {% if snapshot_full_path.startswith(prefix)
-      %}\n  {{ 'local/' ~ snapshot_full_path[prefix | length:] }}\n{% else %}\n  {{
-      snapshot_full_path }}\n{% endif %}"
-- action: camera.snapshot
-  target:
-    entity_id: '{{ camera_entity_id }}'
-  data:
-    filename: '{{ snapshot_full_path }}'
-- variables:
-    response:
-      image_path: '{{ returned_image_path }}'
-- stop: ''
-  response_variable: response
