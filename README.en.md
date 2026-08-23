@@ -63,6 +63,21 @@ Generate images from a text prompt using AI. Just describe what you want and the
 | **HA minimum** | 2025.8.0 |
 | **Requires** | An AI Task entity that supports image generation |
 
+> **Running chatgpt2api? Do not install this blueprint.** The
+> [chatgpt2api](https://github.com/TriTue2011/chatgpt2api) gateway already ships a
+> `generate_image` tool that works from every channel — Zalo, Telegram and the in-house
+> assistant — plus `library_media` to browse results and `delete_media` to clean up. Tick
+> **🎨 Ảnh** under **Settings → Home Assistant → capability limits** and saying "draw me a cat"
+> to a speaker produces an image, with no script in Home Assistant at all.
+>
+> Installing both breaks in two ways. First, the assistant ends up with two tools both claiming
+> "I draw images" and picks the wrong one. Second, the field descriptions of these two
+> blueprints weigh **3,918 characters**, and they enter the tool schema on **every single chat
+> turn** — including turns where you only asked what time it is. For comparison: all five
+> messaging and file-analysis scripts combined, after compression, cost 1,784.
+>
+> Without chatgpt2api the blueprint still works standalone.
+
 **Configuration:**
 - **AI Task Entity:** pick an AI Task entity capable of generating images (leave empty to use the system default)
 - **Output Directory:** where images are saved (default: `/media`)
@@ -83,6 +98,21 @@ Generate AI images with an attached reference image (glasses, clothing, accessor
 | **Type** | Script |
 | **HA minimum** | 2025.8.0 |
 | **Requires** | Input Text Helper |
+
+> **Running chatgpt2api? Do not install this blueprint.** The
+> [chatgpt2api](https://github.com/TriTue2011/chatgpt2api) gateway already ships a
+> `generate_image` tool that works from every channel — Zalo, Telegram and the in-house
+> assistant — plus `library_media` to browse results and `delete_media` to clean up. Tick
+> **🎨 Ảnh** under **Settings → Home Assistant → capability limits** and saying "draw me a cat"
+> to a speaker produces an image, with no script in Home Assistant at all.
+>
+> Installing both breaks in two ways. First, the assistant ends up with two tools both claiming
+> "I draw images" and picks the wrong one. Second, the field descriptions of these two
+> blueprints weigh **3,918 characters**, and they enter the tool schema on **every single chat
+> turn** — including turns where you only asked what time it is. For comparison: all five
+> messaging and file-analysis scripts combined, after compression, cost 1,784.
+>
+> Without chatgpt2api the blueprint still works standalone.
 
 **Pre-setup required — create an Input Text Helper:**
 

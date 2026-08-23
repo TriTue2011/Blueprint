@@ -67,6 +67,19 @@ Tạo ảnh theo prompt bằng mô hình AI. Chỉ cần nói hoặc nhập mô 
 | **HA tối thiểu** | 2025.8.0 |
 | **Yêu cầu** | AI Task Entity hỗ trợ tạo ảnh |
 
+> **Chạy chatgpt2api thì đừng cài blueprint này.** Cổng
+> [chatgpt2api](https://github.com/TriTue2011/chatgpt2api) đã có sẵn công cụ `generate_image`
+> vẽ được từ mọi kênh — Zalo, Telegram lẫn trợ lý trong nhà — kèm `library_media` để xem lại
+> và `delete_media` để dọn. Vào **Cài đặt → Home Assistant → Giới hạn chức năng** tích ô
+> **🎨 Ảnh** là nói với loa «vẽ con mèo» sẽ ra ảnh, không cần script nào trong HA cả.
+>
+> Cài cả hai thì hỏng theo hai đường. Một là trợ lý có hai công cụ cùng nói "tôi vẽ ảnh" nên
+> chọn nhầm. Hai là mô tả trường của hai blueprint này nặng **3 918 ký tự**, và chúng đi vào
+> tool schema **mỗi lượt chat** — kể cả lượt bạn chỉ hỏi giờ. Để so: cả năm script gửi tin và
+> phân tích file cộng lại, sau khi đã nén, chỉ tốn 1 784 ký tự.
+>
+> Không dùng chatgpt2api thì blueprint này vẫn chạy độc lập bình thường.
+
 **Cấu hình:**
 - **AI Task Entity:** Chọn entity AI Task hỗ trợ tạo ảnh (để trống = dùng mặc định hệ thống)
 - **Output Directory:** Thư mục lưu ảnh (mặc định: `/media`)
@@ -87,6 +100,19 @@ Tạo ảnh AI với ảnh tham chiếu đính kèm (kính, trang phục, phụ 
 | **Loại** | Script |
 | **HA tối thiểu** | 2025.8.0 |
 | **Yêu cầu** | Input Text Helper |
+
+> **Chạy chatgpt2api thì đừng cài blueprint này.** Cổng
+> [chatgpt2api](https://github.com/TriTue2011/chatgpt2api) đã có sẵn công cụ `generate_image`
+> vẽ được từ mọi kênh — Zalo, Telegram lẫn trợ lý trong nhà — kèm `library_media` để xem lại
+> và `delete_media` để dọn. Vào **Cài đặt → Home Assistant → Giới hạn chức năng** tích ô
+> **🎨 Ảnh** là nói với loa «vẽ con mèo» sẽ ra ảnh, không cần script nào trong HA cả.
+>
+> Cài cả hai thì hỏng theo hai đường. Một là trợ lý có hai công cụ cùng nói "tôi vẽ ảnh" nên
+> chọn nhầm. Hai là mô tả trường của hai blueprint này nặng **3 918 ký tự**, và chúng đi vào
+> tool schema **mỗi lượt chat** — kể cả lượt bạn chỉ hỏi giờ. Để so: cả năm script gửi tin và
+> phân tích file cộng lại, sau khi đã nén, chỉ tốn 1 784 ký tự.
+>
+> Không dùng chatgpt2api thì blueprint này vẫn chạy độc lập bình thường.
 
 **Yêu cầu thiết lập trước — tạo Input Text Helper:**
 
