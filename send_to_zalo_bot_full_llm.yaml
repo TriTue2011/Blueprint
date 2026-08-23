@@ -104,6 +104,7 @@ blueprint:
 mode: queued
 max: 30
 max_exceeded: silent
+description: Sends messages, locations, or images to Zalo through the official Zalo Bot
 
 variables:
   version: 20251116

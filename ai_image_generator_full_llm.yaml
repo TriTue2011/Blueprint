@@ -111,6 +111,7 @@ blueprint:
 mode: parallel
 max: 10
 max_exceeded: silent
+description: Generates an image from a text description and saves it as a local file
 
 variables:
   version: 20251029

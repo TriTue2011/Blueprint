@@ -117,7 +117,7 @@ blueprint:
 mode: queued
 max: 30
 max_exceeded: silent
-description: Sends text messages, locations, or images via Zalo. Use for notifications, automated alerts, and sharing location or visual media.
+description: Sends messages, locations, or images to Zalo through a personal Zalo account (Zalo Bot integration)
 variables:
   version: 20260207
 fields:

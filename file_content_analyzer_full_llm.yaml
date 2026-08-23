@@ -77,7 +77,7 @@ blueprint:
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/file_content_analyzer_full_llm.yaml
 mode: parallel
 max_exceeded: silent
-description: 'Takes a snapshot from a camera and saves it as an image file. Use ONLY when the user explicitly requests to capture/save/take a photo from a camera, NOT for analyzing or checking what the camera sees.'
+description: Analyzes file content (images, video, audio, text) to extract information or provide summaries
 variables:
   version: 20251209
 fields:

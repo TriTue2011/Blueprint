@@ -1,0 +1,86 @@
+name: Soát blueprint
+
+# Chạy hai trình soát trong tools/, rồi (chỉ khi push vào main) đồng bộ source_url
+# của mọi blueprint theo đúng nhánh hiện tại và commit lại.
+#
+# Thứ tự có chủ đích: đồng bộ source_url TRƯỚC rồi mới soát, để thứ được commit
+# là thứ đã qua kiểm tra. Đảo lại thì dòng source_url mới chưa ai soát bao giờ.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.yaml"
+      - "**.yml"
+      - "**.md"
+      - "tools/**"
+  pull_request:
+    paths:
+      - "**.yaml"
+      - "**.yml"
+      - "**.md"
+      - "tools/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  soat:
+    # Commit do chính workflow này đẩy lên mang [skip ci] nên không tự kích hoạt lại.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Đồng bộ source_url theo nhánh
+        # Chỉ làm khi push — pull request từ fork không có quyền ghi, và sửa file
+        # trong nhánh của người khác cũng không phải việc của CI.
+        if: github.event_name == 'push'
+        run: |
+          BRANCH=${GITHUB_REF#refs/heads/}
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          BASE_URL="https://github.com/${{ github.repository }}/blob/$BRANCH"
+
+          find . -type f -name "*.yaml" ! -path "./.github/*" | while read -r file; do
+            if grep -q "^ *source_url:" "$file"; then
+              RELATIVE_PATH=${file#./}
+              sed -i "s|^\( *\)source_url:.*|\1source_url: ${BASE_URL}/${RELATIVE_PATH}|" "$file"
+            fi
+          done
+
+      - name: Cài uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Soát schema blueprint và Jinja2
+        # Home Assistant 2026.8 đòi Python 3.14; uv tự tải cả hai.
+        run: |
+          uv run --no-project --python 3.14 --with 'homeassistant>=2026.8.0' \
+            python tools/validate_blueprints.py .
+
+      - name: Soát README khớp file thật
+        run: python3 tools/check_readme.py .
+
+      - name: Commit source_url nếu có đổi
+        if: github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+
+          if git diff --quiet --staged; then
+            echo "source_url đã đúng, không có gì để commit."
+          else
+            git commit -m "chore: đồng bộ source_url theo nhánh $BRANCH [skip ci]"
+            git pull --rebase origin "$BRANCH"
+            git push origin "$BRANCH"
+          fi

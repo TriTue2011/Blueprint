@@ -8,7 +8,7 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
 
 ## 📑 Mục lục
 
-- [Yêu cầu chung](#-yêu-cầu-chung)
+- [Yêu cầu chung](#️-yêu-cầu-chung)
 - **Tạo ảnh AI**
   - [Tạo ảnh AI](#️-tạo-ảnh-ai)
   - [Tạo ảnh AI kèm ảnh tham chiếu](#️-tạo-ảnh-ai-kèm-ảnh-tham-chiếu)
@@ -37,8 +37,10 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Tạo Sensor trong configuration.yaml](#-tạo-sensor-trong-configurationyaml)
   - [Tạo Shell Command](#-tạo-shell-command)
   - [Tạo Input Helper](#-tạo-input-helper)
-  - [Cài đặt Scripts (Shell)](#-cài-đặt-scripts-shell)
+  - [Tạo Sensor alias cho Assist](#️-tạo-sensor-alias-cho-assist)
+  - [Cài đặt Scripts (Shell)](#️-cài-đặt-scripts-shell)
   - [Cấu hình Cloudflare Tunnel](#-cấu-hình-cloudflare-tunnel)
+  - [Kiểm tra blueprint trước khi đẩy lên](#-kiểm-tra-blueprint-trước-khi-đẩy-lên)
 
 ---
 
@@ -82,8 +84,8 @@ Tạo ảnh AI với ảnh tham chiếu đính kèm (kính, trang phục, phụ 
 
 | Thông tin | Chi tiết |
 |-----------|----------|
-| **Loại** | Automation |
-| **HA tối thiểu** | 2024.10.0 |
+| **Loại** | Script |
+| **HA tối thiểu** | 2025.8.0 |
 | **Yêu cầu** | Input Text Helper |
 
 **Yêu cầu thiết lập trước — tạo Input Text Helper:**
@@ -110,7 +112,7 @@ Tự động tạo ảnh phù hợp với thời tiết hiện tại theo buổi
 | Thông tin | Chi tiết |
 |-----------|----------|
 | **Loại** | Automation |
-| **HA tối thiểu** | 2024.10.0 |
+| **HA tối thiểu** | 2025.10.0 |
 | **Yêu cầu** | Shell Command + Template Sensor |
 
 **Yêu cầu thiết lập trước** — thêm vào `configuration.yaml`:
@@ -200,7 +202,7 @@ Tự động tạo ảnh các danh lam thắng cảnh, công trình nổi tiến
 | Thông tin | Chi tiết |
 |-----------|----------|
 | **Loại** | Automation |
-| **HA tối thiểu** | 2024.10.0 |
+| **HA tối thiểu** | 2025.10.0 |
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fworld_landmarks_image_generator.yaml)
 
@@ -225,7 +227,7 @@ Dùng giọng nói để yêu cầu AI phân tích camera — phát hiện ngư�
 - Hỗ trợ chế độ Parallel (nhanh) hoặc Sequential
 
 **Cấu hình:**
-- **Entity Aliases:** Sensor alias để ánh xạ tên camera
+- **Entity Aliases:** Sensor alias để ánh xạ tên camera — phải tạo trước, xem [hướng dẫn tạo Sensor alias cho Assist](#️-tạo-sensor-alias-cho-assist)
 - **AI Task Entity:** Chọn entity AI Task (để trống = mặc định)
 - **Multi-Camera Check Mode:** Parallel (nhanh) hoặc Sequential
 
@@ -246,7 +248,8 @@ Dùng giọng nói để ra lệnh chụp ảnh từ camera và lưu thành file
 | Thông tin | Chi tiết |
 |-----------|----------|
 | **Loại** | Script |
-| **HA tối thiểu** | 2025.8.0 |
+| **HA tối thiểu** | 2024.10.0 |
+| **Yêu cầu** | Sensor alias (xem [hướng dẫn](#️-tạo-sensor-alias-cho-assist)), Camera entities |
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcamera_snapshot_full_llm.yaml)
 
@@ -277,7 +280,7 @@ Tự động phân tích sự kiện camera bằng AI Task khi phát hiện có 
 | Thông tin | Chi tiết |
 |-----------|----------|
 | **Loại** | Automation |
-| **HA tối thiểu** | 2025.7.0 |
+| **HA tối thiểu** | 2025.7.0 (bản Gemini và bản OpenAI) — 2026.3.0 (bản gộp) |
 | **Yêu cầu** | Binary sensor (trigger), Camera entity |
 
 **Cấu hình:**
@@ -477,7 +480,7 @@ Gửi tin nhắn, ảnh hoặc file qua Telegram bằng giọng nói. Hỗ trợ
 
 | Thông tin | Chi tiết |
 |-----------|----------|
-| **Loại** | Automation |
+| **Loại** | Script |
 | **HA tối thiểu** | 2024.10.0 |
 | **Yêu cầu** | Telegram Bot integration |
 
@@ -497,7 +500,7 @@ Gửi tin nhắn đến Zalo qua bot chính thức bằng giọng nói. Địa �
 
 | Thông tin | Chi tiết |
 |-----------|----------|
-| **Loại** | Automation |
+| **Loại** | Script |
 | **HA tối thiểu** | 2024.10.0 |
 | **Yêu cầu** | Zalo Bot integration (HACS) |
 
@@ -520,6 +523,8 @@ Gửi tin nhắn, ảnh, video qua Zalo Custom Bot. Hỗ trợ webhook, đồng 
 | **Loại** | Script |
 | **HA tối thiểu** | 2024.10.0 |
 | **Yêu cầu** | Zalo Bot integration (HACS) + [delete-file-home-assistant](https://github.com/chomupashchuk/delete-file-home-assistant) |
+
+> **Đây là nhánh riêng của kho này.** Ngày 18/08/2026 kho gốc [luuquangvu/tutorials](https://github.com/luuquangvu/tutorials) đã bỏ đường Zalo Custom Bot để gộp hết về bot OA chính thức. Blueprint dưới đây vẫn được giữ và tự bảo trì ở đây, vì nó gửi qua **tài khoản Zalo cá nhân** — việc mà bot OA không làm được. Đừng cài đồng thời nó và [Gửi Zalo Bot chính thức](#-gửi-zalo-bot-chính-thức-voice): hai script cùng nhận lệnh gửi Zalo sẽ làm trợ lý chọn nhầm.
 
 **Cấu hình Zalo:**
 - **Account:** Số điện thoại tài khoản Zalo
@@ -666,7 +671,7 @@ Quản lý việc kiểm tra và cập nhật blueprints tự động, với th�
 - **Reload sau cập nhật:** Tự động reload automations và scripts
 - **Thông báo:** Hỗ trợ Zalo khi có cập nhật mới
 
-> **Cài đặt script:** Xem [hướng dẫn cài đặt Scripts](#-cài-đặt-scripts-shell)
+> **Cài đặt script:** Xem [hướng dẫn cài đặt Scripts](#️-cài-đặt-scripts-shell)
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2FBlueprints_update_manager.yaml)
 
@@ -698,7 +703,7 @@ Tự động đồng bộ file / thư mục từ GitHub về `/config/pyscript`,
 - **Reload pyscript sau cập nhật:** Tự động hoặc thủ công
 - **Thông báo Mobile:** Gửi kết quả đến thiết bị mobile
 
-> **Cài đặt script:** Xem [hướng dẫn cài đặt Scripts](#-cài-đặt-scripts-shell)
+> **Cài đặt script:** Xem [hướng dẫn cài đặt Scripts](#️-cài-đặt-scripts-shell)
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2FBlueprint_pyscript_update_manager.yaml)
 
@@ -773,6 +778,65 @@ Sau khi thêm sensor, bạn cần reload:
 
 1. Vào **Developer Tools → YAML → RELOAD TEMPLATE ENTITIES**
 2. Hoặc khởi động lại Home Assistant
+
+---
+
+## 🏷️ Tạo Sensor alias cho Assist
+
+Hai blueprint **Kiểm tra camera bằng AI (Voice)** và **Chụp ảnh camera (Voice)** tra tên
+camera theo biệt danh (alias) bạn đặt trong Assist. Chúng đọc biệt danh từ một sensor
+template mà bạn phải tạo trước — thiếu nó thì việc tìm theo alias không chạy, và Home
+Assistant **không báo lỗi gì cả**, nên rất khó đoán ra.
+
+### Vì sao không chép đoạn cấu hình cũ trên mạng
+
+Home Assistant đã đổi khoá lưu biệt danh trong `.storage/core.entity_registry` từ
+`aliases` sang `aliases_v2`. Mọi hướng dẫn viết trước tháng 6/2026 đều đọc khoá `aliases`,
+nên trên bản Home Assistant mới nó trả về danh sách rỗng. Đoạn dưới đây đọc được cả hai khoá.
+
+### Thêm vào `configuration.yaml`
+
+```yaml
+shell_command:
+  get_entity_alias: >-
+    jq '[.data.entities[] | select(.options.conversation.should_expose == true) | {entity_id, aliases: (if has("aliases_v2") then ((if (.aliases_v2 | type) == "array" then .aliases_v2 else [] end) | map(select(. != null and . != ""))) else (if (.aliases | type) == "array" then .aliases else [] end) end)} | select(.aliases | length > 0)]' ./.storage/core.entity_registry
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      - action: shell_command.get_entity_alias
+        response_variable: response
+    sensor:
+      - name: "Assist: Entity IDs and Aliases"
+        unique_id: entity_ids_and_aliases
+        icon: mdi:format-list-bulleted
+        device_class: timestamp
+        state: "{{ now().isoformat() }}"
+        attributes:
+          entities: "{{ response.stdout }}"
+```
+
+Sensor này chỉ nạp lại vào hai lúc: khi Home Assistant khởi động, và khi bạn reload
+template entities. Vậy nên **đặt thêm alias cho một camera xong thì phải reload**, nếu
+không blueprint vẫn dùng danh sách cũ.
+
+### Kiểm tra sensor đã chạy đúng
+
+Vào **Developer Tools → Template** và dán:
+
+```jinja
+{{ state_attr('sensor.assist_entity_ids_and_aliases', 'entities') }}
+```
+
+Kết quả phải là một danh sách JSON có `entity_id` và `aliases`. Ra `None` hoặc `[]` thì
+có ba nguyên nhân theo thứ tự hay gặp: chưa entity nào được expose cho Assist, chưa
+entity nào được đặt alias, hoặc bản Home Assistant của bạn thiếu lệnh `jq` (bản
+Container và Core cài thủ công hay thiếu — bản OS và Supervised thì có sẵn).
+
+*Nguồn đoạn cấu hình: [luuquangvu/tutorials](https://github.com/luuquangvu/tutorials).*
 
 ---
 
@@ -979,27 +1043,62 @@ update.cloudflareclient.com
 
 ---
 
+## ✅ Kiểm tra blueprint trước khi đẩy lên
+
+Một blueprint sai schema hay sai một dấu ngoặc Jinja2 vẫn nằm yên trong kho, chỉ nổ lúc
+người dùng bấm Import. Cũng vậy, README dài nghìn dòng thì một bảng khai sai phiên bản
+Home Assistant có thể nằm đó hàng tháng. Thư mục [`tools/`](/tools) có hai trình soát
+chặn cả hai chuyện đó.
+
+**Soát blueprint** — nạp thẳng schema thật của Home Assistant Core, bắt sai schema
+blueprint, sai định nghĩa selector, sai cú pháp Jinja2, và tham chiếu `!input` tới input
+chưa hề khai báo:
+
+```bash
+uv run --no-project --python 3.14 --with 'homeassistant>=2026.8.0' \
+  python tools/validate_blueprints.py .
+```
+
+**Soát README** — đọc chính các file YAML rồi đối chiếu với những gì README nói: bảng
+khai sai Loại hay HA tối thiểu, nút Import trỏ vào file không có, file trong kho mà
+README quên nhắc, liên kết mục lục trỏ vào tiêu đề không tồn tại. Chỉ dùng thư viện
+chuẩn:
+
+```bash
+python3 tools/check_readme.py .
+```
+
+Cả hai chạy tự động qua
+[`.github/workflows/soat-blueprint.yaml`](/.github/workflows/soat-blueprint.yaml) mỗi lần
+push vào `main` và mỗi pull request; riêng push vào `main` thì workflow còn đồng bộ
+`source_url` của mọi blueprint theo nhánh rồi commit lại. Xem thêm
+[`tools/README.md`](/tools/README.md).
+
+---
+
 ## 📊 Tổng quan Blueprints
 
 | # | Blueprint | Loại | HA Min | Tính năng chính |
 |---|-----------|------|--------|-----------------|
 | 1 | Tạo ảnh AI | Script | 2025.8.0 | Tạo ảnh từ prompt văn bản |
-| 2 | Tạo ảnh AI + tham chiếu | Automation | 2024.10.0 | Tạo ảnh kèm ảnh mẫu |
-| 3 | Tạo ảnh thời tiết | Automation | 2024.10.0 | Ảnh AI theo thời tiết/buổi |
-| 4 | Danh lam thắng cảnh | Automation | 2024.10.0 | Ảnh AI danh lam thế giới |
+| 2 | Tạo ảnh AI + tham chiếu | Script | 2025.8.0 | Tạo ảnh kèm ảnh mẫu |
+| 3 | Tạo ảnh thời tiết | Automation | 2025.10.0 | Ảnh AI theo thời tiết/buổi |
+| 4 | Danh lam thắng cảnh | Automation | 2025.10.0 | Ảnh AI danh lam thế giới |
 | 5 | Camera AI (Voice) | Script | 2025.8.0 | Phân tích camera bằng giọng nói |
-| 6 | Chụp camera (Voice) | Script | 2025.8.0 | Chụp ảnh camera bằng giọng nói |
+| 6 | Chụp camera (Voice) | Script | 2024.10.0 | Chụp ảnh camera bằng giọng nói |
 | 7 | Phân tích file/ảnh | Script | 2025.8.0 | Gửi file cho LLM phân tích |
-| 8 | Cảnh báo người camera | Automation | 2025.7.0 | Phát hiện người + cảnh báo |
-| 9 | LLM Vision Camera | Automation | 2024.10.0 | Phân tích camera real-time |
-| 10 | Gửi Telegram | Automation | 2024.10.0 | Gửi tin/ảnh qua Telegram |
-| 11 | Gửi Zalo Bot | Automation | 2024.10.0 | Gửi tin qua Zalo chính thức |
-| 12 | Gửi Zalo Custom | Script | 2024.10.0 | Gửi tin/ảnh qua Zalo Custom |
-| 13 | Lịch âm & thời tiết | Automation | 2024.10.0 | Nhắc lịch âm + thời tiết |
-| 14 | Danh ngôn hàng ngày | Automation | 2025.7.0 | Quote AI tự động |
-| 15 | Kiểm tra thiết bị | Automation | 2024.10.0 | Phân biệt nguồn điều khiển |
-| 16 | Cập nhật Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
-| 17 | Cập nhật Pyscript | Automation | 2024.10.0 | Auto-sync pyscript từ GitHub |
+| 8 | Cảnh báo người camera (1–3) | Automation | 2025.7.0 | Phát hiện người + cảnh báo |
+| 9 | Cảnh báo camera AI 4 | Automation | 2026.3.0 | Cửa lọc, ảnh đôi, nhánh video |
+| 10 | Giữ model AI thức | Automation | 2026.3.0 | Gọi định kỳ cho model chạy tại nhà |
+| 11 | LLM Vision Camera | Automation | 2024.10.0 | Phân tích camera real-time |
+| 12 | Gửi Telegram | Script | 2024.10.0 | Gửi tin/ảnh qua Telegram |
+| 13 | Gửi Zalo Bot | Script | 2024.10.0 | Gửi tin qua Zalo chính thức |
+| 14 | Gửi Zalo Custom | Script | 2024.10.0 | Gửi tin/ảnh qua Zalo cá nhân |
+| 15 | Lịch âm & thời tiết | Automation | 2024.10.0 | Nhắc lịch âm + thời tiết |
+| 16 | Danh ngôn hàng ngày | Automation | 2025.7.0 | Quote AI tự động |
+| 17 | Kiểm tra thiết bị | Automation | 2024.10.0 | Phân biệt nguồn điều khiển |
+| 18 | Cập nhật Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
+| 19 | Cập nhật Pyscript | Automation | 2024.10.0 | Auto-sync pyscript từ GitHub |
 
 ---
 
