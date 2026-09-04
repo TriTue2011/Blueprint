@@ -3,8 +3,11 @@ blueprint:
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/universal_cooldown_recovery.yaml
   description: >
-    Khi entity chuyển trạng thái theo cấu hình sẽ bắt đầu Timer Helper.
-    Khi timer kết thúc sẽ thực hiện các action được cấu hình.
+    Khi entity chuyển trạng thái theo cấu hình:
+      - Start Timer Helper
+      - Lưu thời điểm hết hạn
+      - Tự phục hồi sau restart hoặc mất điện
+      - Khi hết thời gian sẽ thực hiện action tùy chỉnh
 
   domain: automation
 
@@ -37,6 +40,14 @@ blueprint:
           filter:
             - domain: timer
 
+    end_time_helper:
+      name: End Time Helper
+      description: Input Datetime lưu thời điểm hết hạn
+      selector:
+        entity:
+          filter:
+            - domain: input_datetime
+
     finish_actions:
       name: Actions When Finished
       selector:
@@ -45,7 +56,9 @@ blueprint:
 mode: single
 
 variables:
+
   timer_entity: !input timer_entity
+  end_time_helper: !input end_time_helper
 
 trigger:
 
@@ -59,21 +72,44 @@ trigger:
     trigger: event
     event_type: timer.finished
 
+  - id: ha_start
+    trigger: homeassistant
+    event: start
+
 action:
 
   - choose:
 
+      #
+      # START TIMER
+      #
       - conditions:
           - condition: trigger
             id: start_timer
 
         sequence:
 
+          - variables:
+              duration: >
+                {{ state_attr(timer_entity, 'duration') }}
+
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: !input end_time_helper
+            data:
+              datetime: >
+                {% set sec = duration | as_timedelta %}
+                {{ (now() + sec).strftime('%Y-%m-%d %H:%M:%S') }}
+
           - action: timer.start
             target:
               entity_id: !input timer_entity
 
+      #
+      # TIMER FINISHED
+      #
       - conditions:
+
           - condition: trigger
             id: timer_finished
 
@@ -81,4 +117,51 @@ action:
             value_template: >
               {{ trigger.event.data.entity_id == timer_entity }}
 
-        sequence: !input finish_actions
+        sequence:
+
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: !input end_time_helper
+            data:
+              datetime: "1970-01-01 00:00:00"
+
+          - sequence: !input finish_actions
+
+      #
+      # RECOVERY AFTER RESTART
+      #
+      - conditions:
+
+          - condition: trigger
+            id: ha_start
+
+          - condition: template
+            value_template: >
+              {{
+                states(end_time_helper)
+                not in ['unknown','unavailable','']
+              }}
+
+          - condition: template
+            value_template: >
+              {{
+                states(end_time_helper)
+                != '1970-01-01 00:00:00'
+              }}
+
+          - condition: template
+            value_template: >
+              {{
+                now() >=
+                states(end_time_helper)|as_datetime
+              }}
+
+        sequence:
+
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: !input end_time_helper
+            data:
+              datetime: "1970-01-01 00:00:00"
+
+          - sequence: !input finish_actions
