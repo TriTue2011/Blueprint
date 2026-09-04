@@ -3,11 +3,8 @@ blueprint:
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/universal_cooldown_recovery.yaml
   description: >
-    Khi entity chuyển trạng thái theo cấu hình:
-      - Lưu thời điểm hết hạn
-      - Tự phục hồi sau restart hoặc mất điện
-      - Khi đến hạn sẽ thực hiện action tùy chỉnh
-      - Hỗ trợ mọi entity và mọi khoảng thời gian
+    Khi entity chuyển trạng thái theo cấu hình sẽ bắt đầu Timer Helper.
+    Khi timer kết thúc sẽ thực hiện các action được cấu hình.
 
   domain: automation
 
@@ -16,141 +13,72 @@ blueprint:
 
   input:
 
-    trigger_section:
-      name: Trigger Settings
-      icon: mdi:play-circle
-      collapsed: true
+    trigger_entity:
+      name: Trigger Entity
+      selector:
+        entity: {}
 
-      input:
+    from_state:
+      name: From State
+      default: "on"
+      selector:
+        text: {}
 
-        trigger_entity:
-          name: Trigger Entity
-          selector:
-            entity:
+    to_state:
+      name: To State
+      default: "off"
+      selector:
+        text: {}
 
-        from_state:
-          name: From State
-          default: "on"
-          selector:
-            text:
+    timer_entity:
+      name: Timer Helper
+      selector:
+        entity:
+          filter:
+            - domain: timer
 
-        to_state:
-          name: To State
-          default: "off"
-          selector:
-            text:
-
-    cooldown_section:
-      name: Cooldown Settings
-      icon: mdi:timer
-      collapsed: true
-
-      input:
-
-        cooldown_duration:
-          name: Cooldown Duration
-          default:
-            hours: 1
-          selector:
-            duration:
-
-        end_time_helper:
-          name: End Time Helper
-          description: Input Datetime dùng để lưu thời điểm hết hạn
-          selector:
-            entity:
-              domain: input_datetime
-
-    action_section:
-      name: Finish Actions
-      icon: mdi:run-fast
-      collapsed: true
-
-      input:
-
-        finish_actions:
-          name: Actions When Finished
-          selector:
-            action:
+    finish_actions:
+      name: Actions When Finished
+      selector:
+        action: {}
 
 mode: single
 
 variables:
-
-  end_time_entity: !input end_time_helper
+  timer_entity: !input timer_entity
 
 trigger:
 
-  - id: start
-    platform: state
+  - id: start_timer
+    trigger: state
     entity_id: !input trigger_entity
     from: !input from_state
     to: !input to_state
 
-  - id: check
-    platform: time_pattern
-    minutes: "/1"
-
-  - id: restart
-    platform: homeassistant
-    event: start
-
-condition: []
+  - id: timer_finished
+    trigger: event
+    event_type: timer.finished
 
 action:
 
   - choose:
 
-      #
-      # BẮT ĐẦU COOLDOWN
-      #
       - conditions:
           - condition: trigger
-            id: start
+            id: start_timer
 
         sequence:
 
-          - service: input_datetime.set_datetime
+          - action: timer.start
             target:
-              entity_id: !input end_time_helper
-            data:
-              datetime: >
-                {% set duration = !input cooldown_duration %}
-                {{ (
-                  now()
-                  + timedelta(
-                      hours=duration.hours|default(0),
-                      minutes=duration.minutes|default(0),
-                      seconds=duration.seconds|default(0)
-                    )
-                ).strftime('%Y-%m-%d %H:%M:%S') }}
+              entity_id: !input timer_entity
 
-      #
-      # KIỂM TRA ĐẾN HẠN
-      #
       - conditions:
+          - condition: trigger
+            id: timer_finished
 
           - condition: template
             value_template: >
-              {{
-                states(end_time_entity) not in
-                ['unknown','unavailable','']
-              }}
+              {{ trigger.event.data.entity_id == timer_entity }}
 
-          - condition: template
-            value_template: >
-              {{
-                now() >=
-                states(end_time_entity)|as_datetime
-              }}
-
-        sequence:
-
-          - service: input_datetime.set_datetime
-            target:
-              entity_id: !input end_time_helper
-            data:
-              datetime: "1970-01-01 00:00:00"
-
-          - choose: []
-            default: !input finish_actions
+        sequence: !input finish_actions
