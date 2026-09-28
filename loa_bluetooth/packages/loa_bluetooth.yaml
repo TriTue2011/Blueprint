@@ -88,7 +88,7 @@ script:
         target: {entity_id: input_select.loa_bluetooth}
         data: {options: "{{ tuy_chon }}"}
       - variables:
-          giu: "{{ tuy_chon | select('search', chon) | first if chon else '' }}"
+          giu: "{{ ((tuy_chon | select('search', chon) | list) + [''])[0] if chon else '' }}"
       # Giữ loa đang chọn; chưa chọn thì đứng ở "(chọn loa)" — không tự chọn thiết bị lạ.
       - action: input_select.select_option
         target: {entity_id: input_select.loa_bluetooth}
