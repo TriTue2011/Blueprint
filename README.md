@@ -30,6 +30,7 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Thông báo lịch âm & thời tiết](#️-thông-báo-lịch-âm--thời-tiết)
   - [Danh ngôn tự động hàng ngày](#-danh-ngôn-tự-động-hàng-ngày)
   - [Kiểm tra thiết bị (Multi-Entity)](#-kiểm-tra-thiết-bị-multi-entity)
+  - [Loa Bluetooth trong HA (không cần add-on)](#-loa-bluetooth-trong-ha-không-cần-add-on)
 - **Quản lý & Cập nhật**
   - [Tự động cập nhật Blueprints](#-tự-động-cập-nhật-blueprints)
   - [Tự động cập nhật Pyscript](#-tự-động-cập-nhật-pyscript)
@@ -688,6 +689,18 @@ Lưu lại
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcheck_device.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## 🔊 Loa Bluetooth trong HA (không cần add-on)
+
+Quét, ghép đôi, kết nối và phát ra loa Bluetooth bất kỳ ngay trên giao diện Home Assistant —
+chạy với **HA Container**, kể cả HA trong **LXC trên Proxmox** (nơi add-on không cài được).
+Chọn loa trong danh sách, bấm **Kết nối**; phát bằng `media_player` của tích hợp MPD.
+
+Không phải blueprint mà là một gói cấu hình (`packages/`) kèm một tệp Python. Hướng dẫn cài
+đủ các bước (máy Proxmox, LXC, compose, MPD, HA) và cách dùng:
+**[loa_bluetooth/README.md](loa_bluetooth/README.md)**.
 
 ---
 

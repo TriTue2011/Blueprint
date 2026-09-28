@@ -1,0 +1,103 @@
+# Loa Bluetooth: quét, ghép đôi, kết nối ngay trên Home Assistant — không cần add-on.
+# HA đọc Bluetooth qua D-Bus. Tiếng: MPD (127.0.0.1:6600) → bluez-alsa → loa đang kết nối
+# GẦN NHẤT. Phát bằng media_player của tích hợp MPD. Mã: /config/loa_bluetooth.py
+# Hướng dẫn: https://github.com/TriTue2011/Blueprint/tree/main/loa_bluetooth
+shell_command:
+  loa_bluetooth: "python3 /config/loa_bluetooth.py {{ lenh }} {{ dia_chi | default('') }}"
+
+input_select:
+  loa_bluetooth:
+    name: Loa Bluetooth
+    icon: mdi:speaker-bluetooth
+    options:
+      - "(bấm Quét loa)"
+
+script:
+  loa_bluetooth_quet:
+    alias: "Loa Bluetooth: Quét"
+    icon: mdi:magnify
+    description: "Bật chế độ ghép đôi trên loa rồi bấm — quét 12 giây"
+    sequence:
+      - action: shell_command.loa_bluetooth
+        data: {lenh: quet, dia_chi: "12"}
+        response_variable: kq
+      - action: script.loa_bluetooth_cap_nhat
+        data: {kq: "{{ kq }}"}
+
+  loa_bluetooth_ket_noi:
+    alias: "Loa Bluetooth: Kết nối"
+    icon: mdi:bluetooth-connect
+    sequence:
+      - action: shell_command.loa_bluetooth
+        data:
+          lenh: noi
+          dia_chi: "{% set m = states('input_select.loa_bluetooth') | regex_findall('([0-9A-F]{2}(?::[0-9A-F]{2}){5})') %}{{ m[0] if m else '' }}"
+        response_variable: kq
+      - action: script.loa_bluetooth_cap_nhat
+        data: {kq: "{{ kq }}"}
+
+  loa_bluetooth_ngat:
+    alias: "Loa Bluetooth: Ngắt"
+    icon: mdi:bluetooth-off
+    sequence:
+      - action: shell_command.loa_bluetooth
+        data:
+          lenh: ngat
+          dia_chi: "{% set m = states('input_select.loa_bluetooth') | regex_findall('([0-9A-F]{2}(?::[0-9A-F]{2}){5})') %}{{ m[0] if m else '' }}"
+        response_variable: kq
+      - action: script.loa_bluetooth_cap_nhat
+        data: {kq: "{{ kq }}"}
+
+  loa_bluetooth_quen:
+    alias: "Loa Bluetooth: Quên (xoá ghép đôi)"
+    icon: mdi:delete
+    sequence:
+      - action: shell_command.loa_bluetooth
+        data:
+          lenh: quen
+          dia_chi: "{% set m = states('input_select.loa_bluetooth') | regex_findall('([0-9A-F]{2}(?::[0-9A-F]{2}){5})') %}{{ m[0] if m else '' }}"
+        response_variable: kq
+      - action: script.loa_bluetooth_cap_nhat
+        data: {kq: "{{ kq }}"}
+
+  loa_bluetooth_cap_nhat:
+    alias: "Loa Bluetooth: cập nhật danh sách"
+    mode: queued
+    fields:
+      kq: {description: "Kết quả shell_command"}
+    sequence:
+      - variables:
+          ra: "{{ kq.stdout | from_json if kq.stdout is defined and kq.stdout else {'ok': false, 'loi': kq.stderr | default('không chạy được')} }}"
+          chon: "{% set m = states('input_select.loa_bluetooth') | regex_findall('([0-9A-F]{2}(?::[0-9A-F]{2}){5})') %}{{ m[0] if m else '' }}"
+      - if: "{{ not ra.ok }}"
+        then:
+          - action: persistent_notification.create
+            data: {title: "Loa Bluetooth", message: "Lỗi: {{ ra.loi }}", notification_id: loa_bluetooth}
+          - stop: "lỗi"
+      - if: "{{ ra.loa | count == 0 }}"
+        then:
+          - action: persistent_notification.create
+            data: {title: "Loa Bluetooth", message: "Không thấy loa nào. Bật chế độ ghép đôi trên loa (đèn nháy nhanh), để gần bộ Bluetooth rồi Quét lại.", notification_id: loa_bluetooth}
+          - stop: "rỗng"
+      - variables:
+          tuy_chon: >
+            {% set o = namespace(v=[]) %}
+            {% for l in ra.loa %}{% set o.v = o.v + [('🔊 ' if l.dang_noi else ('✓ ' if l.da_ghep else '')) ~ l.ten ~ ' (' ~ l.dia_chi ~ ')'] %}{% endfor %}
+            {{ o.v }}
+      - action: input_select.set_options
+        target: {entity_id: input_select.loa_bluetooth}
+        data: {options: "{{ tuy_chon }}"}
+      - variables:
+          giu: "{{ tuy_chon | select('search', chon) | first if chon else '' }}"
+      - if: "{{ giu != '' }}"
+        then:
+          - action: input_select.select_option
+            target: {entity_id: input_select.loa_bluetooth}
+            data: {option: "{{ giu }}"}
+      - action: persistent_notification.create
+        data:
+          title: "Loa Bluetooth"
+          notification_id: loa_bluetooth
+          message: >
+            {% for l in ra.loa %}{{ '🔊 đang kết nối' if l.dang_noi else ('✓ đã ghép' if l.da_ghep else 'mới thấy') }} — {{ l.ten }} ({{ l.dia_chi }})
+            {% endfor %}
