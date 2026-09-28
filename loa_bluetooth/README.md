@@ -54,6 +54,18 @@ systemctl enable --now bluetooth bluealsa
 bluetoothctl list                          # phải có dòng "Controller xx:xx:… [default]"
 ```
 
+Chỉ phát RA loa, giữ kênh 5 giây giữa hai câu, và bỏ dòng gỡ lỗi `D:` (bản Debian in một
+dòng mỗi lần thiết bị BLE hiện/mất — ~15.000 dòng/ngày). Tạo
+`/etc/systemd/system/bluealsa.service.d/loa.conf`:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/bin/sh -c "/usr/bin/bluealsa --keep-alive=5 -p a2dp-source 2>&1 | grep --line-buffered -v ': D: '"
+```
+
+rồi `systemctl daemon-reload && systemctl restart bluealsa`.
+
 Không thấy Controller: `dmesg | grep -i bluetooth` — thường thiếu firmware (chip Realtek
 cần tệp trong `/lib/firmware/rtl_bt/`, Proxmox thường có sẵn).
 
@@ -93,8 +105,10 @@ Dựng lại container HA. Tích hợp **Bluetooth** của HA sẽ tự nhận U
 ### 4. MPD trong LXC (trình phát cho HA điều khiển)
 
 ```bash
-apt install -y --no-install-recommends mpd libasound2-plugin-bluez bluez
-systemctl mask bluetooth                 # KHÔNG chạy BlueZ trong LXC — dùng của máy Proxmox
+apt install -y --no-install-recommends mpd libasound2-plugin-bluez bluez-alsa-utils bluez
+# KHÔNG chạy BlueZ / bluealsa trong LXC — dùng của máy Proxmox. bluez-alsa-utils cài chỉ để
+# có /etc/alsa/conf.d/20-bluealsa.conf: thiếu tệp này MPD báo "Unknown PCM bluealsa".
+systemctl mask bluetooth bluealsa
 ```
 
 `/etc/mpd.conf` (sao lưu bản gốc trước):
@@ -195,5 +209,6 @@ docker exec homeassistant python3 /config/loa_bluetooth.py noi AA:BB:CC:DD:EE:FF
 | Quét không thấy loa | Loa chưa ở chế độ ghép đôi, hoặc đang nối với điện thoại — tắt Bluetooth điện thoại |
 | `org.bluez.Error.AuthenticationFailed` khi Kết nối | Bấm **Quên**, bật lại chế độ ghép đôi, Quét, Kết nối |
 | Kết nối được mà MPD không ra tiếng | Máy Proxmox: `systemctl status bluealsa`; `bluealsa-aplay -L` phải liệt kê loa |
+| MPD: `Unknown PCM bluealsa` | Thiếu `/etc/alsa/conf.d/20-bluealsa.conf` trong LXC — cài `bluez-alsa-utils` (bước 4) |
 | MPD báo lỗi mở thiết bị ALSA | Chưa loa nào kết nối; hoặc thiếu `Environment=DBUS_SYSTEM_BUS_ADDRESS` cho MPD |
 | HA không thấy Bluetooth | `docker exec homeassistant ls /run/dbus` phải có `system_bus_socket` của máy Proxmox |

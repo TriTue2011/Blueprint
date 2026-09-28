@@ -81,7 +81,7 @@ script:
           - stop: "rỗng"
       - variables:
           tuy_chon: >
-            {% set o = namespace(v=[]) %}
+            {% set o = namespace(v=['(chọn loa)']) %}
             {% for l in ra.loa %}{% set o.v = o.v + [('🔊 ' if l.dang_noi else ('✓ ' if l.da_ghep else '')) ~ l.ten ~ ' (' ~ l.dia_chi ~ ')'] %}{% endfor %}
             {{ o.v }}
       - action: input_select.set_options
@@ -89,11 +89,10 @@ script:
         data: {options: "{{ tuy_chon }}"}
       - variables:
           giu: "{{ tuy_chon | select('search', chon) | first if chon else '' }}"
-      - if: "{{ giu != '' }}"
-        then:
-          - action: input_select.select_option
-            target: {entity_id: input_select.loa_bluetooth}
-            data: {option: "{{ giu }}"}
+      # Giữ loa đang chọn; chưa chọn thì đứng ở "(chọn loa)" — không tự chọn thiết bị lạ.
+      - action: input_select.select_option
+        target: {entity_id: input_select.loa_bluetooth}
+        data: {option: "{{ giu if giu != '' else '(chọn loa)' }}"}
       - action: persistent_notification.create
         data:
           title: "Loa Bluetooth"
