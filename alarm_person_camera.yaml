@@ -447,6 +447,20 @@ blueprint:
               filter:
                 - integration: zalo_call
                   domain: notify
+        zalo_calling_ma_nguoi:
+          name: ➕ Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          default: []
+          selector:
+            text:
+              multiple: true
+        zalo_calling_ma_nhom:
+          name: ➕ Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số.
+          default: []
+          selector:
+            text:
+              multiple: true
         zalo_calling_initial_caption:
           name: 📝 Chú thích kèm ảnh
           description: Tin chữ gửi trước ảnh. Để trống = không gửi chú thích.
@@ -565,6 +579,14 @@ variables:
   zalo_custom_initial_caption: !input zalo_custom_initial_caption
   include_zalo_calling: !input include_zalo_calling
   zalo_calling_recipients: !input zalo_calling_recipients
+  zalo_calling_ma_nguoi: !input zalo_calling_ma_nguoi
+  zalo_calling_ma_nhom: !input zalo_calling_ma_nhom
+  zalo_calling_ds: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in zalo_calling_recipients %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in zalo_calling_ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in zalo_calling_ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   zalo_calling_initial_caption: !input zalo_calling_initial_caption
   zalo_resolved_id: >
     {% if zalo_custom_receiver_type == '1' %}
@@ -758,10 +780,10 @@ actions:
   - alias: Gửi qua Zalo Calling
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and zalo_calling_ds | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - variables:
                 zc_to: "{{ repeat.item }}"
@@ -772,7 +794,7 @@ actions:
                 - continue_on_error: true
                   action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (zalo_calling_initial_caption) | trim} }}
             - repeat:
                 for_each: "{{ ['/media/snapshots/' ~ file_path_dynamic ~ '_snapshot1.jpg'] }}"
@@ -780,7 +802,7 @@ actions:
                   - continue_on_error: true
                     action: zalo_call.send_image
                     data: >-
-                      {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                      {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                           'file': repeat.item} }}
 
   # === MOBILE NOTIFICATION: Gửi ảnh trước ===
@@ -996,10 +1018,10 @@ actions:
                   - alias: Gửi qua Zalo Calling
                     if:
                       - condition: template
-                        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+                        value_template: "{{ include_zalo_calling and zalo_calling_ds | count > 0 }}"
                     then:
                       - repeat:
-                          for_each: "{{ zalo_calling_recipients }}"
+                          for_each: "{{ zalo_calling_ds }}"
                           sequence:
                             - variables:
                                 zc_to: "{{ repeat.item }}"
@@ -1009,7 +1031,7 @@ actions:
                                     - continue_on_error: true
                                       action: zalo_call.send_message
                                       data: >-
-                                        {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                                        {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                                             'message': (repeat.item) | trim} }}
 
                   # === TTS RA LOA ===
@@ -1139,10 +1161,10 @@ actions:
               - alias: Gửi qua Zalo Calling
                 if:
                   - condition: template
-                    value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+                    value_template: "{{ include_zalo_calling and zalo_calling_ds | count > 0 }}"
                 then:
                   - repeat:
-                      for_each: "{{ zalo_calling_recipients }}"
+                      for_each: "{{ zalo_calling_ds }}"
                       sequence:
                         - variables:
                             zc_to: "{{ repeat.item }}"
@@ -1152,7 +1174,7 @@ actions:
                                 - continue_on_error: true
                                   action: zalo_call.send_message
                                   data: >-
-                                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                                         'message': (repeat.item) | trim} }}
 
   # === COOLDOWN ===

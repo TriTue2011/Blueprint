@@ -720,7 +720,7 @@ Script cho **Voice Assistant** (Assist): gửi tin nhắn, vị trí hoặc ản
 
 ## 🔗 Zalo Calling trong các blueprint cũ
 
-Các blueprint sau **đã có thêm nhóm «Zalo Calling»** (cạnh Zalo Bot / Zalo Custom): bật nó, chọn người nhận từ danh sách (người và nhóm lẫn lộn đều được), và blueprint gửi **song song** qua Zalo Calling. Cần Zalo Calling từ bản `2026.11.11.3`.
+Các blueprint sau **đã có thêm nhóm «Zalo Calling»** (cạnh Zalo Bot / Zalo Custom): bật nó, chọn người nhận từ danh sách (người và nhóm lẫn lộn đều được) **hoặc nhập mã Zalo (threadID) của người/nhóm bất kỳ**, và blueprint gửi **song song** qua Zalo Calling. Cần Zalo Calling từ bản `2026.11.11.3`.
 
 | Blueprint | Gửi qua Zalo Calling |
 |---|---|

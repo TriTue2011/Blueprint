@@ -36,6 +36,13 @@ blueprint:
                 - integration: zalo_call
                   domain: notify
           default: []
+        ma_loc:
+          name: Hoặc theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Dùng cùng ô chọn bên trên cũng được. Cả hai để trống = bất kỳ ai xin.
+          selector:
+            text:
+              multiple: true
+          default: []
     xu_ly:
       name: ② Làm gì khi có người xin video
       icon: mdi:video-outline
@@ -117,6 +124,7 @@ max: 5
 variables:
   version: 20261111
   nguoi: !input nguoi
+  ma_loc: !input ma_loc
   cach_xu_ly: !input cach_xu_ly
   camera: !input camera
   dien_thoai: !input dien_thoai
@@ -126,7 +134,7 @@ variables:
   cau_bao: !input cau_bao
   ten: "{{ trigger.event.data.peer or 'Người gọi' }}"
   nguoi_thread: >-
-    {% set ns = namespace(l=[]) %}{% for e in nguoi %}{% set ns.l = ns.l + [state_attr(e, 'thread_id') | string] %}{% endfor %}{{ ns.l }}
+    {% set ns = namespace(l=[]) %}{% for e in nguoi %}{% set ns.l = ns.l + [state_attr(e, 'thread_id') | string] %}{% endfor %}{% for m in ma_loc %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') %}{% set ns.l = ns.l + [t] %}{% endif %}{% endfor %}{{ ns.l }}
   ten_dt: >-
     {% set ns = namespace(l=[]) %}{% for d in dien_thoai %}{% set ns.l = ns.l + ['mobile_app_' ~ (device_attr(d, 'name') | slugify)] %}{% endfor %}{{ ns.l }}
   id_dong_y: "ZC_VIDEO_YES_{{ trigger.event.data.call_id }}"
@@ -141,7 +149,7 @@ triggers:
 conditions:
   - condition: template
     alias: Đúng người (nếu có chọn)
-    value_template: "{{ nguoi | count == 0 or (trigger.event.data.thread_id | string) in nguoi_thread }}"
+    value_template: "{{ nguoi_thread | count == 0 or (trigger.event.data.thread_id | string) in nguoi_thread }}"
 
 actions:
   - alias: Đọc thông báo ra loa

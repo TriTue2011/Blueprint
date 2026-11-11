@@ -536,6 +536,20 @@ blueprint:
                 - integration: zalo_call
                   domain: notify
 
+        zalo_calling_ma_nguoi:
+          name: ➕ Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          default: []
+          selector:
+            text:
+              multiple: true
+        zalo_calling_ma_nhom:
+          name: ➕ Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số.
+          default: []
+          selector:
+            text:
+              multiple: true
 # ===== TRIGGER =====
 triggers:
   - trigger: time
@@ -1260,7 +1274,15 @@ actions:
       _zc_type:        !input zalo_custom_receiver_type
       _zc_ttl:         !input zalo_custom_ttl
       _zcall:          !input include_zalo_calling
-      _zcall_to:       !input zalo_calling_recipients
+      _zcall_chon:     !input zalo_calling_recipients
+      zalo_calling_ma_nguoi: !input zalo_calling_ma_nguoi
+      zalo_calling_ma_nhom: !input zalo_calling_ma_nhom
+      _zcall_to: >-
+        {% set ns = namespace(l=[], ids=[]) %}
+        {% for e in _zcall_chon %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+        {% for m in zalo_calling_ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+        {% for m in zalo_calling_ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+        {{ ns.l }}
       _zc_resolved: >-
         {{ _zc_tid if _zc_type == '1' else _zc_uid }}
 
@@ -1314,7 +1336,7 @@ actions:
             - continue_on_error: true
               action: zalo_call.send_image
               data: >-
-                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                     'file': final_image_path} }}
 
 mode: single

@@ -44,13 +44,20 @@ blueprint:
       icon: mdi:account-outline
       input:
         nguoi_goi:
-          name: Người được gọi
-          description: Chọn từ danh sách Zalo Call (gọi được người, không gọi được nhóm).
+          name: Người được gọi (chọn từ danh sách)
+          description: Chọn từ danh sách Zalo Call (gọi được người, không gọi được nhóm). Để trống nếu dùng ô mã Zalo bên dưới.
           selector:
             entity:
               filter:
                 - integration: zalo_call
                   domain: notify
+          default: ""
+        ma_goi:
+          name: Hoặc gọi người theo mã Zalo (threadID)
+          description: Chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp; có điền thì dùng mã này thay cho ô chọn bên trên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*.
+          selector:
+            text: {}
+          default: ""
         loai_cuoc_goi:
           name: Gọi thoại hay gọi video
           selector:
@@ -183,6 +190,11 @@ variables:
   version: 20261111
   cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
   nguoi_goi: !input nguoi_goi
+  ma_goi: !input ma_goi
+  goi_id: >-
+    {% set m = ma_goi | string | trim %}{% if m is match('^[0-9]+$') %}{{ m }}{% elif nguoi_goi %}{{ state_attr(nguoi_goi, 'thread_id') | string }}{% endif %}
+  goi_la_nguoi: >-
+    {% set m = ma_goi | string | trim %}{{ m is match('^[0-9]+$') or (nguoi_goi != '' and state_attr(nguoi_goi, 'type') == 'user') }}
   loai_cuoc_goi: !input loai_cuoc_goi
   cau_noi: !input cau_noi
   so_lan_doc: !input so_lan_doc
@@ -204,13 +216,13 @@ conditions:
     alias: Chỉ gọi khi đang rảnh (nếu có chọn cảm biến)
     value_template: "{{ cam_bien_cuoc_goi == '' or is_state(cam_bien_cuoc_goi, 'idle') }}"
   - condition: template
-    alias: Người được gọi là một người (không phải nhóm)
-    value_template: "{{ state_attr(nguoi_goi, 'type') == 'user' }}"
+    alias: Có người được gọi và đó là một người (không phải nhóm)
+    value_template: "{{ goi_id | string != '' and goi_la_nguoi }}"
 
 actions:
   - action: zalo_call.make_call
     data: >-
-      {% set d = {'thread_id': state_attr(nguoi_goi, 'thread_id'), 'type': loai_cuoc_goi} %}
+      {% set d = {'thread_id': goi_id | string, 'type': loai_cuoc_goi} %}
       {% if cau_noi | trim != '' %}{% set d = dict(d, message=cau_noi | trim, repeat=so_lan_doc | int(1), hangup_after=cup_sau_khi_doc) %}{% endif %}
       {% if cho_ai_noi %}{% set d = dict(d, ai=true) %}{% if tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}{% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}{% endif %}
       {% if noi_khi_chuyen | count > 0 %}{% set d = dict(d, connect=noi_khi_chuyen) %}{% endif %}

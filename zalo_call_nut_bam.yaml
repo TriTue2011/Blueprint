@@ -74,6 +74,20 @@ blueprint:
                 - integration: zalo_call
                   domain: notify
           default: []
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          selector:
+            text:
+              multiple: true
+          default: []
+        ma_nhom:
+          name: Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số. Chỉ dùng khi gửi tin nhắn (nhóm không gọi điện được).
+          selector:
+            text:
+              multiple: true
+          default: []
         loai_cuoc_goi:
           name: Gọi thoại hay gọi video
           selector:
@@ -175,6 +189,14 @@ variables:
   cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
   hanh_dong_ranh: !input hanh_dong_ranh
   nguoi_nhan: !input nguoi_nhan
+  ma_nguoi: !input ma_nguoi
+  ma_nhom: !input ma_nhom
+  ds_nhan: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in nguoi_nhan %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   loai_cuoc_goi: !input loai_cuoc_goi
   cau_noi: !input cau_noi
   cau_tu_viet: !input cau_tu_viet
@@ -191,8 +213,8 @@ variables:
     ve_nha: Tôi đã về đến nhà
   noi_dung: >-
     {% if cau_noi == 'tu_viet' and cau_tu_viet | trim != '' %}{{ cau_tu_viet }}{% else %}{{ mau_cau.get(cau_noi, 'Cần giúp') }}{% endif %}
-  nguoi_goi: >-
-    {% set ns = namespace(r='') %}{% for e in nguoi_nhan %}{% if ns.r == '' and state_attr(e, 'type') == 'user' %}{% set ns.r = e %}{% endif %}{% endfor %}{{ ns.r }}
+  nguoi_goi_id: >-
+    {% set ns = namespace(r='') %}{% for p in ds_nhan %}{% if ns.r == '' and p.type == 'user' %}{% set ns.r = p.thread_id %}{% endif %}{% endfor %}{{ ns.r | string }}
   trang_thai_goi: "{{ states(cam_bien_cuoc_goi) }}"
   trang_thai_chi_tiet: "{{ state_attr(cam_bien_cuoc_goi, 'status') }}"
 
@@ -217,30 +239,30 @@ actions:
       - alias: Rảnh - gọi điện cho người đầu tiên trong danh sách
         conditions:
           - condition: template
-            value_template: "{{ hanh_dong_ranh == 'goi_di' and nguoi_goi != '' }}"
+            value_template: "{{ hanh_dong_ranh == 'goi_di' and nguoi_goi_id != '' }}"
         sequence:
           - action: zalo_call.make_call
             data: >-
-              {{ {'thread_id': state_attr(nguoi_goi, 'thread_id'), 'type': loai_cuoc_goi} }}
+              {{ {'thread_id': nguoi_goi_id | string, 'type': loai_cuoc_goi} }}
       - alias: Rảnh - cảnh báo (nhắn tin cho tất cả, gọi cảnh báo người đầu tiên)
         conditions:
           - condition: template
-            value_template: "{{ hanh_dong_ranh == 'canh_bao' and nguoi_nhan | count > 0 }}"
+            value_template: "{{ hanh_dong_ranh == 'canh_bao' and ds_nhan | count > 0 }}"
         sequence:
           - repeat:
-              for_each: "{{ nguoi_nhan }}"
+              for_each: "{{ ds_nhan }}"
               sequence:
                 - action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                    {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                         'message': noi_dung, 'emoji': 'alert'} }}
           - if:
               - condition: template
-                value_template: "{{ nguoi_goi != '' }}"
+                value_template: "{{ nguoi_goi_id != '' }}"
             then:
               - action: zalo_call.alert_call
                 data: >-
-                  {% set d = {'thread_id': state_attr(nguoi_goi, 'thread_id'), 'message': noi_dung} %}
+                  {% set d = {'thread_id': nguoi_goi_id | string, 'message': noi_dung} %}
                   {% if loai_cuoc_goi == 'video' %}{% set d = dict(d, type='video') %}{% endif %}
                   {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
                   {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
@@ -250,11 +272,11 @@ actions:
       - alias: Rảnh - nhắn tin cho tất cả người nhận (người và nhóm)
         conditions:
           - condition: template
-            value_template: "{{ hanh_dong_ranh == 'nhan_tin' and nguoi_nhan | count > 0 }}"
+            value_template: "{{ hanh_dong_ranh == 'nhan_tin' and ds_nhan | count > 0 }}"
         sequence:
           - repeat:
-              for_each: "{{ nguoi_nhan }}"
+              for_each: "{{ ds_nhan }}"
               sequence:
                 - action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'), 'message': noi_dung} }}
+                    {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type, 'message': noi_dung} }}

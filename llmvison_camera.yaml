@@ -416,6 +416,20 @@ blueprint:
       icon: mdi:cog
       collapsed: true
       input:
+        zalo_calling_ma_nguoi:
+          name: ➕ Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          default: []
+          selector:
+            text:
+              multiple: true
+        zalo_calling_ma_nhom:
+          name: ➕ Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số.
+          default: []
+          selector:
+            text:
+              multiple: true
         additional_actions:
           name: Additional Actions
           default: []
@@ -458,6 +472,14 @@ variables:
   zalo_ttl: !input zalo_ttl
   include_zalo_calling: !input include_zalo_calling
   zalo_calling_recipients: !input zalo_calling_recipients
+  zalo_calling_ma_nguoi: !input zalo_calling_ma_nguoi
+  zalo_calling_ma_nhom: !input zalo_calling_ma_nhom
+  zalo_calling_ds: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in zalo_calling_recipients %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in zalo_calling_ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in zalo_calling_ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   take_snapshot: !input take_snapshot
 
   camera_entities_list: !input camera_entities
@@ -839,18 +861,18 @@ actions:
   - alias: Gửi qua Zalo Calling (người và nhóm chọn từ danh sách)
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and zalo_calling_ds | count > 0 }}"
     then:
       - variables:
           zalo_calling_anh: >-
             {% if response.key_frame is defined and response.key_frame | trim != '' %}{{ response.key_frame | replace('/media/local', '/media') }}{% elif take_snapshot %}{{ snapshot_access_file_path_social }}{% endif %}
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - continue_on_error: true
               action: zalo_call.send_message
               data: >-
-                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                     'message': ai_response_text} }}
             - if:
                 - condition: template
@@ -859,7 +881,7 @@ actions:
                 - continue_on_error: true
                   action: zalo_call.send_image
                   data: >-
-                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                    {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                         'file': zalo_calling_anh | trim} }}
 
   # === 7. ADDITIONAL ACTIONS ===

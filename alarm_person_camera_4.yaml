@@ -919,6 +919,20 @@ blueprint:
       icon: mdi:speaker
       collapsed: true
       input:
+        zalo_calling_ma_nguoi:
+          name: ➕ Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          default: []
+          selector:
+            text:
+              multiple: true
+        zalo_calling_ma_nhom:
+          name: ➕ Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số.
+          default: []
+          selector:
+            text:
+              multiple: true
         include_tts_announcement:
           name: ✅ Use TTS Announcement (Optional)
           description: |
@@ -1792,6 +1806,14 @@ variables:
   zalo_custom_initial_caption: !input zalo_custom_initial_caption
   include_zalo_calling: !input include_zalo_calling
   zalo_calling_recipients: !input zalo_calling_recipients
+  zalo_calling_ma_nguoi: !input zalo_calling_ma_nguoi
+  zalo_calling_ma_nhom: !input zalo_calling_ma_nhom
+  zalo_calling_ds: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in zalo_calling_recipients %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in zalo_calling_ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in zalo_calling_ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   # Chỉ dùng để KIỂM TRA đã có ID hay chưa. TUYỆT ĐỐI không dùng làm thread_id:
   # kết quả template bị Home Assistant diễn giải thành số và ID 19 chữ số bị làm
   # tròn qua float64 (đo thật: …385728 gửi đi thành …385600).
@@ -2433,10 +2455,10 @@ actions:
   - alias: Gửi qua Zalo Calling
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and som_gui_anh and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and som_gui_anh and zalo_calling_ds | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - variables:
                 zc_to: "{{ repeat.item }}"
@@ -2447,7 +2469,7 @@ actions:
                 - continue_on_error: true
                   action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (zalo_custom_initial_caption) | trim} }}
             - repeat:
                 for_each: "{{ (duong_dan_anh if som_nhieu_anh else [duong_dan_anh[0]]) }}"
@@ -2455,7 +2477,7 @@ actions:
                   - continue_on_error: true
                     action: zalo_call.send_image
                     data: >-
-                      {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                      {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                           'file': repeat.item} }}
 
   # --- Zalo cá nhân: video ---
@@ -2512,10 +2534,10 @@ actions:
   - alias: Gửi qua Zalo Calling
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and som_gui_video and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and som_gui_video and zalo_calling_ds | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - variables:
                 zc_to: "{{ repeat.item }}"
@@ -2526,12 +2548,12 @@ actions:
                 - continue_on_error: true
                   action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (zalo_custom_initial_caption) | trim} }}
             - continue_on_error: true
               action: zalo_call.send_video
               data: >-
-                {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                     'file': duong_dan_video} }}
 
   # --- Điện thoại: ảnh ---
@@ -2952,10 +2974,10 @@ actions:
       - alias: Gửi qua Zalo Calling
         if:
           - condition: template
-            value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+            value_template: "{{ include_zalo_calling and zalo_calling_ds | count > 0 }}"
         then:
           - repeat:
-              for_each: "{{ zalo_calling_recipients }}"
+              for_each: "{{ zalo_calling_ds }}"
               sequence:
                 - variables:
                     zc_to: "{{ repeat.item }}"
@@ -2965,7 +2987,7 @@ actions:
                         - continue_on_error: true
                           action: zalo_call.send_message
                           data: >-
-                            {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                            {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                                 'message': (repeat.item) | trim} }}
 
   # ============================================================
@@ -3512,10 +3534,10 @@ actions:
   - alias: Gửi qua Zalo Calling
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and muon_gui_anh and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and muon_gui_anh and zalo_calling_ds | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - variables:
                 zc_to: "{{ repeat.item }}"
@@ -3526,7 +3548,7 @@ actions:
                 - continue_on_error: true
                   action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (pb_zl.anh if pb_zl.anh | length > 0 else zalo_custom_initial_caption) | trim} }}
             - repeat:
                 for_each: "{{ (anh_comma.split(',') if muon_nhieu_anh else [anh_chon]) }}"
@@ -3534,7 +3556,7 @@ actions:
                   - continue_on_error: true
                     action: zalo_call.send_image
                     data: >-
-                      {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                      {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                           'file': repeat.item} }}
 
   # --- Zalo cá nhân: video muộn (cũng đi bằng send_file, xem lý do ở trên) ---
@@ -3586,10 +3608,10 @@ actions:
   - alias: Gửi qua Zalo Calling
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and muon_gui_video and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and muon_gui_video and zalo_calling_ds | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - variables:
                 zc_to: "{{ repeat.item }}"
@@ -3600,12 +3622,12 @@ actions:
                 - continue_on_error: true
                   action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (pb_zl.video if pb_zl.video | length > 0 else zalo_custom_initial_caption) | trim} }}
             - continue_on_error: true
               action: zalo_call.send_video
               data: >-
-                {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                     'file': duong_dan_video} }}
 
   # --- Zalo cá nhân: tin chữ riêng ---
@@ -3655,10 +3677,10 @@ actions:
   - alias: Gửi qua Zalo Calling
     if:
       - condition: template
-        value_template: "{{ include_zalo_calling and pb_zl.rieng | length > 0 and zalo_calling_recipients | count > 0 }}"
+        value_template: "{{ include_zalo_calling and pb_zl.rieng | length > 0 and zalo_calling_ds | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ zalo_calling_recipients }}"
+          for_each: "{{ zalo_calling_ds }}"
           sequence:
             - variables:
                 zc_to: "{{ repeat.item }}"
@@ -3668,7 +3690,7 @@ actions:
                     - continue_on_error: true
                       action: zalo_call.send_message
                       data: >-
-                        {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                        {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                             'message': (repeat.item) | trim} }}
 
   # --- Điện thoại: ảnh muộn ---

@@ -115,6 +115,21 @@ blueprint:
               filter:
                 - integration: zalo_call
                   domain: notify
+          default: []
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          selector:
+            text:
+              multiple: true
+          default: []
+        ma_nhom:
+          name: Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số. Chỉ dùng khi gửi tin nhắn (nhóm không gọi điện được).
+          selector:
+            text:
+              multiple: true
+          default: []
         goi_lan_luot:
           name: Gọi lần lượt cho tới khi có người nghe máy
           description: Tắt thì chỉ gọi người đầu tiên.
@@ -263,6 +278,14 @@ max_exceeded: silent
 variables:
   version: 20261111
   nguoi_nhan: !input nguoi_nhan
+  ma_nguoi: !input ma_nguoi
+  ma_nhom: !input ma_nhom
+  ds_nhan: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in nguoi_nhan %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   goi_lan_luot: !input goi_lan_luot
   cho_nghe_may: !input cho_nghe_may
   cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
@@ -328,27 +351,27 @@ actions:
   - alias: Nhắn tin cho mọi người nhận
     if:
       - condition: template
-        value_template: "{{ gui_tin and nguoi_nhan | count > 0 }}"
+        value_template: "{{ gui_tin and ds_nhan | count > 0 }}"
     then:
       - repeat:
-          for_each: "{{ nguoi_nhan }}"
+          for_each: "{{ ds_nhan }}"
           sequence:
             - action: zalo_call.send_message
               data: >-
-                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                     'message': noi_dung | trim, 'emoji': 'alert'} }}
   - alias: Gọi điện cho từng người nhận (chỉ người, nhóm không gọi được)
     repeat:
-      for_each: "{{ nguoi_nhan }}"
+      for_each: "{{ ds_nhan }}"
       sequence:
         - if:
             - condition: template
-              value_template: "{{ state_attr(repeat.item, 'type') == 'user' }}"
+              value_template: "{{ repeat.item.type == 'user' }}"
           then:
             - action: zalo_call.alert_call
               response_variable: ket_qua
               data: >-
-                {% set d = {'thread_id': state_attr(repeat.item, 'thread_id'), 'message': noi_dung} %}
+                {% set d = {'thread_id': repeat.item.thread_id, 'message': noi_dung} %}
                 {% if loai_cuoc_goi != 'auto' %}{% set d = dict(d, type=loai_cuoc_goi) %}{% endif %}
                 {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
                 {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}

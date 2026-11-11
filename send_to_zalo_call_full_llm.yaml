@@ -37,13 +37,28 @@ blueprint:
       input:
         recipients:
           name: Người nhận (chọn nhiều)
-          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          description: Thực thể notify.zalo_call_... của Zalo Calling. Có thể để trống nếu dùng các ô mã Zalo bên dưới.
           selector:
             entity:
               multiple: true
               filter:
                 - integration: zalo_call
                   domain: notify
+          default: []
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*.
+          selector:
+            text:
+              multiple: true
+          default: []
+        ma_nhom:
+          name: Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số.
+          selector:
+            text:
+              multiple: true
+          default: []
         delete_after_send:
           name: Delete Image After Sending
           description: Automatically delete the image file after it has been sent to Zalo.
@@ -136,7 +151,15 @@ fields:
       text:
 sequence:
   - variables:
-      recipients: !input recipients
+      recipients_chon: !input recipients
+      ma_nguoi: !input ma_nguoi
+      ma_nhom: !input ma_nhom
+      recipients: >-
+        {% set ns = namespace(l=[], ids=[]) %}
+        {% for e in recipients_chon %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+        {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+        {% for m in ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+        {{ ns.l }}
       delete_after_send: !input delete_after_send
       summary: "{{ summary | default('') | trim }}"
       detail: "{{ detail | default('') | trim }}"
@@ -203,7 +226,7 @@ sequence:
                 - continue_on_error: true
                   action: zalo_call.send_message
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': tin_thong_tin if content_type == 'information' else tin_vi_tri} }}
             - conditions:
                 - condition: template
@@ -216,11 +239,11 @@ sequence:
                     - continue_on_error: true
                       action: zalo_call.send_message
                       data: >-
-                        {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'), 'message': noi_dung} }}
+                        {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type, 'message': noi_dung} }}
                 - continue_on_error: true
                   action: zalo_call.send_image
                   data: >-
-                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'), 'file': image_path_resolved} }}
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type, 'file': image_path_resolved} }}
 
   - if:
       - condition: template

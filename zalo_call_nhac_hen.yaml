@@ -128,6 +128,21 @@ blueprint:
               filter:
                 - integration: zalo_call
                   domain: notify
+          default: []
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          selector:
+            text:
+              multiple: true
+          default: []
+        ma_nhom:
+          name: Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số. Chỉ dùng khi gửi tin nhắn (nhóm không gọi điện được).
+          selector:
+            text:
+              multiple: true
+          default: []
         kenh:
           name: Gửi bằng cách nào
           selector:
@@ -186,6 +201,14 @@ variables:
   ten_nguoi: !input ten_nguoi
   so_lan_doc: !input so_lan_doc
   nguoi_nhan: !input nguoi_nhan
+  ma_nguoi: !input ma_nguoi
+  ma_nhom: !input ma_nhom
+  ds_nhan: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in nguoi_nhan %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   kenh: !input kenh
   loai_cuoc_goi: !input loai_cuoc_goi
   giong_doc: !input giong_doc
@@ -225,15 +248,15 @@ actions:
         value_template: "{{ kenh in ['goi', 'ca_hai'] }}"
     then:
       - repeat:
-          for_each: "{{ nguoi_nhan }}"
+          for_each: "{{ ds_nhan }}"
           sequence:
             - if:
                 - condition: template
-                  value_template: "{{ state_attr(repeat.item, 'type') == 'user' }}"
+                  value_template: "{{ repeat.item.type == 'user' }}"
               then:
                 - action: zalo_call.alert_call
                   data: >-
-                    {% set d = {'thread_id': state_attr(repeat.item, 'thread_id'), 'message': noi_dung | trim, 'after': 'hangup',
+                    {% set d = {'thread_id': repeat.item.thread_id, 'message': noi_dung | trim, 'after': 'hangup',
                                 'type': loai_cuoc_goi, 'repeat': so_lan_doc | int(2)} %}
                     {% if giong_doc %}{% set d = dict(d, pipeline=giong_doc) %}{% endif %}
                     {{ d }}
@@ -243,9 +266,9 @@ actions:
         value_template: "{{ kenh in ['tin', 'ca_hai'] }}"
     then:
       - repeat:
-          for_each: "{{ nguoi_nhan }}"
+          for_each: "{{ ds_nhan }}"
           sequence:
             - action: zalo_call.send_message
               data: >-
-                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                     'message': noi_dung | trim, 'emoji': 'bell'} }}
