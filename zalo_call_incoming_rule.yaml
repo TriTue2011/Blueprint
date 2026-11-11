@@ -66,6 +66,13 @@ blueprint:
                 - integration: zalo_call
                   domain: notify
           default: []
+        them_theo_ma:
+          name: Thêm người hoặc nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã (chỉ gồm chữ số). Không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts* (hiện id và tên của bạn bè và nhóm). Dùng cùng ô chọn bên trên cũng được.
+          selector:
+            text:
+              multiple: true
+          default: []
         ten_goi:
           name: Tên gọi (để bạn nhớ)
           description: Cũng là tên đọc ra loa khi báo có cuộc gọi. Bỏ trống thì dùng tên Zalo của người gọi.
@@ -293,6 +300,7 @@ variables:
   bat_quy_tac: !input bat_quy_tac
   pham_vi: !input pham_vi
   nguoi_cu_the: !input nguoi_cu_the
+  them_theo_ma: !input them_theo_ma
   ten_goi: !input ten_goi
   tu_nghe_may: !input tu_nghe_may
   nghe_sau: !input nghe_sau
@@ -315,13 +323,33 @@ variables:
   am_luong: !input am_luong
   chong_vong: !input chong_vong
   xu_ly_xin_video: !input xu_ly_xin_video
-  muc_tieu: "{{ nguoi_cu_the if pham_vi == 'thread' else [''] }}"
 
 triggers:
   - trigger: homeassistant
     event: start
 
 actions:
+  - alias: Gom mã Zalo của những người được chọn
+    variables:
+      ds_thread: >-
+        {% set ns = namespace(l=[], sai=[]) %}
+        {% for e in nguoi_cu_the %}{% set ns.l = ns.l + [state_attr(e, 'thread_id') | string] %}{% endfor %}
+        {% for ma in them_theo_ma %}
+          {% set m = ma | string | trim %}
+          {% if m is match('^[0-9]+$') %}{% set ns.l = ns.l + [m] %}{% else %}{% set ns.sai = ns.sai + [m] %}{% endif %}
+        {% endfor %}
+        {{ {'ids': ns.l | unique | list, 'sai': ns.sai} }}
+      muc_tieu: "{{ ds_thread.ids if pham_vi == 'thread' else [''] }}"
+  - alias: Ghi cảnh báo nếu có mã không hợp lệ
+    if:
+      - condition: template
+        value_template: "{{ pham_vi == 'thread' and ds_thread.sai | count > 0 }}"
+    then:
+      - action: system_log.write
+        data:
+          level: warning
+          logger: zalo_call.blueprint
+          message: "Quy tắc cuộc gọi đến: mã Zalo không hợp lệ (chỉ gồm chữ số): {{ ds_thread.sai | join(', ') }}"
   - repeat:
       for_each: "{{ muc_tieu }}"
       sequence:
@@ -334,7 +362,7 @@ actions:
                 - action: zalo_call.remove_rule
                   data: >-
                     {% set d = {'scope': pham_vi} %}
-                    {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(repeat.item, 'thread_id')) %}{% endif %}
+                    {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
                     {{ d }}
           default:
             - action: zalo_call.set_rule
@@ -344,7 +372,7 @@ actions:
                             'reply_ai': ai_tra_loi_tin and cho_ai_noi, 'announce': bat_bao_loa and loa_bao | default('', true) != '',
                             'connect': noi_khi_chuyen, 'connect_now': noi_ngay,
                             'echo_guard': chong_vong, 'video_request': xu_ly_xin_video, 'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0)} %}
-                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(repeat.item, 'thread_id')) %}{% endif %}
+                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
                 {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
                 {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
                 {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
