@@ -1,0 +1,251 @@
+blueprint:
+  name: Zalo Call - Gọi hoặc nhắn nhắc hẹn theo lịch (thuốc, đi ngủ, thức dậy...)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_nhac_hen.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    Đúng giờ đã chọn, **gọi điện Zalo đọc lời nhắc** (hoặc nhắn tin) cho người bạn chọn: uống thuốc, đi ngủ, thức dậy, ăn cơm, họp, tưới cây...
+    Rất hợp cho người lớn tuổi ít nhìn tin nhắn. Mọi thứ **chọn từ danh sách**.
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
+      - **Người nhận:** *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người/nhóm từ danh bạ (thành thực thể `notify.zalo_...`).
+      - Muốn nhắc đúng ngày làm việc: có sẵn cảm biến `binary_sensor.workday` (tích hợp Workday của Home Assistant).
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    khi_nao:
+      name: ① Khi nào nhắc
+      icon: mdi:clock-outline
+      input:
+        gio:
+          name: Giờ nhắc
+          selector:
+            time: {}
+          default: "07:00:00"
+        ngay:
+          name: Nhắc vào những ngày nào
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Thứ hai
+                  value: mon
+                - label: Thứ ba
+                  value: tue
+                - label: Thứ tư
+                  value: wed
+                - label: Thứ năm
+                  value: thu
+                - label: Thứ sáu
+                  value: fri
+                - label: Thứ bảy
+                  value: sat
+                - label: Chủ nhật
+                  value: sun
+          default:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+        cam_bien_ngay_lam:
+          name: Chỉ nhắc ngày làm việc (tuỳ chọn)
+          description: Chọn cảm biến ngày làm việc (binary_sensor.workday). Để trống = không lọc.
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+          default: ""
+    noi_dung:
+      name: ② Nhắc gì
+      icon: mdi:message-text-outline
+      input:
+        loai_nhac:
+          name: Lời nhắc có sẵn
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Uống thuốc
+                  value: thuoc
+                - label: Đi ngủ
+                  value: ngu
+                - label: Thức dậy
+                  value: day
+                - label: Ăn cơm
+                  value: an
+                - label: Uống nước
+                  value: nuoc
+                - label: Tập thể dục
+                  value: tap
+                - label: Sắp có cuộc họp
+                  value: hop
+                - label: Tưới cây
+                  value: tuoi
+                - label: Tự viết
+                  value: tu_viet
+          default: thuoc
+        cau_tu_viet:
+          name: Câu tự viết (chỉ dùng khi chọn «Tự viết»)
+          selector:
+            text:
+              multiline: true
+          default: ""
+        ten_nguoi:
+          name: Gọi tên người được nhắc (tuỳ chọn)
+          description: Ví dụ «Bà» hoặc «Ba». Lời nhắc sẽ mở đầu bằng «Chào ...».
+          selector:
+            text: {}
+          default: ""
+        so_lan_doc:
+          name: Đọc mấy lần
+          selector:
+            number:
+              min: 1
+              max: 3
+              step: 1
+          default: 2
+    gui_ai:
+      name: ③ Gửi cho ai và bằng cách nào
+      icon: mdi:account-multiple-outline
+      input:
+        nguoi_nhan:
+          name: Người nhận
+          description: Chọn từ danh sách Zalo Call. Gọi điện chỉ gọi được người, không gọi được nhóm.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        kenh:
+          name: Gửi bằng cách nào
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Gọi điện đọc lời nhắc rồi cúp
+                  value: goi
+                - label: Nhắn tin chữ
+                  value: tin
+                - label: Cả gọi điện và nhắn tin
+                  value: ca_hai
+          default: goi
+        loai_cuoc_goi:
+          name: Gọi thoại hay gọi video
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Gọi thoại
+                  value: user
+                - label: Gọi video
+                  value: video
+          default: user
+        giong_doc:
+          name: Giọng đọc (Trợ lý giọng nói)
+          description: Chọn từ danh sách trợ lý giọng nói của Home Assistant. Bỏ trống = giọng mặc định.
+          selector:
+            assist_pipeline: {}
+          default: ""
+    dieu_kien:
+      name: ④ Chỉ nhắc khi (tuỳ chọn)
+      icon: mdi:filter-outline
+      collapsed: true
+      input:
+        chi_khi_o_nha:
+          name: Chỉ nhắc khi có ít nhất một người trong số này đang ở nhà
+          description: Để trống = nhắc bất kể.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: person
+          default: []
+
+mode: single
+max_exceeded: silent
+
+variables:
+  version: 20261111
+  gio: !input gio
+  ngay: !input ngay
+  cam_bien_ngay_lam: !input cam_bien_ngay_lam
+  loai_nhac: !input loai_nhac
+  cau_tu_viet: !input cau_tu_viet
+  ten_nguoi: !input ten_nguoi
+  so_lan_doc: !input so_lan_doc
+  nguoi_nhan: !input nguoi_nhan
+  kenh: !input kenh
+  loai_cuoc_goi: !input loai_cuoc_goi
+  giong_doc: !input giong_doc
+  chi_khi_o_nha: !input chi_khi_o_nha
+  mau_cau:
+    thuoc: Đã đến giờ uống thuốc
+    ngu: Đã đến giờ đi ngủ, chúc ngủ ngon
+    day: Đã đến giờ thức dậy, chúc một ngày tốt lành
+    an: Đã đến giờ ăn cơm
+    nuoc: Nhớ uống nước nhé
+    tap: Đã đến giờ tập thể dục
+    hop: Sắp có cuộc họp
+    tuoi: Đã đến giờ tưới cây
+  noi_dung: >-
+    {% set cau = cau_tu_viet | trim if loai_nhac == 'tu_viet' and cau_tu_viet | trim != '' else mau_cau.get(loai_nhac, 'Có lời nhắc') %}
+    {% if ten_nguoi | trim != '' %}Chào {{ ten_nguoi | trim }}. {% endif %}{{ cau }}.
+
+triggers:
+  - trigger: time
+    at: !input gio
+
+conditions:
+  - condition: template
+    alias: Đúng ngày trong tuần
+    value_template: "{{ ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'][now().weekday()] in ngay }}"
+  - condition: template
+    alias: Ngày làm việc (nếu có chọn cảm biến)
+    value_template: "{{ cam_bien_ngay_lam == '' or is_state(cam_bien_ngay_lam, 'on') }}"
+  - condition: template
+    alias: Có người ở nhà (nếu có chọn)
+    value_template: "{{ chi_khi_o_nha | count == 0 or chi_khi_o_nha | select('is_state', 'home') | list | count > 0 }}"
+
+actions:
+  - alias: Gọi điện đọc lời nhắc
+    if:
+      - condition: template
+        value_template: "{{ kenh in ['goi', 'ca_hai'] }}"
+    then:
+      - repeat:
+          for_each: "{{ nguoi_nhan }}"
+          sequence:
+            - if:
+                - condition: template
+                  value_template: "{{ state_attr(repeat.item, 'type') == 'user' }}"
+              then:
+                - action: zalo_call.alert_call
+                  data: >-
+                    {% set d = {'thread_id': state_attr(repeat.item, 'thread_id'), 'message': noi_dung | trim, 'after': 'hangup',
+                                'type': loai_cuoc_goi, 'repeat': so_lan_doc | int(2)} %}
+                    {% if giong_doc %}{% set d = dict(d, pipeline=giong_doc) %}{% endif %}
+                    {{ d }}
+  - alias: Nhắn tin chữ
+    if:
+      - condition: template
+        value_template: "{{ kenh in ['tin', 'ca_hai'] }}"
+    then:
+      - repeat:
+          for_each: "{{ nguoi_nhan }}"
+          sequence:
+            - action: zalo_call.send_message
+              data: >-
+                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                    'message': noi_dung | trim, 'emoji': 'bell'} }}

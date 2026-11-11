@@ -1,0 +1,288 @@
+blueprint:
+  name: Zalo Call - Quy tắc cho cuộc gọi đến (tự nghe máy, AI, báo ra loa)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_incoming_rule.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    Quy định hệ thống làm gì khi **có người gọi đến** tài khoản Zalo: **báo ra loa** cho cả nhà biết, **tự nghe máy** sau vài giây,
+    cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp. Chọn mọi thứ từ danh sách.
+
+    Quy tắc được **đặt khi Home Assistant khởi động** và mỗi lần bạn bấm *Chạy*. Tắt công tắc «Bật quy tắc» rồi chạy lại để **xoá** quy tắc.
+
+    <details>
+    <summary><b>Nguyên tắc riêng tư:</b> - Nhấn để mở rộng</summary>
+
+      - **Chưa có quy tắc cho một người thì hệ thống không làm gì** với cuộc gọi của người đó (chỉ đổ chuông).
+      - Thiết bị nhà **tắt mặc định**: chỉ dùng thứ bạn tích **và** đã chọn thiết bị, và chỉ **khi người nhà nói trực tiếp** (trừ ô «Nối ngay»).
+      - Cho AI nói chuyện thì phải chọn **Trợ lý giọng nói** (không tự dùng bộ ưu tiên vì nó có quyền điều khiển nhà).
+      - Với **người lạ**, không tích «Người tin cậy» và chọn trợ lý không có quyền điều khiển thiết bị.
+
+    </details>
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
+      - Muốn áp cho **một người/nhóm cụ thể**: *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người từ danh bạ.
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    ap_dung:
+      name: ① Áp dụng cho ai
+      icon: mdi:account-filter-outline
+      input:
+        bat_quy_tac:
+          name: Bật quy tắc
+          description: Tắt rồi chạy lại để xoá quy tắc này.
+          selector:
+            boolean: {}
+          default: true
+        pham_vi:
+          name: Áp dụng cho
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Một người hoặc một nhóm cụ thể (chọn ở ô bên dưới)
+                  value: thread
+                - label: Mọi người trong danh bạ (bạn bè)
+                  value: contacts
+                - label: Mọi người lạ (không có trong danh bạ)
+                  value: strangers
+                - label: Mọi nhóm
+                  value: groups
+          default: contacts
+        nguoi_cu_the:
+          name: Người hoặc nhóm cụ thể
+          description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Zalo Call.
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+          default: ""
+        ten_goi:
+          name: Tên gọi (để bạn nhớ)
+          description: Cũng là tên đọc ra loa khi báo có cuộc gọi. Bỏ trống thì dùng tên Zalo của người gọi.
+          selector:
+            text: {}
+          default: ""
+    nghe_may:
+      name: ② Nghe máy
+      icon: mdi:phone-check-outline
+      input:
+        tu_nghe_may:
+          name: Tự nghe máy
+          selector:
+            boolean: {}
+          default: false
+        nghe_sau:
+          name: Nghe máy sau (giây)
+          selector:
+            number:
+              min: 0
+              max: 120
+              step: 1
+              unit_of_measurement: giây
+          default: 5
+        loai_cuoc_goi:
+          name: Nghe loại cuộc gọi nào
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Thoại
+                  value: voice
+                - label: Video
+                  value: video
+          default:
+            - voice
+            - video
+    bao_loa:
+      name: ③ Báo ra loa khi có cuộc gọi đến
+      icon: mdi:bullhorn-outline
+      description: Một loa trong nhà đọc «Có cuộc gọi ... từ ...» để người trong nhà biết (kể cả khi không tự nghe máy).
+      collapsed: true
+      input:
+        bat_bao_loa:
+          name: Báo ra loa
+          selector:
+            boolean: {}
+          default: false
+        loa_bao:
+          name: Loa dùng để báo
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        cau_bao:
+          name: Câu báo
+          description: "Dùng {ten} (tên người gọi) và {loai} (thoại hoặc video). Bỏ trống = «Có cuộc gọi {loai} từ {ten}.»"
+          selector:
+            text: {}
+          default: ""
+    ai:
+      name: ④ AI nói chuyện
+      icon: mdi:robot-outline
+      collapsed: true
+      input:
+        cho_ai_noi:
+          name: Cho AI nói chuyện khi nghe máy
+          selector:
+            boolean: {}
+          default: false
+        tro_ly_giong_noi:
+          name: Trợ lý giọng nói (Assist)
+          description: Bắt buộc khi cho AI nói chuyện. Chọn từ danh sách trợ lý giọng nói của Home Assistant.
+          selector:
+            assist_pipeline: {}
+          default: ""
+        nguoi_tin_cay:
+          name: Người tin cậy
+          description: Tin cậy thì AI nói chuyện bình thường. Không tin cậy thì AI được dặn không tiết lộ thông tin gia đình.
+          selector:
+            boolean: {}
+          default: false
+        cau_chao:
+          name: Câu AI chào khi nghe máy
+          description: Bỏ trống = «Xin chào, tôi là trợ lý của gia đình. Bạn cần gì ạ?»
+          selector:
+            text: {}
+          default: ""
+        ai_tra_loi_tin:
+          name: AI trả lời cả tin nhắn chữ của người này
+          selector:
+            boolean: {}
+          default: false
+    thiet_bi:
+      name: ⑤ Thiết bị nhà dùng khi người nhà nói trực tiếp
+      icon: mdi:video-wireless-outline
+      description: Tích ô nào thì dùng thứ đó (tích 1 = dùng 1, tích 2 = dùng 2, tích 3 = dùng cả 3). Không tích gì = không dùng thiết bị nào. Tích Camera = cuộc gọi video.
+      collapsed: true
+      input:
+        noi_khi_chuyen:
+          name: Dùng khi người nhà nói trực tiếp
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic - gửi tiếng trong nhà cho người gọi
+                  value: mic
+                - label: Loa - phát tiếng người gọi ra loa trong nhà
+                  value: speaker
+                - label: Camera - gửi hình trong nhà (cuộc gọi video)
+                  value: camera
+                - label: AI tự chọn trong các ô đã tích
+                  value: ai
+          default: []
+        noi_ngay:
+          name: Dùng NGAY khi nghe máy (không chờ người nhà)
+          description: Ví dụ chỉ tích Camera để người gọi thấy hình trong nhà ngay, còn Mic và Loa chờ tới khi người nhà nói trực tiếp.
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera
+                  value: camera
+          default: []
+        loa:
+          name: Loa trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        mic:
+          name: Mic trong nhà
+          description: Camera hoặc vệ tinh Assist có mic (ví dụ loa R1).
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - camera
+                    - assist_satellite
+          default: ""
+        camera:
+          name: Camera trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: camera
+          default: ""
+
+mode: restart
+
+variables:
+  version: 20261111
+  bat_quy_tac: !input bat_quy_tac
+  pham_vi: !input pham_vi
+  nguoi_cu_the: !input nguoi_cu_the
+  ten_goi: !input ten_goi
+  tu_nghe_may: !input tu_nghe_may
+  nghe_sau: !input nghe_sau
+  loai_cuoc_goi: !input loai_cuoc_goi
+  bat_bao_loa: !input bat_bao_loa
+  loa_bao: !input loa_bao
+  cau_bao: !input cau_bao
+  cho_ai_noi: !input cho_ai_noi
+  tro_ly_giong_noi: !input tro_ly_giong_noi
+  nguoi_tin_cay: !input nguoi_tin_cay
+  cau_chao: !input cau_chao
+  ai_tra_loi_tin: !input ai_tra_loi_tin
+  noi_khi_chuyen: !input noi_khi_chuyen
+  noi_ngay: !input noi_ngay
+  loa: !input loa
+  mic: !input mic
+  camera: !input camera
+  co_ma: "{{ nguoi_cu_the != '' and state_attr(nguoi_cu_the, 'thread_id') is not none }}"
+
+triggers:
+  - trigger: homeassistant
+    event: start
+
+actions:
+  - if:
+      - condition: template
+        alias: Chọn «một người cụ thể» thì phải chọn người
+        value_template: "{{ pham_vi != 'thread' or co_ma }}"
+    then:
+      - choose:
+          - alias: Xoá quy tắc
+            conditions:
+              - condition: template
+                value_template: "{{ not bat_quy_tac }}"
+            sequence:
+              - action: zalo_call.remove_rule
+                data: >-
+                  {% set d = {'scope': pham_vi} %}
+                  {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(nguoi_cu_the, 'thread_id')) %}{% endif %}
+                  {{ d }}
+        default:
+          - action: zalo_call.set_rule
+            data: >-
+              {% set d = {'scope': pham_vi, 'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
+                          'call_types': loai_cuoc_goi, 'ai': cho_ai_noi, 'trusted': nguoi_tin_cay,
+                          'reply_ai': ai_tra_loi_tin and cho_ai_noi, 'announce': bat_bao_loa and loa_bao | default('', true) != '',
+                          'connect': noi_khi_chuyen, 'connect_now': noi_ngay} %}
+              {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(nguoi_cu_the, 'thread_id')) %}{% endif %}
+              {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
+              {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
+              {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
+              {% if bat_bao_loa and loa_bao %}{% set d = dict(d, announce_to=loa_bao) %}{% endif %}
+              {% if cau_bao | trim != '' %}{% set d = dict(d, announce_text=cau_bao | trim) %}{% endif %}
+              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+              {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+              {{ d }}

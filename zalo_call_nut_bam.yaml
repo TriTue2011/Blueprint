@@ -1,0 +1,244 @@
+blueprint:
+  name: Zalo Call - Một nút bấm nghe máy, cúp máy hoặc gọi đi
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_nut_bam.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    **Cùng một nút bấm, việc khác nhau tuỳ lúc.** Bạn chọn nút (nút giữa loa R1, nút Zigbee/Zwave, nút ảo trên bảng điều khiển...), máy tự quyết:
+
+    - Đang có **cuộc gọi đến** đổ chuông: **nghe máy**.
+    - Đang **trong cuộc gọi**: **cúp máy** (tắt được).
+    - **Không có cuộc gọi nào**: **gọi đi**, hoặc **gọi cảnh báo**, hoặc **nhắn tin** cho người bạn chọn.
+
+    Mọi thứ chọn từ danh sách, không phải gõ mã.
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
+      - **Người nhận:** *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người/nhóm từ danh bạ (thành thực thể `notify.zalo_...`).
+      - **Nút bấm:** ở ô «Nút bấm» chọn *Thêm trigger → Thiết bị →* thiết bị của nút. Với loa R1 (`assist-phicom-R1` từ bản 0.16.0)
+        có sẵn «Nhấn đơn / đúp / ba lần / giữ nút giữa». Nhớ đặt hành động tích hợp của cử chỉ đó là «Không làm gì (chỉ phát sự kiện)»
+        để loa không làm thêm việc khác.
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    nut:
+      name: ① Nút bấm
+      icon: mdi:gesture-tap-button
+      description: Chọn trigger của nút (có thể chọn nhiều).
+      input:
+        nut_bam:
+          name: Nút bấm
+          selector:
+            trigger: {}
+        cam_bien_cuoc_goi:
+          name: Cảm biến «Trạng thái cuộc gọi» của Zalo Call
+          description: Để biết đang đổ chuông, đang gọi hay rảnh.
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: sensor
+    khi_ranh:
+      name: ② Khi không có cuộc gọi nào
+      icon: mdi:phone-outgoing-outline
+      input:
+        hanh_dong_ranh:
+          name: Nhấn nút lúc rảnh thì
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Gọi điện cho người đã chọn
+                  value: goi_di
+                - label: Gọi cảnh báo (đọc câu cảnh báo rồi nối thiết bị nhà)
+                  value: canh_bao
+                - label: Nhắn tin cho người đã chọn
+                  value: nhan_tin
+                - label: Không làm gì
+                  value: khong
+          default: goi_di
+        nguoi_nhan:
+          name: Người nhận
+          description: Người (hoặc nhóm khi chỉ nhắn tin) từ danh sách Zalo Call.
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+          default: ""
+        loai_cuoc_goi:
+          name: Gọi thoại hay gọi video
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Gọi thoại
+                  value: user
+                - label: Gọi video
+                  value: video
+          default: user
+        cau_noi:
+          name: Câu có sẵn (khi gọi cảnh báo hoặc nhắn tin)
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Cần giúp ngay (khẩn cấp)
+                  value: can_giup
+                - label: Có người bấm chuông cửa
+                  value: chuong_cua
+                - label: Gọi giúp tôi một chút
+                  value: goi_giup
+                - label: Tôi đã về đến nhà
+                  value: ve_nha
+                - label: Tự viết
+                  value: tu_viet
+          default: can_giup
+        cau_tu_viet:
+          name: Câu tự viết (chỉ dùng khi chọn «Tự viết»)
+          selector:
+            text:
+              multiline: true
+          default: ""
+    khi_dang_goi:
+      name: ③ Khi đang có cuộc gọi
+      icon: mdi:phone-in-talk-outline
+      collapsed: true
+      input:
+        nghe_may:
+          name: Có cuộc gọi đến thì nghe máy
+          selector:
+            boolean: {}
+          default: true
+        cup_may:
+          name: Đang trong cuộc gọi hoặc đang gọi đi thì cúp máy
+          selector:
+            boolean: {}
+          default: true
+    thiet_bi:
+      name: ④ Thiết bị trong nhà dùng khi gọi cảnh báo (tuỳ chọn)
+      icon: mdi:speaker-wireless
+      collapsed: true
+      input:
+        noi_gom:
+          name: Nối những thứ nào
+          description: Tích 1 = dùng 1, tích 2 = dùng 2, tích 3 = dùng cả 3. Không tích gì = nối tất cả thiết bị đã chọn.
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera (cuộc gọi video)
+                  value: camera
+          default: []
+        loa:
+          name: Loa trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        mic:
+          name: Mic trong nhà
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - camera
+                    - assist_satellite
+          default: ""
+        camera:
+          name: Camera trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: camera
+          default: ""
+
+mode: single
+max_exceeded: silent
+
+variables:
+  version: 20261111
+  cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
+  hanh_dong_ranh: !input hanh_dong_ranh
+  nguoi_nhan: !input nguoi_nhan
+  loai_cuoc_goi: !input loai_cuoc_goi
+  cau_noi: !input cau_noi
+  cau_tu_viet: !input cau_tu_viet
+  nghe_may: !input nghe_may
+  cup_may: !input cup_may
+  noi_gom: !input noi_gom
+  loa: !input loa
+  mic: !input mic
+  camera: !input camera
+  mau_cau:
+    can_giup: Tôi cần giúp ngay, hãy liên lạc với tôi
+    chuong_cua: Có người bấm chuông cửa
+    goi_giup: Gọi giúp tôi một chút nhé
+    ve_nha: Tôi đã về đến nhà
+  noi_dung: >-
+    {% if cau_noi == 'tu_viet' and cau_tu_viet | trim != '' %}{{ cau_tu_viet }}{% else %}{{ mau_cau.get(cau_noi, 'Cần giúp') }}{% endif %}
+  co_nguoi: "{{ nguoi_nhan != '' and state_attr(nguoi_nhan, 'thread_id') is not none }}"
+  loai_nguoi_nhan: "{{ state_attr(nguoi_nhan, 'type') if nguoi_nhan else '' }}"
+  trang_thai_goi: "{{ states(cam_bien_cuoc_goi) }}"
+  trang_thai_chi_tiet: "{{ state_attr(cam_bien_cuoc_goi, 'status') }}"
+
+triggers: !input nut_bam
+
+actions:
+  - choose:
+      - alias: Có cuộc gọi đến đổ chuông - nghe máy
+        conditions:
+          - condition: template
+            value_template: "{{ nghe_may and trang_thai_goi == 'ringing' and trang_thai_chi_tiet == 'incoming' }}"
+        sequence:
+          - action: zalo_call.answer_call
+            data: {}
+      - alias: Đang trong cuộc gọi - cúp máy
+        conditions:
+          - condition: template
+            value_template: "{{ cup_may and trang_thai_goi in ['ringing', 'active'] }}"
+        sequence:
+          - action: zalo_call.end_call
+            data: {}
+      - alias: Rảnh - gọi điện
+        conditions:
+          - condition: template
+            value_template: "{{ hanh_dong_ranh == 'goi_di' and co_nguoi and loai_nguoi_nhan == 'user' }}"
+        sequence:
+          - action: zalo_call.make_call
+            data: >-
+              {{ {'thread_id': state_attr(nguoi_nhan, 'thread_id'), 'type': loai_cuoc_goi} }}
+      - alias: Rảnh - gọi cảnh báo
+        conditions:
+          - condition: template
+            value_template: "{{ hanh_dong_ranh == 'canh_bao' and co_nguoi and loai_nguoi_nhan == 'user' }}"
+        sequence:
+          - action: zalo_call.alert_call
+            data: >-
+              {% set d = {'thread_id': state_attr(nguoi_nhan, 'thread_id'), 'message': noi_dung} %}
+              {% if loai_cuoc_goi == 'video' %}{% set d = dict(d, type='video') %}{% endif %}
+              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+              {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+              {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
+              {{ d }}
+      - alias: Rảnh - nhắn tin
+        conditions:
+          - condition: template
+            value_template: "{{ hanh_dong_ranh == 'nhan_tin' and co_nguoi }}"
+        sequence:
+          - action: zalo_call.send_message
+            data: >-
+              {{ {'thread_id': state_attr(nguoi_nhan, 'thread_id'), 'type': loai_nguoi_nhan, 'message': noi_dung} }}

@@ -1,0 +1,434 @@
+blueprint:
+  name: Zalo Call - Messenger tuỳ biến (nhắn tin hoặc gọi khi thiết bị thay đổi)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_messenger.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    Một mẫu duy nhất để **nhắn tin Zalo** (hoặc gọi) khi thiết bị của bạn thay đổi, **tuỳ biến rộng nhưng chỉ chọn từ danh sách**:
+    chọn thiết bị, chọn khi nào gửi, chọn câu có sẵn, chọn kiểu chữ (emoji, đậm, màu, cỡ chữ), chọn người nhận.
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
+      - **Người nhận:** *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người/nhóm từ danh bạ (thành thực thể `notify.zalo_...`).
+
+    </details>
+
+    <details>
+    <summary><b>Các chế độ «Khi nào gửi»:</b> - Nhấn để mở rộng</summary>
+
+      | Chế độ | Gửi khi |
+      |---|---|
+      | Mọi thay đổi trạng thái | Trạng thái thiết bị đổi (mọi trạng thái) |
+      | Chuyển sang BẬT | Thiết bị chuyển sang `on` (cửa mở, có người, đèn bật...) |
+      | Chuyển sang TẮT | Thiết bị chuyển sang `off` |
+      | Số vượt ngưỡng trên | Giá trị số **vượt lên trên** ngưỡng (nhiệt độ cao...) |
+      | Số xuống dưới ngưỡng | Giá trị số **tụt xuống dưới** ngưỡng (pin yếu, nhiệt độ thấp...) |
+      | Báo cáo hằng ngày | Mỗi ngày đúng giờ đã chọn, gửi trạng thái của mọi thiết bị đã chọn |
+
+      **Câu có sẵn** dùng được các từ khoá: `{ten}` tên thiết bị, `{khu_vuc}` khu vực, `{tu}` trạng thái cũ, `{den}` trạng thái mới,
+      `{don_vi}` đơn vị, `{gio}` giờ phút, `{nguong}` ngưỡng (chỉ khi chọn «Tự viết»).
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    khi_nao:
+      name: ① Khi nào gửi
+      icon: mdi:bell-ring-outline
+      input:
+        thuc_the:
+          name: Thiết bị theo dõi
+          description: Chọn một hoặc nhiều thực thể (cảm biến, công tắc, đèn, cửa, nhiệt độ, pin...).
+          selector:
+            entity:
+              multiple: true
+        che_do:
+          name: Gửi khi
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Mọi thay đổi trạng thái
+                  value: doi
+                - label: Chuyển sang BẬT
+                  value: bat
+                - label: Chuyển sang TẮT
+                  value: tat
+                - label: Số vượt lên trên ngưỡng
+                  value: vuot_tren
+                - label: Số xuống dưới ngưỡng
+                  value: vuot_duoi
+                - label: Báo cáo hằng ngày
+                  value: bao_cao
+          default: doi
+        nguong:
+          name: Ngưỡng (cho hai chế độ «số»)
+          selector:
+            number:
+              min: -1000
+              max: 100000
+              step: 0.1
+              mode: box
+          default: 30
+        giu_it_nhat:
+          name: Giữ ít nhất (giây) mới gửi
+          description: Tránh gửi vì nhiễu. 0 = gửi ngay.
+          selector:
+            number:
+              min: 0
+              max: 3600
+              step: 1
+              unit_of_measurement: giây
+          default: 0
+        gio_bao_cao:
+          name: Giờ báo cáo (cho chế độ «Báo cáo hằng ngày»)
+          selector:
+            time: {}
+          default: "07:00:00"
+    noi_dung:
+      name: ② Nội dung
+      icon: mdi:message-text-outline
+      input:
+        mau_tin:
+          name: Câu có sẵn
+          description: Chọn câu có sẵn. Chế độ «Báo cáo hằng ngày» luôn dùng dạng báo cáo.
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Tên: trạng thái cũ → trạng thái mới"
+                  value: mac_dinh
+                - label: "Tên vừa Bật / Tắt"
+                  value: bat_tat
+                - label: "Cửa vừa mở / đóng"
+                  value: cua
+                - label: "Giá trị số kèm đơn vị (nhiệt độ, độ ẩm, điện...)"
+                  value: so
+                - label: "Pin còn bao nhiêu phần trăm"
+                  value: pin
+                - label: Tự viết
+                  value: tu_viet
+          default: mac_dinh
+        cau_tu_viet:
+          name: Câu tự viết (chỉ dùng khi chọn «Tự viết»)
+          description: "Từ khoá: {ten} {khu_vuc} {tu} {den} {don_vi} {gio} {nguong}."
+          selector:
+            text:
+              multiline: true
+          default: ""
+    dinh_dang:
+      name: ③ Kiểu chữ
+      icon: mdi:format-text
+      description: Tất cả chọn từ danh sách. «Không đổi» là gửi chữ thường.
+      collapsed: true
+      input:
+        emoji:
+          name: Biểu tượng đầu tin
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Không có
+                  value: none
+                - label: ✅ Thành công
+                  value: ok
+                - label: ❌ Lỗi
+                  value: x
+                - label: ⚠️ Cảnh báo
+                  value: warn
+                - label: 🚨 Khẩn cấp
+                  value: alert
+                - label: ℹ️ Thông tin
+                  value: info
+                - label: 💡 Ý tưởng
+                  value: idea
+                - label: 🔥 Lửa
+                  value: fire
+                - label: 💧 Nước
+                  value: water
+                - label: 🌡️ Nhiệt độ
+                  value: temp
+                - label: ☀️ Nắng
+                  value: sun
+                - label: 🌧️ Mưa
+                  value: rain
+                - label: 🌙 Đêm
+                  value: moon
+                - label: 🚪 Cửa
+                  value: door
+                - label: 🔒 Khoá
+                  value: lock
+                - label: 🔓 Mở khoá
+                  value: unlock
+                - label: 🔔 Chuông
+                  value: bell
+                - label: 🏠 Nhà
+                  value: home
+                - label: 🚗 Xe
+                  value: car
+                - label: 📶 WiFi
+                  value: wifi
+                - label: 🔋 Pin
+                  value: battery
+                - label: ⚡ Điện
+                  value: power
+                - label: 📷 Camera
+                  value: camera
+                - label: 📞 Điện thoại
+                  value: phone
+                - label: ⏰ Giờ
+                  value: time
+          default: none
+        in_dam:
+          name: In đậm
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Không đổi
+                  value: none
+                - label: Tắt
+                  value: "off"
+                - label: Bật (cả tin)
+                  value: "on"
+                - label: Tự động (in đậm con số)
+                  value: auto
+          default: none
+        co_chu:
+          name: Cỡ chữ
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Không đổi
+                  value: none
+                - label: Chữ nhỏ
+                  value: small
+                - label: Chữ to
+                  value: big
+                - label: Tự động (tiêu đề to, dòng trong ngoặc nhỏ)
+                  value: auto
+          default: none
+        mau_chu:
+          name: Màu chữ
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Không đổi
+                  value: none
+                - label: Tự động (tô màu con số)
+                  value: auto
+                - label: Đỏ
+                  value: red
+                - label: Cam
+                  value: orange
+                - label: Vàng
+                  value: yellow
+                - label: Xanh lá
+                  value: green
+          default: none
+    gui_ai:
+      name: ④ Gửi cho ai
+      icon: mdi:account-multiple-outline
+      input:
+        nguoi_nhan:
+          name: Người nhận
+          description: Chọn từ danh sách Zalo Call (người hoặc nhóm).
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        kenh:
+          name: Gửi bằng cách nào
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Nhắn tin chữ
+                  value: tin
+                - label: Gọi điện đọc nội dung rồi cúp (chỉ người, không gọi nhóm)
+                  value: goi
+                - label: Cả hai
+                  value: ca_hai
+          default: tin
+    dieu_kien:
+      name: ⑤ Điều kiện để không gửi thừa
+      icon: mdi:filter-outline
+      collapsed: true
+      input:
+        chong_lap_phut:
+          name: Chống gửi lặp (phút)
+          description: Sau một lần gửi, trong ngần này phút không gửi nữa. 0 = không chống lặp.
+          selector:
+            number:
+              min: 0
+              max: 1440
+              step: 1
+              unit_of_measurement: phút
+          default: 0
+        chi_khi_vang_nha:
+          name: Chỉ gửi khi những người này đều không ở nhà
+          description: Để trống = gửi bất kể có ai ở nhà không.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: person
+          default: []
+        gioi_han_gio:
+          name: Chỉ gửi trong khung giờ
+          selector:
+            boolean: {}
+          default: false
+        tu_gio:
+          name: Từ giờ
+          selector:
+            time: {}
+          default: "22:00:00"
+        den_gio:
+          name: Đến giờ
+          selector:
+            time: {}
+          default: "06:00:00"
+
+mode: queued
+max: 10
+max_exceeded: silent
+
+variables:
+  version: 20261111
+  thuc_the: !input thuc_the
+  che_do: !input che_do
+  nguong: !input nguong
+  mau_tin: !input mau_tin
+  cau_tu_viet: !input cau_tu_viet
+  emoji: !input emoji
+  in_dam: !input in_dam
+  co_chu: !input co_chu
+  mau_chu: !input mau_chu
+  nguoi_nhan: !input nguoi_nhan
+  kenh: !input kenh
+  chong_lap_phut: !input chong_lap_phut
+  chi_khi_vang_nha: !input chi_khi_vang_nha
+  gioi_han_gio: !input gioi_han_gio
+  tu_gio: !input tu_gio
+  den_gio: !input den_gio
+  la_doi: "{{ trigger.id == 'doi' }}"
+  ten: "{{ (state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id) if la_doi else '' }}"
+  khu_vuc: "{{ (area_name(trigger.entity_id) or '') if la_doi else '' }}"
+  don_vi: "{{ (state_attr(trigger.entity_id, 'unit_of_measurement') or '') if la_doi else '' }}"
+  gio: "{{ now().strftime('%H:%M') }}"
+  tu: "{{ {'on': 'Bật', 'off': 'Tắt'}.get(trigger.from_state.state, trigger.from_state.state) if la_doi else '' }}"
+  den: "{{ {'on': 'Bật', 'off': 'Tắt'}.get(trigger.to_state.state, trigger.to_state.state) if la_doi else '' }}"
+  so: "{{ trigger.to_state.state | float(none) if la_doi else none }}"
+  noi_dung: >-
+    {% if che_do == 'bao_cao' %}
+      Báo cáo {{ gio }}:
+      {% for e in thuc_the %}
+      - {{ state_attr(e, 'friendly_name') or e }}: {{ {'on': 'Bật', 'off': 'Tắt'}.get(states(e), states(e)) }}{% if state_attr(e, 'unit_of_measurement') %} {{ state_attr(e, 'unit_of_measurement') }}{% endif %}
+      {% endfor %}
+    {% elif mau_tin == 'tu_viet' and cau_tu_viet | trim != '' %}
+      {{ cau_tu_viet | replace('{ten}', ten) | replace('{khu_vuc}', khu_vuc) | replace('{tu}', tu) | replace('{den}', den)
+         | replace('{don_vi}', don_vi) | replace('{gio}', gio) | replace('{nguong}', nguong | string) }}
+    {% elif mau_tin == 'bat_tat' %}
+      {{ ten }} vừa {{ den }}{% if khu_vuc %} ({{ khu_vuc }}){% endif %}
+    {% elif mau_tin == 'cua' %}
+      Cửa {{ ten }} vừa {{ 'mở' if trigger.to_state.state == 'on' else 'đóng' }}{% if khu_vuc %} ({{ khu_vuc }}){% endif %}, lúc {{ gio }}
+    {% elif mau_tin == 'so' %}
+      {{ ten }}: {{ den }}{% if don_vi %} {{ don_vi }}{% endif %}{% if che_do in ['vuot_tren', 'vuot_duoi'] %} (ngưỡng {{ nguong }}){% endif %}
+    {% elif mau_tin == 'pin' %}
+      Pin của {{ ten }} còn {{ den }}{% if don_vi %} {{ don_vi }}{% else %}%{% endif %}
+    {% else %}
+      {{ ten }}: {{ tu }} → {{ den }}
+    {% endif %}
+
+triggers:
+  - trigger: state
+    id: doi
+    entity_id: !input thuc_the
+    not_from:
+      - unavailable
+      - unknown
+    not_to:
+      - unavailable
+      - unknown
+    for:
+      seconds: !input giu_it_nhat
+  - trigger: time
+    id: bao_cao
+    at: !input gio_bao_cao
+
+conditions:
+  - condition: template
+    alias: Đúng chế độ đã chọn
+    value_template: >-
+      {% if che_do == 'bao_cao' %}{{ trigger.id == 'bao_cao' }}
+      {% elif trigger.id != 'doi' %}false
+      {% elif che_do == 'doi' %}{{ trigger.from_state.state != trigger.to_state.state }}
+      {% elif che_do == 'bat' %}{{ trigger.to_state.state == 'on' and trigger.from_state.state != 'on' }}
+      {% elif che_do == 'tat' %}{{ trigger.to_state.state == 'off' and trigger.from_state.state != 'off' }}
+      {% elif che_do == 'vuot_tren' %}
+        {% set a = trigger.from_state.state | float(none) %}
+        {{ so is not none and so > nguong | float(0) and (a is none or a <= nguong | float(0)) }}
+      {% elif che_do == 'vuot_duoi' %}
+        {% set a = trigger.from_state.state | float(none) %}
+        {{ so is not none and so < nguong | float(0) and (a is none or a >= nguong | float(0)) }}
+      {% else %}false{% endif %}
+  - condition: template
+    alias: Chống gửi lặp
+    value_template: >-
+      {{ chong_lap_phut | int(0) == 0 or this.attributes.last_triggered is none
+         or (now() - this.attributes.last_triggered).total_seconds() > chong_lap_phut | int(0) * 60 }}
+  - condition: template
+    alias: Chỉ khi những người đã chọn đều vắng nhà
+    value_template: >-
+      {{ chi_khi_vang_nha | count == 0 or chi_khi_vang_nha | select('is_state', 'home') | list | count == 0 }}
+  - condition: template
+    alias: Khung giờ
+    value_template: >-
+      {% if not gioi_han_gio %}true{% else %}
+        {% set t = now().strftime('%H:%M:%S') %}
+        {% if tu_gio <= den_gio %}{{ tu_gio <= t <= den_gio }}{% else %}{{ t >= tu_gio or t <= den_gio }}{% endif %}
+      {% endif %}
+
+actions:
+  - alias: Nhắn tin
+    if:
+      - condition: template
+        value_template: "{{ kenh in ['tin', 'ca_hai'] }}"
+    then:
+      - repeat:
+          for_each: "{{ nguoi_nhan }}"
+          sequence:
+            - action: zalo_call.send_message
+              data: >-
+                {% set d = {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                            'message': noi_dung | trim} %}
+                {% if emoji != 'none' %}{% set d = dict(d, emoji=emoji) %}{% endif %}
+                {% if in_dam != 'none' %}{% set d = dict(d, bold=in_dam) %}{% endif %}
+                {% if co_chu != 'none' %}{% set d = dict(d, font_size=co_chu) %}{% endif %}
+                {% if mau_chu != 'none' %}{% set d = dict(d, text_color=mau_chu) %}{% endif %}
+                {{ d }}
+  - alias: Gọi điện đọc nội dung rồi cúp (chỉ người)
+    if:
+      - condition: template
+        value_template: "{{ kenh in ['goi', 'ca_hai'] }}"
+    then:
+      - repeat:
+          for_each: "{{ nguoi_nhan }}"
+          sequence:
+            - if:
+                - condition: template
+                  value_template: "{{ state_attr(repeat.item, 'type') == 'user' }}"
+              then:
+                - action: zalo_call.alert_call
+                  data: >-
+                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'message': noi_dung | trim | replace('\n', '. '),
+                        'after': 'hangup', 'type': 'user'} }}

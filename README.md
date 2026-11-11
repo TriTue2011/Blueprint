@@ -26,10 +26,16 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Gửi Telegram (Voice + xóa file)](#-gửi-telegram-voice--xóa-file)
   - [Gửi Zalo Bot chính thức (Voice)](#-gửi-zalo-bot-chính-thức-voice)
   - [Gửi Zalo Custom Bot (Voice + xóa file)](#-gửi-zalo-custom-bot-voice--xóa-file)
+  - [📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt](#-zalo-call-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
+  - [🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi](#-zalo-call-một-nút-bấm-nghe-máy-cúp-máy-hoặc-gọi-đi)
+  - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
+  - [💬 Zalo Call Messenger tuỳ biến](#-zalo-call-messenger-tuỳ-biến)
+  - [⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch](#-zalo-call-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
 - **Tiện ích**
   - [Thông báo lịch âm & thời tiết](#️-thông-báo-lịch-âm--thời-tiết)
   - [Danh ngôn tự động hàng ngày](#-danh-ngôn-tự-động-hàng-ngày)
   - [Kiểm tra thiết bị (Multi-Entity)](#-kiểm-tra-thiết-bị-multi-entity)
+  - [⏳ Hẹn giờ có phục hồi sau khởi động lại](#-hẹn-giờ-có-phục-hồi-sau-khởi-động-lại)
   - [Loa Bluetooth trong HA (không cần add-on)](#-loa-bluetooth-trong-ha-không-cần-add-on)
 - **Quản lý & Cập nhật**
   - [Tự động cập nhật Blueprints](#-tự-động-cập-nhật-blueprints)
@@ -590,6 +596,111 @@ Gửi tin nhắn, ảnh, video qua Zalo Custom Bot. Hỗ trợ webhook, đồng 
 
 ---
 
+## 📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt
+
+Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất điện...) thì **gọi điện Zalo** cho người bạn chọn: máy đọc cảnh báo rồi nối thẳng loa, mic, camera trong nhà. Gọi **lần lượt** từng người cho tới khi có người nghe máy. **Mọi thứ chọn từ danh sách**, không phải gõ mã.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình* |
+
+**Làm được:**
+- Cảm biến, người nhận, loa/mic/camera chọn từ danh sách; loại cảnh báo có sẵn (người lạ, khói, rò nước, gas, cửa mở, mất điện, người ngã).
+- Gọi lần lượt tới khi có người nghe máy; gửi thêm tin nhắn chữ.
+- Chống báo lặp, khung giờ, chỉ báo khi người đã chọn đều vắng nhà.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## 🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi
+
+**Cùng một nút bấm, việc khác nhau tuỳ lúc:** có cuộc gọi đến thì nghe máy, đang trong cuộc gọi thì cúp, rảnh thì gọi đi / gọi cảnh báo / nhắn tin. Nút chọn bằng bộ chọn trigger (nút giữa loa R1, nút Zigbee, nút ảo...).
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; cảm biến «Trạng thái cuộc gọi» của Zalo Call |
+
+**Làm được:**
+- Một nút, ba việc theo trạng thái cuộc gọi.
+- Người nhận và thiết bị chọn từ danh sách.
+- Dùng được với loa R1 (`assist-phicom-R1` từ bản 0.16.0): nhấn đơn / đúp / ba lần / giữ nút giữa.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## 📲 Zalo Call quy tắc cho cuộc gọi đến
+
+Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra loa** cho cả nhà biết, **tự nghe máy**, cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp (tích Mic / Loa / Camera, tích Camera là cuộc gọi video). Áp cho một người, mọi người trong danh bạ, người lạ hoặc mọi nhóm.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2 |
+
+**Làm được:**
+- Báo ra loa «Có cuộc gọi ... từ ...» (bật/tắt, mặc định tắt).
+- Tự nghe máy sau vài giây; chọn nghe thoại, video hoặc cả hai.
+- AI nói chuyện chọn từ danh sách Trợ lý giọng nói; thiết bị nhà chọn bằng ô tích; tắt công tắc rồi chạy lại để xoá quy tắc.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## 💬 Zalo Call Messenger tuỳ biến
+
+Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộng nhưng chỉ chọn từ danh sách**: thiết bị theo dõi, chế độ (mọi thay đổi, bật, tắt, vượt ngưỡng, báo cáo hằng ngày), câu có sẵn, kiểu chữ (emoji, đậm, màu, cỡ chữ), người nhận.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình* |
+
+**Làm được:**
+- 6 chế độ «Khi nào gửi» và 6 câu có sẵn có điền tên, khu vực, trạng thái, đơn vị, giờ tự động.
+- Kiểu chữ chọn từ danh sách: emoji, in đậm, cỡ chữ, màu chữ.
+- Gửi tin chữ, gọi điện đọc nội dung, hoặc cả hai; chống lặp, khung giờ.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## ⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch
+
+Đúng giờ đã chọn, **gọi điện Zalo đọc lời nhắc** (hoặc nhắn tin): uống thuốc, đi ngủ, thức dậy, ăn cơm, uống nước, tập thể dục, họp, tưới cây. Hợp cho người lớn tuổi ít nhìn tin nhắn.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình* |
+
+**Làm được:**
+- Chọn giờ và các ngày trong tuần; lọc ngày làm việc nếu có cảm biến Workday.
+- Lời nhắc có sẵn hoặc tự viết, gọi tên người được nhắc, đọc 1 đến 3 lần.
+- Giọng đọc chọn từ danh sách Trợ lý giọng nói.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
 ## 🗓️ Thông báo lịch âm & thời tiết
 
 Tự động nhắc nhở các sự kiện âm lịch kèm theo thông tin thời tiết hàng ngày. AI biên tập tin nhắn tự nhiên, sáng tạo mỗi ngày một kiểu khác nhau.
@@ -701,6 +812,24 @@ Chọn loa trong danh sách, bấm **Kết nối**; phát bằng `media_player` 
 Không phải blueprint mà là một gói cấu hình (`packages/`) kèm một tệp Python. Hướng dẫn cài
 đủ các bước (máy Proxmox, LXC, compose, MPD, HA) và cách dùng:
 **[loa_bluetooth/README.md](loa_bluetooth/README.md)**.
+
+---
+
+## ⏳ Hẹn giờ có phục hồi sau khởi động lại
+
+Khi một thực thể chuyển trạng thái theo cấu hình, **bật hẹn giờ**, **lưu thời điểm hết hạn** và **tự phục hồi sau khi Home Assistant khởi động lại hoặc mất điện**; hết giờ thì chạy hành động bạn chọn.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2024.10.0 |
+| **Yêu cầu** | Một Timer helper và một Input Datetime helper |
+
+**Đầu vào:** thực thể kích hoạt, trạng thái từ/đến, Timer helper, Input Datetime lưu thời điểm hết hạn, hành động khi hết giờ.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Funiversal_cooldown_recovery.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -1158,6 +1287,12 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 17 | Kiểm tra thiết bị | Automation | 2024.10.0 | Phân biệt nguồn điều khiển |
 | 18 | Cập nhật Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
 | 19 | Cập nhật Pyscript | Automation | 2024.10.0 | Auto-sync pyscript từ GitHub |
+| 20 | Zalo Call gọi cảnh báo | Automation | 2026.3.0 | Gọi cảnh báo khi cảm biến kích hoạt |
+| 21 | Zalo Call một nút bấm | Automation | 2026.3.0 | Nghe máy / cúp / gọi đi bằng một nút |
+| 22 | Zalo Call quy tắc cuộc gọi đến | Automation | 2026.3.0 | Báo ra loa, tự nghe, AI, thiết bị nhà |
+| 23 | Zalo Call Messenger | Automation | 2026.3.0 | Nhắn tin hoặc gọi tuỳ biến theo thiết bị |
+| 24 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
+| 25 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
 
 ---
 

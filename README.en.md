@@ -26,10 +26,16 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [📩 Send to Telegram (Voice + Delete File)](#-send-to-telegram-voice--delete-file)
   - [💬 Send to Zalo Official Bot (Voice)](#-send-to-zalo-official-bot-voice)
   - [🧩 Send to Zalo Custom Bot (Voice + Delete File)](#-send-to-zalo-custom-bot-voice--delete-file)
+  - [📞 Zalo Call alert call when a sensor triggers](#-zalo-call-alert-call-when-a-sensor-triggers)
+  - [🔘 Zalo Call one button to answer, hang up or call](#-zalo-call-one-button-to-answer-hang-up-or-call)
+  - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
+  - [💬 Zalo Call custom Messenger](#-zalo-call-custom-messenger)
+  - [⏰ Zalo Call scheduled reminder call or message](#-zalo-call-scheduled-reminder-call-or-message)
 - **Utilities**
   - [🗓️ Lunar Calendar & Weather Notification](#️-lunar-calendar--weather-notification)
   - [💬 Daily Quote Automation](#-daily-quote-automation)
   - [🔧 Check Device Source (Multi-Entity)](#-check-device-source-multi-entity)
+  - [⏳ Cooldown timer that survives restarts](#-cooldown-timer-that-survives-restarts)
 - **Management & Updates**
   - [🔄 Auto-Update Blueprints](#-auto-update-blueprints)
   - [🐍 Auto-Update Pyscript](#-auto-update-pyscript)
@@ -559,6 +565,111 @@ Send messages, images, and videos through a personal Zalo account. Supports webh
 
 ---
 
+## 📞 Zalo Call alert call when a sensor triggers
+
+When a sensor triggers (person, smoke, water leak, open door, power loss...) **call the person you pick on Zalo**: the alert is read out, then the home speaker, mic and camera are connected. Calls people **one after another** until someone answers. **Everything is picked from lists**, no typing ids.
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2026.3.0 |
+| **Requires** | Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure* |
+
+**What it does:**
+- Sensors, recipients, speaker/mic/camera picked from lists; ready-made alert types (stranger, smoke, water leak, gas, door open, power loss, person fell).
+- Escalation until someone answers; optional text message too.
+- Anti-repeat, time window, only when the chosen people are away.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
+
+*Read the blueprint description before using it.*
+
+---
+
+## 🔘 Zalo Call one button to answer, hang up or call
+
+**One button, different jobs depending on the moment:** incoming call → answer, in a call → hang up, idle → call / alert call / message. Pick the button with the trigger picker (R1 speaker center key, Zigbee button, virtual button...).
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2026.3.0 |
+| **Requires** | Zalo Call 2026.11.11.2 or newer; the Zalo Call «Call status» sensor |
+
+**What it does:**
+- One button, three jobs by call state.
+- Recipient and devices picked from lists.
+- Works with the R1 speaker (`assist-phicom-R1` 0.16.0+): single / double / triple / long press.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
+
+*Read the blueprint description before using it.*
+
+---
+
+## 📲 Zalo Call incoming-call rules
+
+Decide what happens when **someone calls in**: **announce on a speaker**, **auto-answer**, let the **AI talk**, and **which home devices to connect** when a person takes over (tick Mic / Speaker / Camera; ticking Camera makes it a video call). Apply to one person, all contacts, strangers or all groups.
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2026.3.0 |
+| **Requires** | Zalo Call 2026.11.11.2 or newer |
+
+**What it does:**
+- Speaker announcement «Incoming call from ...» (on/off, off by default).
+- Auto-answer after a few seconds; voice, video or both.
+- AI picked from your Assist pipelines; home devices by tick boxes; turn the switch off and run again to remove the rule.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
+
+*Read the blueprint description before using it.*
+
+---
+
+## 💬 Zalo Call custom Messenger
+
+Send a Zalo message (or call) when a device changes, **widely customizable but only by picking from lists**: watched devices, mode (any change, on, off, above/below a threshold, daily report), ready-made sentences, text style (emoji, bold, color, size), recipients.
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2026.3.0 |
+| **Requires** | Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure* |
+
+**What it does:**
+- 6 «When to send» modes and 6 ready-made sentences that fill in name, area, state, unit and time.
+- Text style from lists: emoji, bold, font size, color.
+- Text message, spoken call, or both; anti-repeat and time window.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
+
+*Read the blueprint description before using it.*
+
+---
+
+## ⏰ Zalo Call scheduled reminder call or message
+
+At the chosen time, **call someone on Zalo and read a reminder** (or message them): medicine, bedtime, wake-up, meals, water, exercise, meetings, watering plants. Great for older relatives who rarely read messages.
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2026.3.0 |
+| **Requires** | Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure* |
+
+**What it does:**
+- Pick the time and weekdays; filter to workdays if you have a Workday sensor.
+- Ready-made or custom reminder, address the person by name, read 1 to 3 times.
+- Voice picked from your Assist pipelines.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
+
+*Read the blueprint description before using it.*
+
+---
+
 ## 🗓️ Lunar Calendar & Weather Notification
 
 Daily reminders for lunar calendar events combined with weather information. The AI writes the message fresh each day so it never reads the same way twice.
@@ -652,6 +763,24 @@ Save
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcheck_device.yaml)
 
 *Please read the blueprint description carefully before getting started.*
+
+---
+
+## ⏳ Cooldown timer that survives restarts
+
+When an entity changes state as configured, **start a timer**, **store the expiry time** and **recover automatically after a Home Assistant restart or power loss**; when time is up your chosen actions run.
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2024.10.0 |
+| **Requires** | A Timer helper and an Input Datetime helper |
+
+**Inputs:** trigger entity, from/to state, Timer helper, Input Datetime that stores the expiry time, actions when finished.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Funiversal_cooldown_recovery.yaml)
+
+*Read the blueprint description before using it.*
 
 ---
 
@@ -812,6 +941,12 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 17 | Check Device Source | Automation | 2024.10.0 | Tell manual from app from automation |
 | 18 | Auto-Update Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
 | 19 | Auto-Update Pyscript | Automation | 2024.10.0 | Auto-sync pyscript from GitHub |
+| 20 | Zalo Call Alert | Automation | 2026.3.0 | Alert call when a sensor triggers |
+| 21 | Zalo Call One Button | Automation | 2026.3.0 | Answer / hang up / call with one button |
+| 22 | Zalo Call Incoming Rules | Automation | 2026.3.0 | Announce, auto-answer, AI, home devices |
+| 23 | Zalo Call Messenger | Automation | 2026.3.0 | Customizable message or call by device |
+| 24 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
+| 25 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
 
 ---
 
