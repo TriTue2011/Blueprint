@@ -46,6 +46,12 @@ blueprint:
                 - label: Giảm âm lượng loa
                   value: giam_am
           default: nghe
+        tu_chon_theo_nut:
+          name: Tự chọn loa và mic theo loa vừa được nhấn nút
+          description: "Nhà có nhiều loa R1: thêm trigger nút của MỌI loa vào ô «Nút bấm»; loa nào được nhấn thì nghe máy bằng loa và mic của chính loa đó (lấy từ thiết bị của nút). Chỉ dùng khi ô Loa/Mic ở mục ② để trống."
+          selector:
+            boolean: {}
+          default: true
         cam_bien_cuoc_goi:
           name: Cảm biến «Trạng thái cuộc gọi» của Zalo Call
           selector:
@@ -184,12 +190,19 @@ variables:
     {{ (camera_goc if camera_goc is not string else ([camera_goc] if camera_goc else [])) | join(',') }}
   am_luong: !input am_luong
   loa_am_luong: !input loa_am_luong
+  tu_chon_theo_nut: !input tu_chon_theo_nut
   buoc: !input buoc
   trang_thai: "{{ states(cam_bien_cuoc_goi) }}"
   chi_tiet: "{{ state_attr(cam_bien_cuoc_goi, 'status') }}"
   dang_do_chuong_den: "{{ trang_thai == 'ringing' and chi_tiet == 'incoming' }}"
   dang_trong_cuoc_goi: "{{ trang_thai in ['ringing', 'active'] }}"
   loa_chinh: "{{ loa_am_luong or loa }}"
+  thiet_bi_bam: >-
+    {% if trigger is defined and trigger.device_id is defined and trigger.device_id %}{{ trigger.device_id }}{% elif trigger is defined and trigger.event is defined and trigger.event.data.device_id is defined %}{{ trigger.event.data.device_id }}{% endif %}
+  loa_tu_nut: >-
+    {% if tu_chon_theo_nut and thiet_bi_bam | string != '' %}{{ device_entities(thiet_bi_bam | string) | select('match', '^media_player\\.') | list | first | default('') }}{% endif %}
+  mic_tu_nut: >-
+    {% if tu_chon_theo_nut and thiet_bi_bam | string != '' %}{{ (device_entities(thiet_bi_bam | string) | select('match', '^assist_satellite\\.') | list | first) | default('') }}{% endif %}
 
 triggers: !input nut_bam
 
@@ -206,8 +219,8 @@ actions:
               {% if cho_ai_noi %}{% set d = dict(d, ai=true) %}{% if tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}{% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}{% endif %}
               {% if noi_khi_chuyen | count > 0 %}{% set d = dict(d, connect=noi_khi_chuyen) %}{% endif %}
               {% if noi_ngay | count > 0 %}{% set d = dict(d, connect_now=noi_ngay) %}{% endif %}
-              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+              {% if loa %}{% set d = dict(d, speaker=loa) %}{% elif loa_tu_nut %}{% set d = dict(d, speaker=loa_tu_nut) %}{% endif %}
+              {% if mic %}{% set d = dict(d, mic=mic) %}{% elif mic_tu_nut %}{% set d = dict(d, mic=mic_tu_nut) %}{% endif %}
               {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
               {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
               {{ d }}

@@ -123,12 +123,13 @@ blueprint:
             boolean: {}
           default: false
         loa_bao:
-          name: Loa dùng để báo
+          name: Loa dùng để báo (chọn nhiều = báo ra tất cả các loa)
           selector:
             entity:
+              multiple: true
               filter:
                 - domain: media_player
-          default: ""
+          default: []
         am_luong_bao:
           name: Âm lượng lúc báo (0 = giữ nguyên)
           description: Âm lượng loa khi đọc thông báo. Không ai nghe máy thì loa trở về mức cũ. Loa R1 có 15 mức, ví dụ mức 6 là 40%.
@@ -309,7 +310,9 @@ variables:
   nghe_sau: !input nghe_sau
   loai_cuoc_goi: !input loai_cuoc_goi
   bat_bao_loa: !input bat_bao_loa
-  loa_bao: !input loa_bao
+  loa_bao_goc: !input loa_bao
+  loa_bao: >-
+    {{ (loa_bao_goc if loa_bao_goc is not string else ([loa_bao_goc] if loa_bao_goc else [])) | join(',') }}
   cau_bao: !input cau_bao
   lap_bao: !input lap_bao
   am_luong_bao: !input am_luong_bao
