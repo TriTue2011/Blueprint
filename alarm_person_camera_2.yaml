@@ -614,6 +614,43 @@ blueprint:
             text:
               multiline: true
 
+    zalo_calling_settings:
+      name: Zalo Calling (chọn người nhận từ danh sách)
+      icon: mdi:phone-message-outline
+      collapsed: true
+      input:
+        include_zalo_calling:
+          name: ✅ Bật gửi qua Zalo Calling
+          description: >-
+            Gửi qua tích hợp Zalo Calling (kho TriTue2011/Zalo-calling, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
+            (Zalo Call → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
+          default: false
+          selector:
+            boolean: {}
+        zalo_calling_recipients:
+          name: 👥 Người nhận Zalo Calling (chọn nhiều)
+          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        zalo_calling_initial_caption:
+          name: 📝 Chú thích kèm ảnh
+          description: Tin chữ gửi trước ảnh. Để trống = không gửi chú thích.
+          default: "🔔 Phát hiện chuyển động!"
+          selector:
+            text:
+              multiline: true
+        zalo_calling_send_all_images:
+          name: 🖼️ Gửi tất cả ảnh chụp được
+          description: Bật = gửi mọi ảnh, tắt = chỉ ảnh đầu tiên.
+          default: false
+          selector:
+            boolean: {}
+
     # ============================================================
     # TTS SPEAKER SETTINGS
     # ============================================================
@@ -963,6 +1000,10 @@ variables:
   zalo_custom_receiver_type: !input zalo_custom_receiver_type
   zalo_custom_ttl: !input zalo_custom_ttl
   zalo_custom_initial_caption: !input zalo_custom_initial_caption
+  include_zalo_calling: !input include_zalo_calling
+  zalo_calling_recipients: !input zalo_calling_recipients
+  zalo_calling_initial_caption: !input zalo_calling_initial_caption
+  zalo_calling_send_all_images: !input zalo_calling_send_all_images
   # Chỉ dùng để KIỂM TRA có ID hay chưa. TUYỆT ĐỐI không dùng làm thread_id:
   # kết quả template bị HA diễn giải thành số và ID 19 chữ số bị làm tròn.
   zalo_resolved_id: >-
@@ -1350,6 +1391,34 @@ action:
                   message: !input zalo_custom_initial_caption
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_custom_image_response
+
+  - alias: Gửi qua Zalo Calling
+    if:
+      - condition: template
+        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+    then:
+      - repeat:
+          for_each: "{{ zalo_calling_recipients }}"
+          sequence:
+            - variables:
+                zc_to: "{{ repeat.item }}"
+            - if:
+                - condition: template
+                  value_template: "{{ (zalo_calling_initial_caption) | trim | length > 0 }}"
+              then:
+                - continue_on_error: true
+                  action: zalo_call.send_message
+                  data: >-
+                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                        'message': (zalo_calling_initial_caption) | trim} }}
+            - repeat:
+                for_each: "{{ (all_snapshot_paths_comma.split(',') if zalo_calling_send_all_images else ['/media/snapshots/' ~ file_path_dynamic ~ '_snapshot1.jpg']) }}"
+                sequence:
+                  - continue_on_error: true
+                    action: zalo_call.send_image
+                    data: >-
+                      {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                          'file': repeat.item} }}
 
   # --- Mobile App: Bước 1 — Gửi ảnh ngay lập tức (thông báo riêng, không tag) ---
   - if:
@@ -1758,6 +1827,25 @@ action:
                               message: "{{ ai_messages }}"
                               ttl: !input zalo_custom_ttl
 
+                  - alias: Gửi qua Zalo Calling
+                    if:
+                      - condition: template
+                        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+                    then:
+                      - repeat:
+                          for_each: "{{ zalo_calling_recipients }}"
+                          sequence:
+                            - variables:
+                                zc_to: "{{ repeat.item }}"
+                            - repeat:
+                                for_each: "{{ [ai_messages] }}"
+                                sequence:
+                                    - continue_on_error: true
+                                      action: zalo_call.send_message
+                                      data: >-
+                                        {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                                            'message': (repeat.item) | trim} }}
+
                   # --- TTS ra loa ---
                   - if:
                       - condition: template
@@ -1912,6 +2000,25 @@ action:
                           type: "0"
                           message: "{{ error_message }}"
                           ttl: !input zalo_custom_ttl
+
+              - alias: Gửi qua Zalo Calling
+                if:
+                  - condition: template
+                    value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+                then:
+                  - repeat:
+                      for_each: "{{ zalo_calling_recipients }}"
+                      sequence:
+                        - variables:
+                            zc_to: "{{ repeat.item }}"
+                        - repeat:
+                            for_each: "{{ [error_message] }}"
+                            sequence:
+                                - continue_on_error: true
+                                  action: zalo_call.send_message
+                                  data: >-
+                                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                                        'message': (repeat.item) | trim} }}
 
   # ============================================================
   # BƯỚC CUỐI: COOLDOWN

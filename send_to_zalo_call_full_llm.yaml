@@ -1,0 +1,240 @@
+blueprint:
+  name: Voice - Send to Zalo Calling
+  author: TriTue2011 dựa trên send_to_zalo_custom_bot_full_llm của luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/send_to_zalo_call_full_llm.yaml
+  description: |-
+    # Công cụ gửi nội dung qua Zalo Calling cho Voice Assistant
+
+    Gửi tin nhắn, vị trí hoặc ảnh cho **nhiều người và nhóm cùng lúc** qua tích hợp **Zalo Calling**. Người nhận **chọn từ danh sách**,
+    không phải gõ mã Zalo.
+
+    ## Hướng dẫn cài đặt
+
+    ### Bắt buộc
+
+    - Tích hợp **Zalo Calling** (HACS, kho `TriTue2011/Zalo-calling`) bản `2026.11.11.3` trở lên.
+    - Chọn người/nhóm nhận ở *Zalo Call → Cấu hình → Người và nhóm nhận*, mỗi người thành một thực thể `notify.zalo_call_...`.
+
+    ### Tùy chọn
+
+    - Cài `delete-file-home-assistant` qua HACS nếu dùng tính năng xóa ảnh sau khi gửi.
+    - Điều chỉnh các prompt cho từng trường. Mô tả sẽ hướng dẫn LLM cung cấp đầu vào đúng.
+
+    ### Lưu ý
+
+    - Cung cấp mô tả ngắn gọn và chính xác cho script để LLM hiểu đây là script gửi nội dung qua Zalo.
+    - Nhớ expose script cho Assist sau khi lưu.
+    - Không thay đổi tên script mặc định.
+    - Sau khi tạo script, nhấn dấu 3 chấm góc trên phải, chọn "Edit in YAML", xóa dòng description để khôi phục mặc định.
+  domain: script
+  homeassistant:
+    min_version: 2026.3.0
+  input:
+    zalo_settings:
+      name: Zalo Calling
+      icon: mdi:phone-message-outline
+      description: Chọn người nhận từ danh sách. Người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
+      input:
+        recipients:
+          name: Người nhận (chọn nhiều)
+          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        delete_after_send:
+          name: Delete Image After Sending
+          description: Automatically delete the image file after it has been sent to Zalo.
+          selector:
+            boolean: {}
+          default: true
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        summary_prompt:
+          name: Summary Prompt
+          description: The prompt which will be used for the LLM can provide the message summary.
+          selector:
+            text:
+              multiline: true
+          default: |-
+            <=10 words overview/caption. Plain text. Multiple items = multiple calls
+        detail_prompt:
+          name: Detail Prompt
+          description: The prompt which will be used for the LLM can provide the message detail.
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Full details. No links/markdown/emojis/repeats. Plain text
+        content_type_prompt:
+          name: Content Type Prompt
+          description: The prompt which will be used for the LLM can specify the type of content for the message.
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Exactly one: information, location, image. location=place/address/map, image=visual media
+        location_prompt:
+          name: Location Prompt
+          description: The prompt which will be used for the LLM can provide the location for the place.
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Address only. No commas or punctuation
+        image_path_prompt:
+          name: Image Path Prompt
+          description: Prompt shown to the LLM to request the media path when sending an image.
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Existing path (local/, /media/). No guessing
+mode: queued
+max: 30
+max_exceeded: silent
+description: Sends messages, locations, or images to Zalo for several people and groups at once (Zalo Calling integration)
+variables:
+  version: 20261111
+fields:
+  summary:
+    name: Summary
+    description: !input summary_prompt
+    selector:
+      text:
+    required: true
+  detail:
+    name: Detail
+    description: !input detail_prompt
+    selector:
+      text:
+  content_type:
+    name: Content Type
+    description: !input content_type_prompt
+    selector:
+      select:
+        options:
+          - information
+          - location
+          - image
+    required: true
+  location:
+    name: Location
+    description: !input location_prompt
+    selector:
+      text:
+  image_path:
+    name: Image Path
+    description: !input image_path_prompt
+    selector:
+      text:
+sequence:
+  - variables:
+      recipients: !input recipients
+      delete_after_send: !input delete_after_send
+      summary: "{{ summary | default('') | trim }}"
+      detail: "{{ detail | default('') | trim }}"
+      content_type: "{{ content_type | default('') | trim }}"
+      location: "{{ location | default('') | trim }}"
+      image_path: "{{ image_path | default('') | trim }}"
+      image_path_resolved: >-
+        {% set path = image_path %}
+        {% set prefix = 'local/' %}
+        {% if path and path.startswith(prefix) %}
+          {{ '/media/' ~ path[prefix | length:] }}
+        {% else %}
+          {{ path }}
+        {% endif %}
+      noi_dung: |-
+        {{ summary }}{% if detail %}
+
+        {{ detail }}{% endif %}
+      tin_thong_tin: |-
+        {{ noi_dung }}
+
+        {% set query = summary | urlencode -%}
+        Google Search (https://www.google.com/search?q={{ query }})
+      tin_vi_tri: |-
+        {{ noi_dung }}
+
+        {% set place = (summary ~ ' ' ~ location) | urlencode -%}
+        Google Maps (https://www.google.com/maps/search/?api=1&query={{ place }})
+
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: >-
+          {{
+            (recipients | count == 0)
+            or (not summary)
+            or (content_type not in ['information', 'location', 'image'])
+            or (content_type == 'location' and not location)
+            or (content_type == 'image' and not image_path)
+          }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: >-
+              Unable to send the message to Zalo because one or more inputs are
+              missing or invalid (recipients, summary, content_type, location,
+              or image_path).
+      - alias: Stop the script
+        stop: Unable to send the message to Zalo due to invalid inputs.
+        response_variable: response
+
+  - alias: Gửi cho từng người nhận (người hoặc nhóm)
+    repeat:
+      for_each: "{{ recipients }}"
+      sequence:
+        - variables:
+            zc_to: "{{ repeat.item }}"
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ content_type in ['information', 'location'] }}"
+              sequence:
+                - continue_on_error: true
+                  action: zalo_call.send_message
+                  data: >-
+                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'),
+                        'message': tin_thong_tin if content_type == 'information' else tin_vi_tri} }}
+            - conditions:
+                - condition: template
+                  value_template: "{{ content_type == 'image' }}"
+              sequence:
+                - if:
+                    - condition: template
+                      value_template: "{{ noi_dung | trim | length > 0 }}"
+                  then:
+                    - continue_on_error: true
+                      action: zalo_call.send_message
+                      data: >-
+                        {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'), 'message': noi_dung} }}
+                - continue_on_error: true
+                  action: zalo_call.send_image
+                  data: >-
+                    {{ {'thread_id': state_attr(zc_to, 'thread_id'), 'type': state_attr(zc_to, 'type'), 'file': image_path_resolved} }}
+
+  - if:
+      - condition: template
+        value_template: "{{ content_type == 'image' and delete_after_send }}"
+    then:
+      - action: delete.file
+        data:
+          file: "{{ image_path_resolved }}"
+
+  - alias: Prepare success response for Assist
+    variables:
+      response:
+        success: >-
+          Sent the {{ content_type }} "{{ summary }}" to {{ recipients | count }} Zalo recipient(s) successfully.
+
+  - stop: Finish and return response data
+    response_variable: response

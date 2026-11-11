@@ -26,6 +26,8 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [📩 Send to Telegram (Voice + Delete File)](#-send-to-telegram-voice--delete-file)
   - [💬 Send to Zalo Official Bot (Voice)](#-send-to-zalo-official-bot-voice)
   - [🧩 Send to Zalo Custom Bot (Voice + Delete File)](#-send-to-zalo-custom-bot-voice--delete-file)
+  - [🔗 Zalo Calling in the older blueprints](#-zalo-calling-in-the-older-blueprints)
+  - [🎤 Voice send to Zalo Calling (many people and groups)](#-voice-send-to-zalo-calling-many-people-and-groups)
   - [📞 Zalo Call alert call when a sensor triggers](#-zalo-call-alert-call-when-a-sensor-triggers)
   - [🔘 Zalo Call one button to answer, hang up or call](#-zalo-call-one-button-to-answer-hang-up-or-call)
   - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
@@ -670,6 +672,41 @@ At the chosen time, **call someone on Zalo and read a reminder** (or message the
 
 ---
 
+## 🎤 Voice send to Zalo Calling (many people and groups)
+
+A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
+
+| Info | Details |
+|------|---------|
+| **Type** | Script |
+| **HA minimum** | 2026.3.0 |
+| **Requires** | Zalo Calling 2026.11.11.3 or newer; recipients picked in *Zalo Call → Configure* |
+
+**Example voice commands:**
+- "Send the yard camera snapshot to everyone on Zalo"
+- "Message dad and the family group on Zalo that I'll be late tonight"
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
+
+*Read the blueprint description before using it.*
+
+---
+
+## 🔗 Zalo Calling in the older blueprints
+
+These blueprints **now have a «Zalo Calling» group** (next to Zalo Bot / Zalo Custom): turn it on, pick recipients from a list (people and groups mixed), and the blueprint sends **in parallel** through Zalo Calling. Needs Zalo Calling `2026.11.11.3` or newer.
+
+| Blueprint | Sent through Zalo Calling |
+|---|---|
+| Person Camera Alarm (1, 2, 3) | Snapshot with caption, AI result, error message |
+| Camera AI Alarm 4 | Early/late images, early/late video, AI result, extra text, error message |
+| LLM Vision Camera | AI result with the key frame or snapshot |
+| AI Weather Image | The generated image |
+| Lunar Calendar & Weather | Lunar and weather messages |
+| Auto-Update Blueprints, Auto-Update Pyscript | Update report |
+
+---
+
 ## 🗓️ Lunar Calendar & Weather Notification
 
 Daily reminders for lunar calendar events combined with weather information. The AI writes the message fresh each day so it never reads the same way twice.
@@ -947,6 +984,7 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 23 | Zalo Call Messenger | Automation | 2026.3.0 | Customizable message or call by device |
 | 24 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
 | 25 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
+| 26 | Voice send to Zalo Calling | Script | 2026.3.0 | Send text/location/image to many people and groups |
 
 ---
 

@@ -5,7 +5,7 @@ blueprint:
     min_version: 2024.10.0
   description: >
     Tóm tắt sự kiện cửa ra vào bằng AI với phát hiện người.
-    Hỗ trợ gửi thông báo qua điện thoại, Zalo và phân tích camera khi cửa mở
+    Hỗ trợ gửi thông báo qua điện thoại, Zalo (Bot, Custom, Calling) và phân tích camera khi cửa mở
     và phát hiện người trong khu vực.
   domain: automation
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/llmvison_camera.yaml
@@ -387,6 +387,30 @@ blueprint:
               step: 1000
               unit_of_measurement: ms
 
+    zalo_calling_settings:
+      name: Zalo Calling (chọn người nhận từ danh sách)
+      icon: mdi:phone-message-outline
+      collapsed: true
+      input:
+        include_zalo_calling:
+          name: ✅ Bật gửi qua Zalo Calling
+          description: >-
+            Gửi qua tích hợp Zalo Calling (kho TriTue2011/Zalo-calling, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
+            (Zalo Call → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
+          default: false
+          selector:
+            boolean: {}
+        zalo_calling_recipients:
+          name: 👥 Người nhận Zalo Calling (chọn nhiều)
+          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+
     experimental_section:
       name: Additional Settings
       icon: mdi:cog
@@ -432,6 +456,8 @@ variables:
   zalo_phone: !input zalo_phone
   zalo_types: !input zalo_types
   zalo_ttl: !input zalo_ttl
+  include_zalo_calling: !input include_zalo_calling
+  zalo_calling_recipients: !input zalo_calling_recipients
   take_snapshot: !input take_snapshot
 
   camera_entities_list: !input camera_entities
@@ -808,6 +834,33 @@ action:
               message: "{{ ai_response_text }}"
               thread_id: "{{ zalo_group_id | trim }}"
               account_selection: !input zalo_phone
+
+  # === 6b. GỬI ZALO CALLING ===
+  - alias: Gửi qua Zalo Calling (người và nhóm chọn từ danh sách)
+    if:
+      - condition: template
+        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+    then:
+      - variables:
+          zalo_calling_anh: >-
+            {% if response.key_frame is defined and response.key_frame | trim != '' %}{{ response.key_frame | replace('/media/local', '/media') }}{% elif take_snapshot %}{{ snapshot_access_file_path_social }}{% endif %}
+      - repeat:
+          for_each: "{{ zalo_calling_recipients }}"
+          sequence:
+            - continue_on_error: true
+              action: zalo_call.send_message
+              data: >-
+                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                    'message': ai_response_text} }}
+            - if:
+                - condition: template
+                  value_template: "{{ zalo_calling_anh | trim != '' }}"
+              then:
+                - continue_on_error: true
+                  action: zalo_call.send_image
+                  data: >-
+                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                        'file': zalo_calling_anh | trim} }}
 
   # === 7. ADDITIONAL ACTIONS ===
   - choose: []

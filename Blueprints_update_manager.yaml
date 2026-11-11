@@ -162,6 +162,30 @@ blueprint:
               step: 1000
               unit_of_measurement: milliseconds
 
+    zalo_calling_settings:
+      name: Zalo Calling (chọn người nhận từ danh sách)
+      icon: mdi:phone-message-outline
+      collapsed: true
+      input:
+        include_zalo_calling:
+          name: ✅ Bật gửi qua Zalo Calling
+          description: >-
+            Gửi qua tích hợp Zalo Calling (kho TriTue2011/Zalo-calling, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
+            (Zalo Call → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
+          default: false
+          selector:
+            boolean: {}
+        zalo_calling_recipients:
+          name: 👥 Người nhận Zalo Calling (chọn nhiều)
+          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+
 # FIX: dung trigger_variables thay vi !input truc tiep trong enabled
 # tranh loi tren mot so phien ban HA
 trigger_variables:
@@ -194,6 +218,8 @@ variables:
   zalo_phone: !input zalo_phone
   zalo_types: !input zalo_types
   zalo_ttl: !input zalo_ttl
+  include_zalo_calling: !input include_zalo_calling
+  zalo_calling_recipients: !input zalo_calling_recipients
 
   device_name_map: >
     {% set ns = namespace(device_names=[]) %}
@@ -323,6 +349,41 @@ action:
 
             ⏱ Duration: {{ duration }}s
             ⏰ {{ update_time }}
+
+
+  # Zalo Calling
+  - if:
+      - condition: template
+        value_template: "{{ include_zalo_calling and zalo_calling_recipients | count > 0 }}"
+    then:
+      - variables:
+          zalo_calling_msg: >
+            📋 BLUEPRINT UPDATE REPORT
+
+            📊 Summary
+            • Total: {{ total_files }}
+            • Updated: {{ update_count }}
+            • Up-to-date: {{ uptodate_count }}
+            • Failed: {{ failed_count }}
+            • No source_url: {{ nosource_count }}
+            {% if update_count | int > 0 %}
+
+            🔄 Updated Files:
+            {% for f in updated_list %}
+            • {{ f }}
+            {% endfor %}
+            {% endif %}
+
+            ⏱ Duration: {{ duration }}s
+            ⏰ {{ update_time }}
+      - repeat:
+          for_each: "{{ zalo_calling_recipients }}"
+          sequence:
+            - continue_on_error: true
+              action: zalo_call.send_message
+              data: >-
+                {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                    'message': zalo_calling_msg | trim} }}
 
 # single: khong chay song song
 # silent: neu dang chay thi bo qua trigger moi (khong bao loi)

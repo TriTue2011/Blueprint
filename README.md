@@ -26,6 +26,8 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Gửi Telegram (Voice + xóa file)](#-gửi-telegram-voice--xóa-file)
   - [Gửi Zalo Bot chính thức (Voice)](#-gửi-zalo-bot-chính-thức-voice)
   - [Gửi Zalo Custom Bot (Voice + xóa file)](#-gửi-zalo-custom-bot-voice--xóa-file)
+  - [🔗 Zalo Calling trong các blueprint cũ](#-zalo-calling-trong-các-blueprint-cũ)
+  - [🎤 Voice gửi Zalo Calling (nhiều người và nhóm)](#-voice-gửi-zalo-calling-nhiều-người-và-nhóm)
   - [📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt](#-zalo-call-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
   - [🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi](#-zalo-call-một-nút-bấm-nghe-máy-cúp-máy-hoặc-gọi-đi)
   - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
@@ -701,6 +703,41 @@ Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộ
 
 ---
 
+## 🎤 Voice gửi Zalo Calling (nhiều người và nhóm)
+
+Script cho **Voice Assistant** (Assist): gửi tin nhắn, vị trí hoặc ảnh cho **nhiều người và nhóm cùng lúc** qua **Zalo Calling**. Người nhận **chọn từ danh sách** (thực thể `notify.zalo_call_...`), không gõ mã Zalo. Cùng khuôn với «Gửi Zalo Custom Bot», nhưng không cần số điện thoại tài khoản và mã nhóm.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Script |
+| **HA tối thiểu** | 2026.3.0 |
+| **Yêu cầu** | Zalo Calling từ bản 2026.11.11.3; người nhận chọn ở *Zalo Call → Cấu hình* |
+
+**Ví dụ lệnh giọng nói:**
+- "Gửi ảnh camera sân cho cả nhà trên Zalo"
+- "Nhắn Zalo cho bố và nhóm gia đình là tối nay về muộn"
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
+
+*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
+
+---
+
+## 🔗 Zalo Calling trong các blueprint cũ
+
+Các blueprint sau **đã có thêm nhóm «Zalo Calling»** (cạnh Zalo Bot / Zalo Custom): bật nó, chọn người nhận từ danh sách (người và nhóm lẫn lộn đều được), và blueprint gửi **song song** qua Zalo Calling. Cần Zalo Calling từ bản `2026.11.11.3`.
+
+| Blueprint | Gửi qua Zalo Calling |
+|---|---|
+| Cảnh báo người qua camera bằng AI (1, 2, 3) | Ảnh chụp kèm chú thích, kết quả AI, tin báo lỗi |
+| Cảnh báo camera AI 4 | Ảnh sớm/muộn, video sớm/muộn, kết quả AI, chữ riêng, tin báo lỗi |
+| LLM Vision Camera | Kết quả AI kèm ảnh khung hình hoặc ảnh chụp |
+| Tạo ảnh thời tiết bằng AI | Ảnh vừa tạo |
+| Thông báo lịch âm & thời tiết | Tin lịch âm và tin thời tiết |
+| Tự động cập nhật Blueprints, Tự động cập nhật Pyscript | Báo cáo cập nhật |
+
+---
+
 ## 🗓️ Thông báo lịch âm & thời tiết
 
 Tự động nhắc nhở các sự kiện âm lịch kèm theo thông tin thời tiết hàng ngày. AI biên tập tin nhắn tự nhiên, sáng tạo mỗi ngày một kiểu khác nhau.
@@ -1293,6 +1330,7 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 23 | Zalo Call Messenger | Automation | 2026.3.0 | Nhắn tin hoặc gọi tuỳ biến theo thiết bị |
 | 24 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
 | 25 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
+| 26 | Voice gửi Zalo Calling | Script | 2026.3.0 | Gửi tin/vị trí/ảnh tới nhiều người và nhóm |
 
 ---
 
