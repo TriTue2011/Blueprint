@@ -172,7 +172,7 @@ blueprint:
             number:
               min: 0
               max: 100
-              step: 5
+              step: 1
               unit_of_measurement: "%"
           default: 0
 
