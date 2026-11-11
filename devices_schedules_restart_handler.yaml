@@ -1,7 +1,7 @@
 blueprint:
   name: Devices Schedules Restart Handler (Deprecated)
   author: luuquangvu
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/devices_schedules_restart_handler.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/devices_schedules_restart_handler.yaml
   description: |-
     # Devices Schedules Restart Handler (Deprecated)
 
