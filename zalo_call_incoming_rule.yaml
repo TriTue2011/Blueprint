@@ -122,6 +122,16 @@ blueprint:
               filter:
                 - domain: media_player
           default: ""
+        am_luong_bao:
+          name: Âm lượng lúc báo (0 = giữ nguyên)
+          description: Âm lượng loa khi đọc thông báo. Không ai nghe máy thì loa trở về mức cũ. Loa R1 có 15 mức, ví dụ mức 6 là 40%.
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+          default: 0
         lap_bao:
           name: Báo lại sau mỗi (giây)
           description: Đọc xong thì chờ chừng này giây rồi đọc lại, tới khi nghe máy hoặc cuộc gọi kết thúc. 0 = chỉ báo một lần.
@@ -291,6 +301,7 @@ variables:
   loa_bao: !input loa_bao
   cau_bao: !input cau_bao
   lap_bao: !input lap_bao
+  am_luong_bao: !input am_luong_bao
   cho_ai_noi: !input cho_ai_noi
   tro_ly_giong_noi: !input tro_ly_giong_noi
   nguoi_tin_cay: !input nguoi_tin_cay
@@ -332,7 +343,7 @@ actions:
                             'call_types': loai_cuoc_goi, 'ai': cho_ai_noi, 'trusted': nguoi_tin_cay,
                             'reply_ai': ai_tra_loi_tin and cho_ai_noi, 'announce': bat_bao_loa and loa_bao | default('', true) != '',
                             'connect': noi_khi_chuyen, 'connect_now': noi_ngay,
-                            'echo_guard': chong_vong, 'video_request': xu_ly_xin_video, 'announce_repeat': lap_bao | int(0)} %}
+                            'echo_guard': chong_vong, 'video_request': xu_ly_xin_video, 'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0)} %}
                 {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(repeat.item, 'thread_id')) %}{% endif %}
                 {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
                 {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
