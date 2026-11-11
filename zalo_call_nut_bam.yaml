@@ -158,28 +158,31 @@ blueprint:
                   value: camera
           default: []
         loa:
-          name: Loa trong nhà
+          name: Loa trong nhà (chọn nhiều = dự phòng theo thứ tự)
           selector:
             entity:
+              multiple: true
               filter:
                 - domain: media_player
-          default: ""
+          default: []
         mic:
-          name: Mic trong nhà
+          name: Mic trong nhà (chọn nhiều = dự phòng theo thứ tự)
           selector:
             entity:
+              multiple: true
               filter:
                 - domain:
                     - camera
                     - assist_satellite
-          default: ""
+          default: []
         camera:
-          name: Camera trong nhà
+          name: Camera trong nhà (chọn nhiều = dự phòng theo thứ tự)
           selector:
             entity:
+              multiple: true
               filter:
                 - domain: camera
-          default: ""
+          default: []
 
 mode: single
 max_exceeded: silent
@@ -203,9 +206,15 @@ variables:
   nghe_may: !input nghe_may
   cup_may: !input cup_may
   noi_gom: !input noi_gom
-  loa: !input loa
-  mic: !input mic
-  camera: !input camera
+  loa_goc: !input loa
+  loa: >-
+    {{ (loa_goc if loa_goc is not string else ([loa_goc] if loa_goc else [])) | join(',') }}
+  mic_goc: !input mic
+  mic: >-
+    {{ (mic_goc if mic_goc is not string else ([mic_goc] if mic_goc else [])) | join(',') }}
+  camera_goc: !input camera
+  camera: >-
+    {{ (camera_goc if camera_goc is not string else ([camera_goc] if camera_goc else [])) | join(',') }}
   mau_cau:
     can_giup: Tôi cần giúp ngay, hãy liên lạc với tôi
     chuong_cua: Có người bấm chuông cửa
