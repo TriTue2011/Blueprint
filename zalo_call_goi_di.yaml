@@ -1,0 +1,222 @@
+blueprint:
+  name: Zalo Call - Gọi đi tuỳ biến (nút bấm, giờ, cảm biến... có AI, loa, mic, camera, âm lượng)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_goi_di.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    **Gọi điện Zalo** cho một người bạn chọn khi có **bất kỳ sự kiện nào**: bấm nút (nút loa R1, nút Zigbee, nút ảo), đúng giờ, cảm biến đổi trạng thái...
+
+    Chọn từ danh sách: **người gọi**, **thoại hay video**, **câu đọc**, **có AI nói chuyện không**, **dùng mic / loa / camera nào**, **âm lượng**.
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.4` trở lên; người nhận chọn ở *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*.
+      - Muốn gọi bằng nút loa R1: ở ô «Khi nào gọi» chọn *Thêm trigger → Thiết bị →* thiết bị R1 (`assist-phicom-R1` từ bản 0.16.0).
+      - Cho AI nói chuyện thì phải chọn **Trợ lý giọng nói** (không tự dùng bộ ưu tiên).
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    khi_nao:
+      name: ① Khi nào gọi
+      icon: mdi:gesture-tap-button
+      input:
+        kich_hoat:
+          name: Trigger
+          description: Chọn một hoặc nhiều trigger (nút bấm, giờ, cảm biến...).
+          selector:
+            trigger: {}
+        cam_bien_cuoc_goi:
+          name: Cảm biến «Trạng thái cuộc gọi» (tuỳ chọn)
+          description: Chọn thì chỉ gọi khi đang rảnh (không có cuộc gọi nào).
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: sensor
+          default: ""
+    goi_ai:
+      name: ② Gọi ai
+      icon: mdi:account-outline
+      input:
+        nguoi_goi:
+          name: Người được gọi
+          description: Chọn từ danh sách Zalo Call (gọi được người, không gọi được nhóm).
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loai_cuoc_goi:
+          name: Gọi thoại hay gọi video
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Gọi thoại
+                  value: user
+                - label: Gọi video
+                  value: video
+          default: user
+    noi_dung:
+      name: ③ Nói gì khi nghe máy
+      icon: mdi:message-text-outline
+      input:
+        cau_noi:
+          name: Câu đọc (tuỳ chọn)
+          description: Để trống = không đọc gì (chỉ đổ chuông và nối thiết bị).
+          selector:
+            text:
+              multiline: true
+          default: ""
+        so_lan_doc:
+          name: Đọc mấy lần
+          selector:
+            number:
+              min: 1
+              max: 3
+              step: 1
+          default: 1
+        cup_sau_khi_doc:
+          name: Tự cúp máy sau khi đọc xong
+          selector:
+            boolean: {}
+          default: false
+    ai:
+      name: ④ AI nói chuyện
+      icon: mdi:robot-outline
+      collapsed: true
+      input:
+        cho_ai_noi:
+          name: Cho AI nói chuyện khi người nhận nghe máy
+          selector:
+            boolean: {}
+          default: false
+        tro_ly_giong_noi:
+          name: Trợ lý giọng nói (Assist)
+          description: Bắt buộc khi cho AI nói chuyện.
+          selector:
+            assist_pipeline: {}
+          default: ""
+        cau_chao:
+          name: Câu AI chào đầu tiên
+          selector:
+            text: {}
+          default: ""
+    thiet_bi:
+      name: ⑤ Thiết bị trong nhà
+      icon: mdi:video-wireless-outline
+      description: Tích ô nào thì dùng thứ đó (tích 1 = dùng 1, tích 2 = dùng 2, tích 3 = dùng cả 3). Tích Camera = cuộc gọi video.
+      collapsed: true
+      input:
+        noi_khi_chuyen:
+          name: Dùng khi người nhà nói trực tiếp
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera
+                  value: camera
+                - label: AI tự chọn trong các ô đã tích
+                  value: ai
+          default: []
+        noi_ngay:
+          name: Dùng NGAY khi người nhận nghe máy
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera
+                  value: camera
+          default: []
+        loa:
+          name: Loa trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        mic:
+          name: Mic trong nhà
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - camera
+                    - assist_satellite
+          default: ""
+        camera:
+          name: Camera trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: camera
+          default: ""
+        am_luong:
+          name: Âm lượng loa (0 = giữ nguyên)
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 5
+              unit_of_measurement: "%"
+          default: 0
+
+mode: single
+max_exceeded: silent
+
+variables:
+  version: 20261111
+  cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
+  nguoi_goi: !input nguoi_goi
+  loai_cuoc_goi: !input loai_cuoc_goi
+  cau_noi: !input cau_noi
+  so_lan_doc: !input so_lan_doc
+  cup_sau_khi_doc: !input cup_sau_khi_doc
+  cho_ai_noi: !input cho_ai_noi
+  tro_ly_giong_noi: !input tro_ly_giong_noi
+  cau_chao: !input cau_chao
+  noi_khi_chuyen: !input noi_khi_chuyen
+  noi_ngay: !input noi_ngay
+  loa: !input loa
+  mic: !input mic
+  camera: !input camera
+  am_luong: !input am_luong
+
+triggers: !input kich_hoat
+
+conditions:
+  - condition: template
+    alias: Chỉ gọi khi đang rảnh (nếu có chọn cảm biến)
+    value_template: "{{ cam_bien_cuoc_goi == '' or is_state(cam_bien_cuoc_goi, 'idle') }}"
+  - condition: template
+    alias: Người được gọi là một người (không phải nhóm)
+    value_template: "{{ state_attr(nguoi_goi, 'type') == 'user' }}"
+
+actions:
+  - action: zalo_call.make_call
+    data: >-
+      {% set d = {'thread_id': state_attr(nguoi_goi, 'thread_id'), 'type': loai_cuoc_goi} %}
+      {% if cau_noi | trim != '' %}{% set d = dict(d, message=cau_noi | trim, repeat=so_lan_doc | int(1), hangup_after=cup_sau_khi_doc) %}{% endif %}
+      {% if cho_ai_noi %}{% set d = dict(d, ai=true) %}{% if tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}{% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}{% endif %}
+      {% if noi_khi_chuyen | count > 0 %}{% set d = dict(d, connect=noi_khi_chuyen) %}{% endif %}
+      {% if noi_ngay | count > 0 %}{% set d = dict(d, connect_now=noi_ngay) %}{% endif %}
+      {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+      {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+      {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+      {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
+      {{ d }}

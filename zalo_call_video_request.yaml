@@ -1,0 +1,211 @@
+blueprint:
+  name: Zalo Call - Người gọi xin chuyển từ thoại sang video
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_video_request.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    Đang nói chuyện thoại mà **người gọi xin chuyển sang video**: blueprint này quyết định làm gì. Mặc định hệ thống **không tự đồng ý** (riêng tư), nên không có blueprint này
+    hoặc quy tắc thì lời xin bị bỏ qua.
+
+    - **Hỏi trên điện thoại** (có nút Đồng ý / Từ chối), hoặc **tự đồng ý**, hoặc **tự đồng ý và gửi camera** bạn chọn.
+    - Có thể đọc thông báo ra loa cho cả nhà biết.
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.4` trở lên (có dịch vụ «Đồng ý chuyển sang video»).
+      - Hỏi trên điện thoại cần ứng dụng Home Assistant (mobile_app) trên điện thoại đó.
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    ap_dung:
+      name: ① Áp dụng cho ai
+      icon: mdi:account-filter-outline
+      input:
+        nguoi:
+          name: Chỉ những người này (tuỳ chọn)
+          description: Chọn từ danh sách Zalo Call. Để trống = bất kỳ ai xin.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+          default: []
+    xu_ly:
+      name: ② Làm gì khi có người xin video
+      icon: mdi:video-outline
+      input:
+        cach_xu_ly:
+          name: Cách xử lý
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Hỏi trên điện thoại (Đồng ý / Từ chối)
+                  value: hoi
+                - label: Tự đồng ý, KHÔNG gửi hình trong nhà
+                  value: dong_y
+                - label: Tự đồng ý và gửi camera đã chọn
+                  value: dong_y_cam
+                - label: Không làm gì
+                  value: khong
+          default: hoi
+        camera:
+          name: Camera gửi khi đồng ý
+          description: Dùng cho «Tự đồng ý và gửi camera» và cho nút Đồng ý khi hỏi trên điện thoại (để trống = chỉ đồng ý, không gửi hình).
+          selector:
+            entity:
+              filter:
+                - domain: camera
+          default: ""
+    hoi_dt:
+      name: ③ Hỏi trên điện thoại
+      icon: mdi:cellphone-message
+      collapsed: true
+      input:
+        dien_thoai:
+          name: Điện thoại nhận câu hỏi
+          selector:
+            device:
+              multiple: true
+              filter:
+                - integration: mobile_app
+          default: []
+        cho_toi_da:
+          name: Chờ trả lời tối đa (giây)
+          selector:
+            number:
+              min: 5
+              max: 120
+              step: 5
+              unit_of_measurement: giây
+          default: 30
+    bao_loa:
+      name: ④ Đọc thông báo ra loa (tuỳ chọn)
+      icon: mdi:bullhorn-outline
+      collapsed: true
+      input:
+        loa_bao:
+          name: Loa
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        tts_bao:
+          name: Dịch vụ đọc (TTS)
+          selector:
+            entity:
+              filter:
+                - domain: tts
+          default: ""
+        cau_bao:
+          name: Câu đọc
+          description: "Dùng {ten} cho tên người xin. Bỏ trống = «{ten} xin chuyển sang video.»"
+          selector:
+            text: {}
+          default: ""
+
+mode: parallel
+max: 5
+
+variables:
+  version: 20261111
+  nguoi: !input nguoi
+  cach_xu_ly: !input cach_xu_ly
+  camera: !input camera
+  dien_thoai: !input dien_thoai
+  cho_toi_da: !input cho_toi_da
+  loa_bao: !input loa_bao
+  tts_bao: !input tts_bao
+  cau_bao: !input cau_bao
+  ten: "{{ trigger.event.data.peer or 'Người gọi' }}"
+  nguoi_thread: >-
+    {% set ns = namespace(l=[]) %}{% for e in nguoi %}{% set ns.l = ns.l + [state_attr(e, 'thread_id') | string] %}{% endfor %}{{ ns.l }}
+  ten_dt: >-
+    {% set ns = namespace(l=[]) %}{% for d in dien_thoai %}{% set ns.l = ns.l + ['mobile_app_' ~ (device_attr(d, 'name') | slugify)] %}{% endfor %}{{ ns.l }}
+  id_dong_y: "ZC_VIDEO_YES_{{ trigger.event.data.call_id }}"
+  id_tu_choi: "ZC_VIDEO_NO_{{ trigger.event.data.call_id }}"
+
+triggers:
+  - trigger: event
+    event_type: zalo_call_call_state
+    event_data:
+      state: video_request
+
+conditions:
+  - condition: template
+    alias: Đúng người (nếu có chọn)
+    value_template: "{{ nguoi | count == 0 or (trigger.event.data.thread_id | string) in nguoi_thread }}"
+
+actions:
+  - alias: Đọc thông báo ra loa
+    if:
+      - condition: template
+        value_template: "{{ loa_bao != '' and tts_bao != '' }}"
+    then:
+      - action: tts.speak
+        target:
+          entity_id: "{{ tts_bao }}"
+        data:
+          media_player_entity_id: "{{ loa_bao }}"
+          message: "{{ (cau_bao | trim if cau_bao | trim != '' else '{ten} xin chuyển sang video.') | replace('{ten}', ten) }}"
+  - choose:
+      - alias: Tự đồng ý (không gửi hình)
+        conditions:
+          - condition: template
+            value_template: "{{ cach_xu_ly == 'dong_y' }}"
+        sequence:
+          - action: zalo_call.accept_video
+            data: "{{ {'call_id': trigger.event.data.call_id | string} }}"
+      - alias: Tự đồng ý và gửi camera
+        conditions:
+          - condition: template
+            value_template: "{{ cach_xu_ly == 'dong_y_cam' }}"
+        sequence:
+          - action: zalo_call.accept_video
+            data: >-
+              {% set d = {'call_id': trigger.event.data.call_id | string} %}{% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}{{ d }}
+      - alias: Hỏi trên điện thoại
+        conditions:
+          - condition: template
+            value_template: "{{ cach_xu_ly == 'hoi' and ten_dt | count > 0 }}"
+        sequence:
+          - repeat:
+              for_each: "{{ ten_dt }}"
+              sequence:
+                - action: "notify.{{ repeat.item }}"
+                  data:
+                    title: Xin chuyển sang video
+                    message: "{{ ten }} xin chuyển cuộc gọi Zalo sang video."
+                    data:
+                      tag: "{{ id_dong_y }}"
+                      actions:
+                        - action: "{{ id_dong_y }}"
+                          title: Đồng ý
+                        - action: "{{ id_tu_choi }}"
+                          title: Từ chối
+          - wait_for_trigger:
+              - trigger: event
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "{{ id_dong_y }}"
+              - trigger: event
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "{{ id_tu_choi }}"
+            timeout:
+              seconds: "{{ cho_toi_da | int(30) }}"
+            continue_on_timeout: false
+          - if:
+              - condition: template
+                value_template: "{{ wait.trigger.event.data.action == id_dong_y }}"
+            then:
+              - action: zalo_call.accept_video
+                data: >-
+                  {% set d = {'call_id': trigger.event.data.call_id | string} %}{% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}{{ d }}

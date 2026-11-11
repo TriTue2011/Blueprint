@@ -33,6 +33,9 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
   - [💬 Zalo Call Messenger tuỳ biến](#-zalo-call-messenger-tuỳ-biến)
   - [⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch](#-zalo-call-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
+  - [📱 Zalo Call gọi đi tuỳ biến](#-zalo-call-gọi-đi-tuỳ-biến)
+  - [🔔 Zalo Call nút cho cuộc gọi đến](#-zalo-call-nút-cho-cuộc-gọi-đến)
+  - [🎥 Zalo Call người gọi xin chuyển sang video](#-zalo-call-người-gọi-xin-chuyển-sang-video)
   - [🔁 Automation của luuquangvu (webhook, hẹn giờ, liên kết)](#-automation-của-luuquangvu-webhook-hẹn-giờ-liên-kết)
   - [🧠 Script của luuquangvu cho Assist (tìm kiếm, lịch, bộ nhớ, hẹn giờ)](#-script-của-luuquangvu-cho-assist-tìm-kiếm-lịch-bộ-nhớ-hẹn-giờ)
 - **Tiện ích**
@@ -672,6 +675,36 @@ Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộ
 **Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
+
+---
+
+## 📱 Zalo Call gọi đi tuỳ biến
+
+Gọi một người khi **bất kỳ sự kiện nào** (nút bấm, giờ, cảm biến): chọn thoại hay video, câu đọc, có AI không, mic/loa/camera và âm lượng. Chỉ gọi khi đang rảnh.
+
+**Cần:** Zalo Call từ bản 2026.11.11.4.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
+
+---
+
+## 🔔 Zalo Call nút cho cuộc gọi đến
+
+Gán một nút cho một việc: **nghe máy**, **từ chối**, **cúp**, **tăng/giảm âm lượng**. Chỉ chạy đúng lúc (đang đổ chuông / đang trong cuộc gọi).
+
+**Cần:** Zalo Call từ bản 2026.11.11.4.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_cuoc_goi_den.yaml)
+
+---
+
+## 🎥 Zalo Call người gọi xin chuyển sang video
+
+Người gọi xin chuyển từ thoại sang video: **hỏi trên điện thoại** (Đồng ý / Từ chối), tự đồng ý, hoặc tự đồng ý và gửi camera; có thể đọc thông báo ra loa. Mặc định không tự đồng ý.
+
+**Cần:** Zalo Call từ bản 2026.11.11.4.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
 
 ---
 
@@ -1376,6 +1409,9 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 49 | Hẹn giờ nhiều thiết bị | Script | 2024.12.0 | common_utilities.py |
 | 50 | Điều khiển hẹn giờ bằng giọng nói | Script | 2024.12.0 | — |
 | 51 | Bộ nhớ ghi nhớ cho Assist | Script | 2024.12.0 | memory.py |
+| 52 | Zalo Call gọi đi tuỳ biến | Automation | 2026.3.0 | Zalo Call gọi đi tuỳ biến |
+| 53 | Zalo Call nút cho cuộc gọi đến | Automation | 2026.3.0 | Zalo Call nút cho cuộc gọi đến |
+| 54 | Zalo Call người gọi xin chuyển sang video | Automation | 2026.3.0 | Zalo Call người gọi xin chuyển sang video |
 
 ---
 

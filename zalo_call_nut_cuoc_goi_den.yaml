@@ -1,0 +1,231 @@
+blueprint:
+  name: Zalo Call - Nút cho cuộc gọi đến (nghe máy, từ chối, cúp, âm lượng)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_nut_cuoc_goi_den.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    Gán **một nút bấm cho một việc** khi có cuộc gọi Zalo: **nghe máy**, **từ chối**, **cúp máy**, **tăng / giảm âm lượng loa**. Tạo mỗi nút một automation từ blueprint này.
+
+    Việc chỉ chạy đúng lúc: nghe máy và từ chối khi **đang đổ chuông có người gọi đến**; cúp máy khi **đang trong cuộc gọi**; âm lượng khi đang trong cuộc gọi.
+    Muốn một nút làm nhiều việc theo ngữ cảnh (nghe / cúp / gọi đi) thì dùng blueprint «Một nút bấm nghe máy, cúp máy hoặc gọi đi».
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** từ bản `2026.11.11.4` trở lên.
+      - Nút bấm: ở ô «Nút bấm» chọn *Thêm trigger → Thiết bị →* thiết bị của nút (loa R1 từ bản 0.16.0 có sẵn nhấn đơn / đúp / ba lần / giữ).
+
+    </details>
+
+    **Phiên bản: v.2026.11.11**
+  input:
+    nut:
+      name: ① Nút và việc của nút
+      icon: mdi:gesture-tap-button
+      input:
+        nut_bam:
+          name: Nút bấm
+          selector:
+            trigger: {}
+        viec:
+          name: Nút này làm gì
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Nghe máy
+                  value: nghe
+                - label: Từ chối cuộc gọi đến
+                  value: tu_choi
+                - label: Cúp máy
+                  value: cup
+                - label: Tăng âm lượng loa
+                  value: tang_am
+                - label: Giảm âm lượng loa
+                  value: giam_am
+          default: nghe
+        cam_bien_cuoc_goi:
+          name: Cảm biến «Trạng thái cuộc gọi» của Zalo Call
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: sensor
+    nghe_may:
+      name: ② Khi nghe máy (chỉ dùng cho việc «Nghe máy»)
+      icon: mdi:phone-check-outline
+      collapsed: true
+      input:
+        cho_ai_noi:
+          name: Cho AI nói chuyện
+          selector:
+            boolean: {}
+          default: false
+        tro_ly_giong_noi:
+          name: Trợ lý giọng nói (Assist)
+          description: Bắt buộc khi cho AI nói chuyện.
+          selector:
+            assist_pipeline: {}
+          default: ""
+        cau_chao:
+          name: Câu AI chào đầu tiên
+          selector:
+            text: {}
+          default: ""
+        noi_khi_chuyen:
+          name: Thiết bị dùng khi người nhà nói trực tiếp
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera
+                  value: camera
+                - label: AI tự chọn trong các ô đã tích
+                  value: ai
+          default: []
+        noi_ngay:
+          name: Thiết bị dùng NGAY khi nghe máy
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera
+                  value: camera
+          default: []
+        loa:
+          name: Loa trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        mic:
+          name: Mic trong nhà
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - camera
+                    - assist_satellite
+          default: ""
+        camera:
+          name: Camera trong nhà
+          selector:
+            entity:
+              filter:
+                - domain: camera
+          default: ""
+        am_luong:
+          name: Âm lượng loa khi nghe máy (0 = giữ nguyên)
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 5
+              unit_of_measurement: "%"
+          default: 0
+    am_luong_nut:
+      name: ③ Âm lượng (chỉ dùng cho tăng / giảm âm)
+      icon: mdi:volume-high
+      collapsed: true
+      input:
+        loa_am_luong:
+          name: Loa cần chỉnh
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        buoc:
+          name: Mỗi lần nhấn đổi bao nhiêu %
+          selector:
+            number:
+              min: 1
+              max: 50
+              step: 1
+              unit_of_measurement: "%"
+          default: 10
+
+mode: single
+max_exceeded: silent
+
+variables:
+  version: 20261111
+  viec: !input viec
+  cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
+  cho_ai_noi: !input cho_ai_noi
+  tro_ly_giong_noi: !input tro_ly_giong_noi
+  cau_chao: !input cau_chao
+  noi_khi_chuyen: !input noi_khi_chuyen
+  noi_ngay: !input noi_ngay
+  loa: !input loa
+  mic: !input mic
+  camera: !input camera
+  am_luong: !input am_luong
+  loa_am_luong: !input loa_am_luong
+  buoc: !input buoc
+  trang_thai: "{{ states(cam_bien_cuoc_goi) }}"
+  chi_tiet: "{{ state_attr(cam_bien_cuoc_goi, 'status') }}"
+  dang_do_chuong_den: "{{ trang_thai == 'ringing' and chi_tiet == 'incoming' }}"
+  dang_trong_cuoc_goi: "{{ trang_thai in ['ringing', 'active'] }}"
+  loa_chinh: "{{ loa_am_luong or loa }}"
+
+triggers: !input nut_bam
+
+actions:
+  - choose:
+      - alias: Nghe máy
+        conditions:
+          - condition: template
+            value_template: "{{ viec == 'nghe' and dang_do_chuong_den }}"
+        sequence:
+          - action: zalo_call.answer_call
+            data: >-
+              {% set d = {} %}
+              {% if cho_ai_noi %}{% set d = dict(d, ai=true) %}{% if tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}{% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}{% endif %}
+              {% if noi_khi_chuyen | count > 0 %}{% set d = dict(d, connect=noi_khi_chuyen) %}{% endif %}
+              {% if noi_ngay | count > 0 %}{% set d = dict(d, connect_now=noi_ngay) %}{% endif %}
+              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+              {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+              {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
+              {{ d }}
+      - alias: Từ chối cuộc gọi đến
+        conditions:
+          - condition: template
+            value_template: "{{ viec == 'tu_choi' and dang_do_chuong_den }}"
+        sequence:
+          - action: zalo_call.reject_call
+            data: {}
+      - alias: Cúp máy
+        conditions:
+          - condition: template
+            value_template: "{{ viec == 'cup' and dang_trong_cuoc_goi }}"
+        sequence:
+          - action: zalo_call.end_call
+            data: {}
+      - alias: Tăng hoặc giảm âm lượng loa
+        conditions:
+          - condition: template
+            value_template: "{{ viec in ['tang_am', 'giam_am'] and dang_trong_cuoc_goi and loa_chinh != '' }}"
+        sequence:
+          - action: media_player.volume_set
+            target:
+              entity_id: "{{ loa_chinh }}"
+            data:
+              volume_level: >-
+                {% set hien_tai = state_attr(loa_chinh, 'volume_level') | float(0.3) %}
+                {% set doi = (buoc | float(10)) / 100 * (1 if viec == 'tang_am' else -1) %}
+                {{ [0, [1, hien_tai + doi] | min] | max | round(2) }}

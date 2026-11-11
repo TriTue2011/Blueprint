@@ -33,6 +33,9 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
   - [💬 Zalo Call custom Messenger](#-zalo-call-custom-messenger)
   - [⏰ Zalo Call scheduled reminder call or message](#-zalo-call-scheduled-reminder-call-or-message)
+  - [📱 Zalo Call custom outgoing call](#-zalo-call-custom-outgoing-call)
+  - [🔔 Zalo Call button for incoming calls](#-zalo-call-button-for-incoming-calls)
+  - [🎥 Zalo Call caller asks to switch to video](#-zalo-call-caller-asks-to-switch-to-video)
   - [🔁 luuquangvu automations (webhooks, timers, linking)](#-luuquangvu-automations-webhooks-timers-linking)
   - [🧠 luuquangvu scripts for Assist (search, calendar, memory, timers)](#-luuquangvu-scripts-for-assist-search-calendar-memory-timers)
 - **Utilities**
@@ -644,6 +647,36 @@ At the chosen time, **call someone on Zalo and read a reminder** (or message the
 
 ---
 
+## 📱 Zalo Call custom outgoing call
+
+Call one person on **any event** (button, time, sensor): voice or video, what to say, AI or not, mic/speaker/camera and volume. Only calls when idle.
+
+**Needs:** Zalo Call 2026.11.11.4 or newer.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
+
+---
+
+## 🔔 Zalo Call button for incoming calls
+
+Give one button one job: **answer**, **reject**, **hang up**, **volume up/down**. Only acts at the right moment (ringing / in a call).
+
+**Needs:** Zalo Call 2026.11.11.4 or newer.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_cuoc_goi_den.yaml)
+
+---
+
+## 🎥 Zalo Call caller asks to switch to video
+
+The caller asks to switch from voice to video: **ask on your phone** (Accept / Decline), accept automatically, or accept and send a camera; can announce on a speaker. Never accepts by default.
+
+**Needs:** Zalo Call 2026.11.11.4 or newer.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
+
+---
+
 ## 🎤 Voice send to Zalo Calling (many people and groups)
 
 A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
@@ -1030,6 +1063,9 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 49 | Multi-device timers | Script | 2024.12.0 | common_utilities.py |
 | 50 | Voice device timers | Script | 2024.12.0 | — |
 | 51 | Memory tool for Assist | Script | 2024.12.0 | memory.py |
+| 52 | Zalo Call custom outgoing call | Automation | 2026.3.0 | Zalo Call custom outgoing call |
+| 53 | Zalo Call button for incoming calls | Automation | 2026.3.0 | Zalo Call button for incoming calls |
+| 54 | Zalo Call caller asks to switch to video | Automation | 2026.3.0 | Zalo Call caller asks to switch to video |
 
 ---
 
