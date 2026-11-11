@@ -1,0 +1,67 @@
+blueprint:
+  name: Check The Device Turns On Manually
+  author: luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/check_the_device_turns_on_manually.yaml
+  description: |-
+    # Verify whether the device activated manually or via automation/application
+
+    Identifies whether a device was turned on physically by a human (e.g., pressing a physical wall switch) versus triggered programmatically by an automation, script, or user in the Home Assistant app/dashboard.
+
+    ### Key Features:
+    - **Physical Activation Detection:** Uses Home Assistant event context (`parent_id` and `user_id`) to reliably differentiate physical button presses from software-initiated commands.
+    - **State Synchronization:** Updates an `input_boolean` helper entity (`on` when turned on manually/physically, `off` when turned off or triggered programmatically).
+    - **Fail-Safe Filtering:** Restricts state transitions strictly between `on` and `off`, preventing false activations when devices recover or reboot from `unavailable` or `unknown` states.
+
+    ### Requirements:
+    - A target switch or light entity (`switch` or `light`).
+    - An `input_boolean` helper entity to reflect the manual activation state.
+    - Requires Home Assistant 2024.12.0 or newer.
+  domain: automation
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    linked_entity:
+      name: Entity
+      description: Entity to link (Switch or Light)
+      selector:
+        entity:
+          filter:
+            - domain:
+                - switch
+                - light
+    linked_boolean:
+      name: Input Boolean
+      description: Input Boolean Helper to link
+      selector:
+        entity:
+          filter:
+            - domain: input_boolean
+mode: restart
+max_exceeded: silent
+variables:
+  version: 20251209
+triggers:
+  - trigger: state
+    entity_id: !input linked_entity
+    from:
+      - "on"
+      - "off"
+    to:
+      - "off"
+      - "on"
+actions:
+  - if:
+      - condition: template
+        value_template: "{{ trigger.to_state.state == 'on' }}"
+      - condition: template
+        value_template: "{{ trigger.to_state.context.parent_id is none }}"
+      - condition: template
+        value_template: "{{ trigger.to_state.context.user_id is none }}"
+    then:
+      - action: homeassistant.turn_on
+        target:
+          entity_id: !input linked_boolean
+    else:
+      - action: homeassistant.turn_off
+        target:
+          entity_id: !input linked_boolean

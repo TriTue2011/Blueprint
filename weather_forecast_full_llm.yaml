@@ -1,0 +1,271 @@
+blueprint:
+  name: Get Home Weather Forecast
+  author: luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/weather_forecast_full_llm.yaml
+  description: |-
+    # Tool for requesting the weather forecast used for Voice Assistant
+
+    ### Blueprint setup
+
+    #### Required
+
+    * Set a weather entity to use for the forecasts
+
+    ### Optional
+
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    - Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for requesting the weather forecast.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+
+    ### Credit
+
+    - Special thanks to the original blueprint from [TheFes/ha-blueprints](https://github.com/TheFes/ha-blueprints). This version has been refined and optimized specifically for use with Gemini.
+  domain: script
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    weather_settings:
+      name: Weather settings
+      icon: mdi:weather-lightning-rainy
+      description: Here you need to select the weather entity you want to use
+      input:
+        weather_entity:
+          name: Weather entity
+          description:
+            Select the weather entity to use for the forecast. Needs to
+            be a weather entity which provides an hourly and daily forecast
+          selector:
+            entity:
+              multiple: false
+              filter:
+                - domain:
+                    - weather
+        calc_average:
+          name: Calculate averages
+          description:
+            "When this is enabled, the LLM will only receive the average
+            of the data for the selected period, instead of the data for each hour/day.
+            For text fields like the current condition, the most frequent value will
+            be sent.
+
+            When disabled all data for each hour or day will be sent."
+          selector:
+            boolean: {}
+          default: true
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description:
+        You can use these settings to finetune the prompts for your specific
+        LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        time_period_type_prompt:
+          name: Time period type prompt
+          description: The prompt used by the AI to identify the period type (daily or hourly)
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: |-
+            daily or hourly. Default daily
+        time_period_length_prompt:
+          name: Time period length prompt
+          description: The prompt used by the AI to identify the period length
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: |-
+            Length in days (daily) or hours (hourly). Default 1
+        date_prompt:
+          name: Date prompt
+          description: The prompt used by the AI to identify the starting date
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: |-
+            Start date (YYYY-MM-DD). Default today. Night=next day if >=05:00:00
+        time_prompt:
+          name: Time prompt
+          description: The prompt used by the AI to identify the starting time
+          selector:
+            text:
+              multiline: true
+              multiple: false
+          default: |-
+            Start time (HH:MM:SS). Default 00:00:00 for daily, current time for hourly
+mode: parallel
+max_exceeded: silent
+description: Retrieves weather forecast for hourly or daily periods
+variables:
+  version: 20260821
+fields:
+  time_period_type:
+    name: Time Period Type
+    description: !input time_period_type_prompt
+    selector:
+      select:
+        options:
+          - daily
+          - hourly
+    default: daily
+  time_period_length:
+    name: Time Period Length
+    description: !input time_period_length_prompt
+    selector:
+      number:
+        min: 1
+        max: 48
+    default: 1
+  start_date:
+    name: Start Date
+    description: !input date_prompt
+    selector:
+      date:
+  start_time:
+    name: Start Time
+    description: !input time_prompt
+    selector:
+      time:
+sequence:
+  - variables:
+      weather_entity: !input weather_entity
+      supported: >
+        {% set sf = state_attr(weather_entity, 'supported_features') | int(0) %}
+        {% set d = ['daily'] if sf | bitwise_and(1) else [] %}
+        {% set h = ['hourly'] if sf | bitwise_and(2) else [] %}
+        {% set td = ['twice_daily'] if sf | bitwise_and(4) else [] %}
+        {{ d + h + td }}
+      _period_type: "{{ time_period_type if (time_period_type | default) in ['daily', 'hourly', 'twice_daily'] else 'daily' }}"
+      time_period_type: >
+        {{
+          'twice_daily'
+            if _period_type not in supported
+            and _period_type == 'daily'
+            and 'twice_daily' in supported
+          else _period_type
+        }}
+      _add_length: "{{ (time_period_length | default(1) | int(1)) | abs }}"
+      _start_date_raw: "{{ start_date | default('', true) | trim }}"
+      _start_time_raw: "{{ start_time | default('', true) | trim }}"
+      _start_date_val: >-
+        {% if _start_date_raw != '' %}
+          {% set parsed = _start_date_raw | as_datetime(default=none) %}
+          {{ (parsed.date() | string) if parsed is not none else _start_date_raw }}
+        {% else %}
+          {{ now().strftime('%Y-%m-%d') }}
+        {% endif %}
+      _start_time_val: >-
+        {% if _start_time_raw != '' %}
+          {{ _start_time_raw }}
+        {% elif time_period_type == 'hourly' and (_start_date_val == now().strftime('%Y-%m-%d')) %}
+          {{ now().strftime('%H:%M:%S') }}
+        {% else %}
+          00:00:00
+        {% endif %}
+      start: >-
+        {% set dt_str = _start_date_val ~ ' ' ~ _start_time_val %}
+        {% set dt = dt_str | as_datetime(default=none) %}
+        {{ (dt | as_local).isoformat() if dt is not none else 'NA' }}
+      end: >-
+        {% if start != 'NA' %}
+          {% set start_dt = as_datetime(start) %}
+          {{ (start_dt + timedelta(days = _add_length if time_period_type in ['daily', 'twice_daily'] else 0, hours = _add_length if time_period_type == 'hourly' else 0)) | as_local | string }}
+        {% else %}
+          NA
+        {% endif %}
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ start == 'NA' or (end | as_datetime | default(now(), true) < now()) }}"
+    then:
+      - alias: Set variable for eror message
+        variables:
+          response:
+            error:
+              Unable to provide forecast because not all parameters were set by the
+              AI agent
+      - alias: Stop the script
+        stop:
+          Unable to determine the date for the weather forecast, or the date is in
+          the past
+        response_variable: response
+  - if: "{{ time_period_type not in supported }}"
+    then:
+      - alias: Set variable for eror message
+        variables:
+          response:
+            error:
+              Unable to provide forecast because the weather provider doesn't provide
+              the {{ time_period_type }} forecast data
+      - alias: Stop the script
+        stop: Weather provider doesn't provide {{ time_period_type }} forecast data
+        response_variable: response
+    else:
+      - action: weather.get_forecasts
+        data:
+          type: "{{ time_period_type }}"
+        target:
+          entity_id: !input weather_entity
+        response_variable: weather_response
+      - variables:
+          calc_average: !input calc_average
+          selected_data: >-
+            {% set ns = namespace(forecast=[]) %}
+            {% for item in weather_response[weather_entity].forecast %}
+              {% if start | as_datetime <= item.datetime | as_datetime | as_local < end | as_datetime %}
+                {% set ns.forecast = ns.forecast + [item] %}
+              {% endif %}
+            {% endfor %}
+            {{
+              dict(
+                current_context=dict(
+                  current_time=now().strftime('%A, %Y-%m-%d %H:%M:%S %z'),
+                  timezone=now().tzinfo | string
+                ),
+                start_of_period=start,
+                end_of_period=end,
+                forecast=ns.forecast
+              )
+            }}
+          averaged:
+            averaged_weather_data_for_period:
+              "{% set ns = namespace(combined={}) %}
+
+              {% set weather_data = selected_data.forecast if selected_data is mapping and selected_data.forecast is defined else [] %}
+
+              {% set first_forecast = weather_data[0] if weather_data else {} %}
+
+              {% set forecast_keys = first_forecast.keys() | reject('eq', 'datetime') %}
+
+              {% for item in forecast_keys %}
+
+              {% set combine = weather_data | selectattr(item, 'defined') | map(attribute=item) | list %}
+
+              {% set combine = combine | statistical_mode if combine | count > 0 and combine[0] is string else combine | average(none) %}
+
+              {% set combine = combine | round(1 if combine < 1 else 0) if combine | is_number else combine %}
+
+              {% set ns.combined = (dict(ns.combined, **{item: combine})) if combine is not none else ns.combined %}
+
+              {% endfor %}
+
+              {{ dict(
+              current_context=dict(
+              current_time=now().strftime('%A, %Y-%m-%d %H:%M:%S %z'),
+              timezone=now().tzinfo | string
+              ),
+              start_of_period=start,
+              end_of_period=end,
+              **ns.combined
+              ) }}"
+          response: "{{ averaged if calc_average else selected_data }}"
+      - stop: ""
+        response_variable: response

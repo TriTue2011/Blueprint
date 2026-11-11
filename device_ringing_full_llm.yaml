@@ -1,0 +1,102 @@
+blueprint:
+  name: Ring Device
+  author: luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/device_ringing_full_llm.yaml
+  description: |-
+    # Device Ringing Tool used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    - An LLM like Gemini or OpenAI.
+    - Home Assistant Companion App must be installed on the device.
+    - The device must allow notifications permission for Home Assistant Companion App.
+    - The device must allow critical alerts for Home Assistant Companion App (iOS).
+
+    ### Optional
+
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    - Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to ring the mobile device.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+  domain: script
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        ring_id_prompt:
+          name: Ring ID Prompt
+          description: The specific Ring ID (notify.mobile_app_*) of the device to ring, provided by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Valid Ring ID (notify.mobile_app_*). No guessing
+mode: parallel
+max_exceeded: silent
+description: Triggers a notification or sound on a mobile device to locate it
+variables:
+  version: 20260409
+fields:
+  ring_id:
+    name: Ring ID
+    description: !input ring_id_prompt
+    selector:
+      text:
+    required: true
+sequence:
+  - variables:
+      ring_id: "{{ ring_id | default('') | trim }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ not (ring_id and ring_id.startswith('notify.mobile_app_')) }}"
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to ring the device because the ring id is invalid.
+      - alias: Stop the script
+        stop: Unable to ring the device because the ring id is invalid.
+        response_variable: response
+  - repeat:
+      count: 5
+      sequence:
+        - action: "{{ ring_id }}"
+          data:
+            message: Hello, is anybody here?
+            title: I'm here
+            data:
+              push:
+                interruption-level: critical
+                sound:
+                  name: default
+                  critical: 1
+                  volume: 1
+              ttl: 0
+              priority: high
+              channel: alarm_stream
+              importance: high
+              tag: "{{ this.entity_id }}"
+        - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+  - alias: Prepare success response for Assist
+    variables:
+      response:
+        success: >-
+          Sent 5 critical ring notifications to {{ ring_id }} successfully.
+  - stop: Finish and return response data
+    response_variable: response

@@ -1,0 +1,169 @@
+blueprint:
+  name: Get YouTube Video Info
+  author: luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/get_youtube_video_info_full_llm.yaml
+  description: |-
+    # Tool gets YouTube video info used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    - Check out the guide `home_assistant_play_favorite_youtube_channel_videos_en.md` for further details.
+    - The Feedparser integration needs to be installed from HACS.
+    - Expose YouTube Channel entities after created to Assist.
+    - Consider adding entity aliases to make them easier to remember if needed.
+    - A template sensor stores all information about entity aliases needs to be configured in `config/configuration.yaml`; The sensor is required for friendly-name lookup.
+
+    ```
+    # File configuration.yaml
+    shell_command:
+      get_entity_alias: >-
+        jq '[.data.entities[] | select(.options.conversation.should_expose == true) | {entity_id, aliases: (if has("aliases_v2") then ((if (.aliases_v2 | type) == "array" then .aliases_v2 else [] end) | map(select(. != null and . != ""))) else (if (.aliases | type) == "array" then .aliases else [] end) end)} | select(.aliases | length > 0)]' ./.storage/core.entity_registry
+    template:
+      - triggers:
+          - trigger: homeassistant
+            event: start
+          - trigger: event
+            event_type: event_template_reloaded
+        actions:
+          - action: shell_command.get_entity_alias
+            response_variable: response
+        sensor:
+          - name: "Assist: Entity IDs and Aliases"
+            unique_id: entity_ids_and_aliases
+            icon: mdi:format-list-bulleted
+            device_class: timestamp
+            state: "{{ now().isoformat() }}"
+            attributes:
+              entities: "{{ response.stdout }}"
+    ```
+
+    ### Optional
+
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    - The `play_youtube_video_full_llm.yaml` blueprint needs to be installed to play YouTube videos on a smart TV.
+    - Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to obtain the latest video information from a YouTube channel or multiple channels.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+  domain: script
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    entity_aliases_settings:
+      name: Settings for Entity Aliases
+      icon: mdi:format-list-bulleted
+      description: You can use these settings to configure a template sensor that stores all information about entity aliases.
+      input:
+        entity_aliases:
+          name: Entity Aliases
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  integration: template
+    short_videos_settings:
+      name: Settings for Short Videos
+      icon: mdi:video-high-definition
+      description: "These settings let you choose whether to ignore short videos in the results or include them (Default: Ignored)."
+      collapsed: true
+      input:
+        short_videos:
+          name: Short Videos
+          selector:
+            boolean:
+          default: false
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        entities_prompt:
+          name: Entities Prompt
+          description: The prompt used by the AI to identify the YouTube channel names for the query
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Channel names (semicolon-separated). Silence-correct. After results, ask to play using ordinals, omit Media IDs and URLs
+        period_length_prompt:
+          name: Period Length Prompt
+          description: The prompt used by the AI to identify the lookback period in days
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Lookback days (1-30). Default: 3. Today=1, Week=7, Month=30
+mode: parallel
+max_exceeded: silent
+description: Fetches recent video uploads from specified YouTube channels
+variables:
+  version: 20260818
+fields:
+  entities:
+    name: Entities
+    description: !input entities_prompt
+    selector:
+      text:
+    required: true
+  period_length:
+    name: Period Length
+    description: !input period_length_prompt
+    selector:
+      number:
+        min: 1
+        max: 30
+    default: 3
+sequence:
+  - variables:
+      entity_aliases: !input entity_aliases
+      short_videos: !input short_videos
+      entities: "{{ entities | default('') | trim }}"
+      period_length: "{{ (period_length | default(3) | float(3)) | abs }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: >-
+          {% set validation = namespace(not_exist=false) -%}
+          {% for entity in entities.split(';') -%}
+          {% if not ((integration_entities('feedparser') | select('is_state_attr', 'friendly_name', entity.strip()) | list) or
+          (state_attr(entity_aliases, 'entities') | default([], true) | selectattr('entity_id', 'defined') | selectattr('entity_id', 'match', '^sensor\.') | selectattr('aliases', 'defined') | selectattr('aliases', 'contains', entity.strip()) | list)) -%}
+          {% set validation.not_exist = true -%}
+          {% endif -%}
+          {% endfor -%}
+          {{ validation.not_exist }}
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to find the video information because the channel name is invalid.
+      - alias: Stop the script
+        stop: Unable to find the video information because the channel name is invalid.
+        response_variable: response
+  - variables:
+      response:
+        entries: |-
+          {% set seen_video_ids = namespace(values=[]) -%}
+          {% for entity in entities.split(';') -%}
+          {% set feed_matches = integration_entities('feedparser') | select('is_state_attr', 'friendly_name', entity.strip()) | list -%}
+          {% set alias_matches = state_attr(entity_aliases, 'entities') | default([], true) | selectattr('entity_id', 'defined') | selectattr('entity_id', 'match', '^sensor\.') | selectattr('aliases', 'defined') | selectattr('aliases', 'contains', entity.strip()) | map(attribute='entity_id') | list -%}
+          {% set entity_id = feed_matches[0] if feed_matches else (alias_matches[0] if alias_matches else none) -%}
+          {% set entries = state_attr(entity_id, 'entries') | default([], true) if entity_id else [] -%}
+          {% for entry in entries if (strptime(entry.published, '%Y-%m-%dT%H:%M:%S%z') > (now() - timedelta(days=period_length))) -%}
+          {% if (short_videos or entry.link is not search('\/shorts\/')) and entry.yt_videoid not in seen_video_ids.values -%}
+          {% set seen_video_ids.values = seen_video_ids.values + [entry.yt_videoid] -%}
+          - channel: {{ entry.author | lower }}
+            title: {{ entry.title | lower }}
+            published: {{ strptime(entry.published, '%Y-%m-%dT%H:%M:%S%z') | relative_time }} ago
+            media_id: {{ entry.yt_videoid }}
+            media_url: {{ 'https://www.youtube.com/watch?v=' ~ entry.yt_videoid }}
+          {% endif -%}
+          {% endfor -%}
+          {% endfor -%}
+  - stop: ""
+    response_variable: response

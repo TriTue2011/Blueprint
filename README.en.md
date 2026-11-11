@@ -66,10 +66,11 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
 
 | `.py` file | Blueprints that use it |
 |---|---|
-| `common_utilities.py` | `devices_schedules_restart_handler.yaml`, `telegram_bot_webhook.yaml`, `zalo_bot_webhook.yaml`, `devices_schedules.yaml` |
-| `date_conversion_tool.py` | `date_lookup_and_conversion_full_llm.yaml` |
+| `common_utilities.py` | `devices_schedules_restart_handler.yaml`, `telegram_bot_webhook.yaml`, `zalo_bot_webhook.yaml`, `memory_tool_local.yaml`, `devices_schedules.yaml` |
+| `date_conversion_tool.py` | `create_lunar_events.yaml`, `date_lookup_and_conversion_full_llm.yaml` |
+| `devices_scheduler.py` | `devices_schedules_controller_v2_full_llm.yaml` |
 | `flow_image.py` | `ai_creat_image_weather_3.yaml` |
-| `memory.py` | `memory_tool_full_llm.yaml` |
+| `memory.py` | `memory_tool_local.yaml`, `memory_tool_full_llm.yaml` |
 | `telegram_bot_handle_tool.py` | `send_to_telegram_full_llm.yaml`, `telegram_bot_webhook.yaml` |
 | `weather_image.py` | `ai_creat_image_weather_2.yaml`, `ai_creat_image_weather_3.yaml` |
 | `youtube_data_tool.py` | `advanced_youtube_search_full_llm.yaml` |
@@ -679,10 +680,13 @@ Install the **Pyscript** integration (HACS), enable `allow_all_imports` and `has
 | **Type** | Automation |
 | **HA minimum** | 2024.12.0 / 2025.8.0 |
 
-- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_restart_handler.yaml) — `devices_schedules_restart_handler.yaml`: Restore device timers after Home Assistant restarts; needs `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_restart_handler.yaml) — `devices_schedules_restart_handler.yaml`: Restore device timers after Home Assistant restarts (legacy); needs `common_utilities.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Flink_multiple_devices.yaml) — `link_multiple_devices.yaml`: Link the on/off state of several devices; no `.py` file needed
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_bot_webhook.yaml) — `telegram_bot_webhook.yaml`: Two-way Telegram bot for Home Assistant (webhook); needs `telegram_bot_handle_tool.py`, `common_utilities.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_bot_webhook.yaml) — `zalo_bot_webhook.yaml`: Two-way Zalo bot for Home Assistant (webhook); needs `zalo_bot_handle_tool.py`, `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcheck_the_device_turns_on_manually.yaml) — `check_the_device_turns_on_manually.yaml`: Detect a device turned on manually; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fstate_activated_device_with_timer.yaml) — `state_activated_device_with_timer.yaml`: Turn a device off after a delay once it is on; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmemory_tool_local.yaml) — `memory_tool_local.yaml`: Local memory for Assist (scheduled cleanup); needs `memory.py`, `common_utilities.py`
 
 ---
 
@@ -694,10 +698,22 @@ Install the **Pyscript** integration (HACS), enable `allow_all_imports` and `has
 | **HA minimum** | 2024.12.0 |
 
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fadvanced_youtube_search_full_llm.yaml) — `advanced_youtube_search_full_llm.yaml`: Search YouTube videos for Assist; needs `youtube_data_tool.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fget_youtube_video_info_full_llm.yaml) — `get_youtube_video_info_full_llm.yaml`: Get information about a YouTube video; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fplay_youtube_video_full_llm.yaml) — `play_youtube_video_full_llm.yaml`: Play a YouTube video on a device; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fadvanced_google_search_full_llm.yaml) — `advanced_google_search_full_llm.yaml`: Google search for Assist; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fweather_forecast_full_llm.yaml) — `weather_forecast_full_llm.yaml`: Weather forecast for Assist; no `.py` file needed
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcalendar_events_lookup_full_llm.yaml) — `calendar_events_lookup_full_llm.yaml`: Look up calendar events for Assist; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcreate_calendar_event_full_llm.yaml) — `create_calendar_event_full_llm.yaml`: Create calendar events by voice; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcreate_lunar_events.yaml) — `create_lunar_events.yaml`: Create yearly lunar-calendar events; needs `date_conversion_tool.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdate_lookup_and_conversion_full_llm.yaml) — `date_lookup_and_conversion_full_llm.yaml`: Date lookup and solar ↔ lunar conversion for Assist; needs `date_conversion_tool.py`
-- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules.yaml) — `devices_schedules.yaml`: Multi-device timers (legacy, base for the controller); needs `common_utilities.py`
-- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_full_llm.yaml) — `devices_schedules_controller_full_llm.yaml`: Voice control of device timers (needs the “Devices Schedules” script); no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcontrol_music_full_llm.yaml) — `control_music_full_llm.yaml`: Control music by voice; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fac_mode_and_fan_control_full_llm.yaml) — `ac_mode_and_fan_control_full_llm.yaml`: Control the air conditioner (mode, fan); no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ffan_speed_and_oscillation_control_full_llm.yaml) — `fan_speed_and_oscillation_control_full_llm.yaml`: Control fan speed and oscillation; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevice_location_lookup_full_llm.yaml) — `device_location_lookup_full_llm.yaml`: Find where a device is in the home; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevice_ringing_full_llm.yaml) — `device_ringing_full_llm.yaml`: Ring a phone to find it; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_v2_full_llm.yaml) — `devices_schedules_controller_v2_full_llm.yaml`: Multi-device timers by voice (new version); needs `devices_scheduler.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules.yaml) — `devices_schedules.yaml`: Multi-device timers (legacy, base for the old controller); needs `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_full_llm.yaml) — `devices_schedules_controller_full_llm.yaml`: Voice device timers (legacy, needs the “Devices Schedules” script); no `.py` file needed
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmemory_tool_full_llm.yaml) — `memory_tool_full_llm.yaml`: Memory tool for Assist; needs `memory.py`
 
 ---
@@ -961,7 +977,7 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 
 ## 📊 Blueprint Overview
 
-| # | Blueprint | Type | HA Min | Main feature |
+| # | Blueprint | Type | HA Min | Main feature (needed .py) |
 |---|-----------|------|--------|--------------|
 | 1 | AI Image Generator | Script | 2025.8.0 | Generate an image from a text prompt |
 | 2 | AI Image + reference | Script | 2025.8.0 | Generate an image from a reference photo |
@@ -989,16 +1005,31 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 24 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
 | 25 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
 | 26 | Voice send to Zalo Calling | Script | 2026.3.0 | Send text/location/image to many people and groups |
-| 27 | Restore device timers | Automation | 2025.8.0 | Timers come back after Home Assistant restarts |
-| 28 | Link multiple devices | Automation | 2024.12.0 | Toggle one device and the others follow |
-| 29 | Two-way Telegram bot | Automation | 2025.8.0 | Telegram webhook with AI (needs `.py`) |
-| 30 | Two-way Zalo bot | Automation | 2025.8.0 | Zalo webhook with AI (needs `.py`) |
-| 31 | YouTube search for Assist | Script | 2024.12.0 | Voice video search (needs `.py`) |
-| 32 | Calendar lookup for Assist | Script | 2024.12.0 | Voice calendar lookup |
-| 33 | Date lookup / lunar conversion | Script | 2024.12.0 | Solar ↔ lunar conversion (needs `.py`) |
-| 34 | Device timers (legacy) | Script | 2024.12.0 | Base for the controller (needs `.py`) |
-| 35 | Device timers controller | Script | 2024.12.0 | Voice control of device timers |
-| 36 | Memory tool for Assist | Script | 2024.12.0 | Remember / recall (needs `.py`) |
+| 27 | Restore device timers after Home Assistant restarts | Automation | — | common_utilities.py |
+| 28 | Link the on/off state of several devices | Automation | 2024.12.0 | — |
+| 29 | Two-way Telegram bot for Home Assistant | Automation | 2025.8.0 | telegram_bot_handle_tool.py, common_utilities.py |
+| 30 | Two-way Zalo bot for Home Assistant | Automation | 2025.8.0 | zalo_bot_handle_tool.py, common_utilities.py |
+| 31 | Detect a device turned on manually | Automation | 2024.12.0 | — |
+| 32 | Turn a device off after a delay once it is on | Automation | 2024.12.0 | — |
+| 33 | Local memory for Assist | Automation | 2024.12.0 | memory.py, common_utilities.py |
+| 34 | Search YouTube videos for Assist | Script | 2024.12.0 | youtube_data_tool.py |
+| 35 | Get information about a YouTube video | Script | 2024.12.0 | — |
+| 36 | Play a YouTube video on a device | Script | 2024.12.0 | — |
+| 37 | Google search for Assist | Script | 2024.12.0 | — |
+| 38 | Weather forecast for Assist | Script | 2024.12.0 | — |
+| 39 | Look up calendar events for Assist | Script | 2024.12.0 | — |
+| 40 | Create calendar events by voice | Script | 2024.12.0 | — |
+| 41 | Create yearly lunar-calendar events | Script | 2024.12.0 | date_conversion_tool.py |
+| 42 | Date lookup and solar ↔ lunar conversion for Assist | Script | 2024.12.0 | date_conversion_tool.py |
+| 43 | Control music by voice | Script | 2024.12.0 | — |
+| 44 | Control the air conditioner | Script | 2024.12.0 | — |
+| 45 | Control fan speed and oscillation | Script | 2024.12.0 | — |
+| 46 | Find where a device is in the home | Script | 2024.12.0 | — |
+| 47 | Ring a phone to find it | Script | 2024.12.0 | — |
+| 48 | Multi-device timers by voice | Script | 2024.12.0 | devices_scheduler.py |
+| 49 | Multi-device timers | Script | 2024.12.0 | common_utilities.py |
+| 50 | Voice device timers | Script | 2024.12.0 | — |
+| 51 | Memory tool for Assist | Script | 2024.12.0 | memory.py |
 
 ---
 

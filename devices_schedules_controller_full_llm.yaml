@@ -1,12 +1,12 @@
 blueprint:
   name: Devices Schedules Controller (Deprecated)
   author: luuquangvu
-  source_url: https://github.com/luuquangvu/tutorials/blob/main/devices_schedules_controller_full_llm.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/devices_schedules_controller_full_llm.yaml
   description: |-
     # Devices Schedules Controller (Deprecated)
 
     > [!WARNING]
-    > **DEPRECATED**: This blueprint (v1) is deprecated in favor of [Devices Schedules Controller V2](https://github.com/luuquangvu/tutorials/blob/main/devices_schedules_controller_v2_full_llm.yaml).
+    > **DEPRECATED**: This blueprint (v1) is deprecated in favor of [Devices Schedules Controller V2](https://github.com/TriTue2011/Blueprint/blob/main/devices_schedules_controller_v2_full_llm.yaml).
     > Please upgrade to V2 which uses `scripts/devices_scheduler.py` for persistent SQLite storage, dynamic condition evaluation at expiration, and a real-time status sensor (`sensor.devices_scheduler`) without requiring companion blueprints.
 
     - Uses the Devices Schedules script to manage per-device timers (start / cancel / cancel_all / extend / pause / resume / list).

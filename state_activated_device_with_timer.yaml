@@ -1,0 +1,484 @@
+blueprint:
+  name: Turn On/Off Device with State and Timer
+  author: luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/state_activated_device_with_timer.yaml
+  description: |-
+    # Turn On/Off Device with State and Timer
+
+    Automatically turn on a switch, light, or device when an entity (binary sensor, switch, light, input boolean, etc.) turns on, and start a timer helper when it turns off to turn it off when the timer finishes.
+
+    ### Key Features:
+    - **State / Activation Triggered:** Turns on target devices upon entity turning on (with optional turn-on conditions, e.g. ambient light/lux threshold).
+    - **No-Op Turn On / Auto-Off Only:** Option to disable turning on devices on activation (turning on becomes a no-op, only resetting active timers). Perfect for spaces where lights or devices are turned on manually and only auto-turn off.
+    - **Timer Reset:** Automatically cancels active timer if the entity turns on again while the target device is on.
+    - **Restart Sensitivity Control:** Option to allow triggering when the entity transitions after Home Assistant restarts (enabled by default so lights reliably activate even if HA recently rebooted), or disable it to restrict triggers strictly from 'off'/'on' for sensitive automations.
+    - **Graceful Turn Off:** Starts the timer when the entity turns off (with optional timer start conditions, e.g. only start if target devices are on) and turns off devices after the timer finishes (with optional turn-off conditions, e.g. manual override helpers).
+    - **Dynamic Timer Duration:**
+      - *Default:* Use the timer helper's configured default duration.
+      - *Dynamic / Active Runtime Proportional:* Calculate timer duration dynamically based on how long the trigger entity was active (e.g. exhaust fan runs after kitchen hood or shower for 50% or 100% of runtime), with configurable multiplier, minimum, and maximum limits. Supports optional `input_datetime` helper to persist start times across Home Assistant restarts.
+      - *Fixed Duration:* Specify a custom duration override directly in the blueprint.
+      - *From Helper Entity:* Read the timer duration dynamically from an `input_number`, `number`, or `sensor` helper entity.
+    - **Global Conditions:** Gate the entire automation from triggering (e.g. alarm system status).
+    - **Extensible Action Sequences (If-Then-Else):**
+      - *Additional Actions on Turn On:* Optional custom actions that run when the entity turns on, supporting conditional if-then-else branching (e.g. secondary fan controls or scenes).
+      - *Additional Actions on Turn Off:* Optional custom actions that run when the entity turns off, supporting conditional if-then-else branching (e.g. dimming, alerts, or secondary transitions).
+      - *Additional Actions on Timer Finished:* Optional custom actions that run when the timer finishes, supporting conditional if-then-else branching (e.g. secondary fan shutoff, button toggle).
+
+    ### Requirements:
+    - An entity with two states (`on`/`off`), such as a binary sensor (motion, door, presence, window, etc.), switch, light, or input boolean.
+    - A configured `timer` helper entity.
+    - Requires Home Assistant 2024.12.0 or newer.
+  domain: automation
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    trigger_entity:
+      name: Trigger Entity
+      description: Entity with two states (e.g. binary sensor, switch, light, input boolean) that triggers the automation.
+      selector:
+        entity:
+          filter:
+            - domain:
+                - binary_sensor
+                - switch
+                - input_boolean
+                - light
+                - fan
+                - schedule
+                - siren
+    target_device:
+      name: Target Device(s) (Optional)
+      description: The switch, light, device, or area to turn on and off. If left empty, target device operations are a no-op.
+      default: {}
+      selector:
+        target: {}
+    timer_entity:
+      name: Timer Helper
+      description: The timer helper entity that manages the delay before turning off.
+      selector:
+        entity:
+          filter:
+            domain: timer
+    timer_duration_mode:
+      name: Timer Duration Mode
+      description: |-
+        How the timer duration is determined when starting the timer:
+        - Timer Helper Default: Use the duration pre-configured on the timer helper entity.
+        - Dynamic (Active Runtime Proportional): Dynamically set duration based on how long the trigger entity was active ('on'), with configurable multiplier, minimum, and maximum limits (e.g. run fan after kitchen hood or shower).
+        - Fixed Duration: Override with a fixed custom duration.
+        - From Helper Entity: Read duration dynamically from an input_number, number, or sensor helper entity.
+      default: default
+      selector:
+        select:
+          options:
+            - label: Timer Helper Default
+              value: default
+            - label: Dynamic (Proportional to Active Runtime)
+              value: dynamic
+            - label: Fixed Duration
+              value: fixed
+            - label: From Helper Entity
+              value: entity
+    dynamic_timer_multiplier:
+      name: Dynamic Timer Multiplier (Optional)
+      description: Multiplier factor applied to the trigger entity's active runtime when in Dynamic mode. E.g. 0.5 runs the timer for half the time the entity was on, 1.0 runs for the exact same duration, and 2.0 runs for double the duration.
+      default: 1.0
+      selector:
+        number:
+          min: 0.05
+          max: 10.0
+          step: 0.05
+          mode: box
+    dynamic_timer_min:
+      name: Dynamic Timer Minimum Duration (Optional)
+      description: Minimum duration in seconds the timer will run in Dynamic mode (e.g. 180 for 3 minutes). Set to 0 for no minimum limit (defaults to at least 1 second).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 86400
+          step: 1
+          unit_of_measurement: s
+          mode: box
+    dynamic_timer_max:
+      name: Dynamic Timer Maximum Duration (Optional)
+      description: Maximum duration in seconds the timer will run in Dynamic mode (e.g. 1800 for 30 minutes). Set to 0 for no maximum limit.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 86400
+          step: 1
+          unit_of_measurement: s
+          mode: box
+    dynamic_timer_start_time_helper:
+      name: Dynamic Timer Start Time Helper (Optional)
+      description: Optional input_datetime helper entity used to store the activation timestamp when the trigger entity turns on. Highly recommended if you want the start time to survive Home Assistant restarts or reloads while the trigger entity is on. If left empty, Home Assistant's previous state timestamp (trigger.from_state.last_changed) is used automatically.
+      default: ""
+      selector:
+        entity:
+          filter:
+            domain: input_datetime
+    fixed_timer_duration:
+      name: Fixed Timer Duration (Optional)
+      description: Custom duration used when Timer Duration Mode is set to 'Fixed Duration'.
+      default: "00:05:00"
+      selector:
+        duration:
+          enable_day: false
+    timer_duration_entity:
+      name: Timer Duration Entity (Optional)
+      description: Helper entity (input_number, number, or sensor) that specifies the duration when Timer Duration Mode is set to 'From Helper Entity'.
+      default: ""
+      selector:
+        entity:
+          filter:
+            - domain:
+                - input_number
+                - number
+                - sensor
+    timer_duration_entity_unit:
+      name: Timer Duration Entity Unit
+      description: Time unit of the numeric value provided by the Timer Duration Entity.
+      default: seconds
+      selector:
+        select:
+          options:
+            - label: Seconds
+              value: seconds
+            - label: Minutes
+              value: minutes
+    enable_turn_on:
+      name: Enable Turn On
+      description: Turn on the target device when the trigger entity turns on. If disabled, turning on only cancels active timers (no-op for turning on), allowing auto-off-only automations.
+      default: true
+      selector:
+        boolean: {}
+    enable_turn_off:
+      name: Enable Turn Off
+      description: Turn off the target device when the timer finishes. If disabled, the device will not be turned off automatically (no-op for turning off).
+      default: true
+      selector:
+        boolean: {}
+    allow_trigger_after_restart:
+      name: Allow Trigger After Restart
+      description: |-
+        Allow the automation to trigger when the trigger entity transitions to on or off after Home Assistant restarts (from unknown or unavailable states).
+        Enabled by default so lights and devices reliably activate after reboots. When disabled, the entity must transition strictly from 'off' to 'on' or 'on' to 'off' (useful to avoid re-triggers for sensitive automations).
+      default: true
+      selector:
+        boolean: {}
+    global_conditions:
+      name: Global Conditions (Optional)
+      description: Optional conditions that must be met for the automation to run at all (e.g. alarm is disarmed).
+      default: []
+      selector:
+        condition: {}
+    target_turn_on_conditions:
+      name: Target Turn On Conditions (Optional)
+      description: Conditions that must be met before turning on the target device (e.g. ambient light/lux below threshold, evening sensor is on). If left empty, the device turns on unconditionally.
+      default: []
+      selector:
+        condition: {}
+    timer_start_conditions:
+      name: Timer Start Conditions (Optional)
+      description: Optional conditions that must be met before starting the timer when the trigger entity turns off (e.g. target device is currently on). If left empty, the timer starts unconditionally.
+      default: []
+      selector:
+        condition: {}
+    target_turn_off_conditions:
+      name: Target Turn Off Conditions (Optional)
+      description: Conditions that must be met before turning off the target device (e.g. manual override helper is off). If left empty, the device turns off unconditionally.
+      default: []
+      selector:
+        condition: {}
+    extra_turn_on_conditions:
+      name: Extra Turn On Conditions (Optional)
+      description: Conditions that must be met for extra turn on actions to run.
+      default: []
+      selector:
+        condition: {}
+    extra_turn_on_actions:
+      name: Extra Turn On Actions (Optional)
+      description: Extra actions to run after the trigger entity turns on (or when Extra Turn On Conditions are met).
+      default: []
+      selector:
+        action: {}
+    extra_turn_on_else_actions:
+      name: Extra Turn On Else Actions (Optional)
+      description: Actions to run after the trigger entity turns on when Extra Turn On Conditions are not met.
+      default: []
+      selector:
+        action: {}
+    extra_entity_off_conditions:
+      name: Extra Entity Turn Off Conditions (Optional)
+      description: Conditions that must be met for extra entity turn off actions to run.
+      default: []
+      selector:
+        condition: {}
+    extra_entity_off_actions:
+      name: Extra Entity Turn Off Actions (Optional)
+      description: Extra actions to run when the trigger entity turns off (e.g. dim light, notification, or secondary controls).
+      default: []
+      selector:
+        action: {}
+    extra_entity_off_else_actions:
+      name: Extra Entity Turn Off Else Actions (Optional)
+      description: Actions to run when the trigger entity turns off when Extra Entity Turn Off Conditions are not met.
+      default: []
+      selector:
+        action: {}
+    extra_turn_off_conditions:
+      name: Extra Turn Off Conditions (Optional)
+      description: Conditions that must be met for extra turn off actions to run.
+      default: []
+      selector:
+        condition: {}
+    extra_turn_off_actions:
+      name: Extra Turn Off Actions (Optional)
+      description: Extra actions to run when the timer finishes (or when Extra Turn Off Conditions are met).
+      default: []
+      selector:
+        action: {}
+    extra_turn_off_else_actions:
+      name: Extra Turn Off Else Actions (Optional)
+      description: Actions to run when the timer finishes when Extra Turn Off Conditions are not met.
+      default: []
+      selector:
+        action: {}
+mode: queued
+max: 10
+variables:
+  version: 20261016
+  target_device: !input target_device
+  has_target: "{{ target_device is mapping and (target_device.values() | select | list | length > 0) }}"
+  enable_turn_on: !input enable_turn_on
+  enable_turn_off: !input enable_turn_off
+  allow_trigger_after_restart: !input allow_trigger_after_restart
+  timer_duration_mode: !input timer_duration_mode
+  dynamic_timer_multiplier: !input dynamic_timer_multiplier
+  dynamic_timer_min: !input dynamic_timer_min
+  dynamic_timer_max: !input dynamic_timer_max
+  dynamic_timer_start_time_helper: !input dynamic_timer_start_time_helper
+  fixed_timer_duration: !input fixed_timer_duration
+  timer_duration_entity: !input timer_duration_entity
+  timer_duration_entity_unit: !input timer_duration_entity_unit
+  target_turn_on_conditions: !input target_turn_on_conditions
+  timer_start_conditions: !input timer_start_conditions
+  target_turn_off_conditions: !input target_turn_off_conditions
+  extra_turn_on_conditions: !input extra_turn_on_conditions
+  extra_turn_on_actions: !input extra_turn_on_actions
+  extra_turn_on_else_actions: !input extra_turn_on_else_actions
+  extra_entity_off_conditions: !input extra_entity_off_conditions
+  extra_entity_off_actions: !input extra_entity_off_actions
+  extra_entity_off_else_actions: !input extra_entity_off_else_actions
+  extra_turn_off_conditions: !input extra_turn_off_conditions
+  extra_turn_off_actions: !input extra_turn_off_actions
+  extra_turn_off_else_actions: !input extra_turn_off_else_actions
+triggers:
+  - trigger: state
+    entity_id: !input trigger_entity
+    to: "on"
+    id: entity_turned_on
+  - trigger: state
+    entity_id: !input trigger_entity
+    to: "off"
+    id: entity_turned_off
+  - trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input timer_entity
+    id: timer_finished
+conditions: !input global_conditions
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - entity_turned_on
+          - condition: template
+            value_template: "{{ allow_trigger_after_restart or (trigger.from_state is defined and trigger.from_state and trigger.from_state.state == 'off') }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ dynamic_timer_start_time_helper is string and dynamic_timer_start_time_helper | length > 0 }}"
+            then:
+              - action: input_datetime.set_datetime
+                target:
+                  entity_id: "{{ dynamic_timer_start_time_helper }}"
+                data:
+                  timestamp: "{{ now().timestamp() }}"
+          - if:
+              - condition: state
+                entity_id: !input timer_entity
+                state:
+                  - active
+                  - paused
+            then:
+              - action: timer.cancel
+                target:
+                  entity_id: !input timer_entity
+          - if:
+              - condition: template
+                value_template: "{{ enable_turn_on and has_target }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_turn_on_conditions | length == 0 }}"
+                then:
+                  - action: homeassistant.turn_on
+                    target: "{{ target_device }}"
+                else:
+                  - if: !input target_turn_on_conditions
+                    then:
+                      - action: homeassistant.turn_on
+                        target: "{{ target_device }}"
+          - if:
+              - condition: template
+                value_template: "{{ extra_turn_on_conditions | length == 0 }}"
+            then:
+              - sequence: !input extra_turn_on_actions
+            else:
+              - if: !input extra_turn_on_conditions
+                then:
+                  - sequence: !input extra_turn_on_actions
+                else:
+                  - sequence: !input extra_turn_on_else_actions
+      - conditions:
+          - condition: trigger
+            id:
+              - entity_turned_off
+          - condition: template
+            value_template: "{{ allow_trigger_after_restart or (trigger.from_state is defined and trigger.from_state and trigger.from_state.state == 'on') }}"
+        sequence:
+          - variables:
+              calculated_timer_duration: >-
+                {% if timer_duration_mode == 'dynamic' %}
+                  {% set helper = dynamic_timer_start_time_helper %}
+                  {% if helper is string and helper | length > 0 %}
+                    {% set helper_ts = state_attr(helper, 'timestamp') %}
+                    {% if helper_ts is none %}
+                      {% set helper_ts = as_timestamp(states(helper), none) %}
+                    {% endif %}
+                    {% set start_ts = helper_ts %}
+                  {% else %}
+                    {% set start_ts = as_timestamp(trigger.from_state.last_changed) if trigger is defined and trigger.from_state is defined and trigger.from_state.last_changed is defined else none %}
+                  {% endif %}
+                  {% if start_ts is none or start_ts <= 0 %}
+                    {% set active_seconds = 0 %}
+                  {% else %}
+                    {% set active_seconds = (as_timestamp(now()) - (start_ts | float(as_timestamp(now())))) | int(0) %}
+                    {% set active_seconds = [0, active_seconds] | max %}
+                  {% endif %}
+                  {% set raw_duration = (active_seconds * (dynamic_timer_multiplier | float(1.0))) | round | int %}
+                  {% set min_dur = dynamic_timer_min | int(0) %}
+                  {% set max_dur = dynamic_timer_max | int(0) %}
+                  {% set bounded = raw_duration %}
+                  {% if min_dur > 0 and bounded < min_dur %}
+                    {% set bounded = min_dur %}
+                  {% endif %}
+                  {% if max_dur > 0 and bounded > max_dur %}
+                    {% set bounded = max_dur %}
+                  {% endif %}
+                  {{ [1, bounded] | max }}
+                {% elif timer_duration_mode == 'fixed' %}
+                  {% if fixed_timer_duration is mapping %}
+                    {% set h = fixed_timer_duration.get('hours', 0) | int(0) %}
+                    {% set m = fixed_timer_duration.get('minutes', 0) | int(0) %}
+                    {% set s = fixed_timer_duration.get('seconds', 0) | int(0) %}
+                    {{ [1, (h * 3600 + m * 60 + s)] | max }}
+                  {% elif fixed_timer_duration is number %}
+                    {{ [1, fixed_timer_duration | int] | max }}
+                  {% else %}
+                    {{ fixed_timer_duration }}
+                  {% endif %}
+                {% elif timer_duration_mode == 'entity' %}
+                  {% if timer_duration_entity is string and timer_duration_entity | length > 0 %}
+                    {% set entity_val = states(timer_duration_entity) | float(0) %}
+                    {% if timer_duration_entity_unit == 'minutes' %}
+                      {% set entity_secs = (entity_val * 60) | round | int %}
+                    {% else %}
+                      {% set entity_secs = entity_val | round | int %}
+                    {% endif %}
+                    {{ [1, entity_secs] | max }}
+                  {% else %}
+                    60
+                  {% endif %}
+                {% else %}
+                  0
+                {% endif %}
+          - if:
+              - condition: template
+                value_template: "{{ timer_start_conditions | length == 0 }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ timer_duration_mode == 'default' }}"
+                then:
+                  - action: timer.start
+                    target:
+                      entity_id: !input timer_entity
+                else:
+                  - action: timer.start
+                    target:
+                      entity_id: !input timer_entity
+                    data:
+                      duration: "{{ calculated_timer_duration }}"
+            else:
+              - if: !input timer_start_conditions
+                then:
+                  - if:
+                      - condition: template
+                        value_template: "{{ timer_duration_mode == 'default' }}"
+                    then:
+                      - action: timer.start
+                        target:
+                          entity_id: !input timer_entity
+                    else:
+                      - action: timer.start
+                        target:
+                          entity_id: !input timer_entity
+                        data:
+                          duration: "{{ calculated_timer_duration }}"
+          - if:
+              - condition: template
+                value_template: "{{ extra_entity_off_conditions | length == 0 }}"
+            then:
+              - sequence: !input extra_entity_off_actions
+            else:
+              - if: !input extra_entity_off_conditions
+                then:
+                  - sequence: !input extra_entity_off_actions
+                else:
+                  - sequence: !input extra_entity_off_else_actions
+      - conditions:
+          - condition: trigger
+            id:
+              - timer_finished
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ enable_turn_off and has_target }}"
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ target_turn_off_conditions | length == 0 }}"
+                then:
+                  - action: homeassistant.turn_off
+                    target: "{{ target_device }}"
+                else:
+                  - if: !input target_turn_off_conditions
+                    then:
+                      - action: homeassistant.turn_off
+                        target: "{{ target_device }}"
+          - if:
+              - condition: template
+                value_template: "{{ extra_turn_off_conditions | length == 0 }}"
+            then:
+              - sequence: !input extra_turn_off_actions
+            else:
+              - if: !input extra_turn_off_conditions
+                then:
+                  - sequence: !input extra_turn_off_actions
+                else:
+                  - sequence: !input extra_turn_off_else_actions

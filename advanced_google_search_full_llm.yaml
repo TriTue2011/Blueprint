@@ -1,0 +1,118 @@
+blueprint:
+  name: Perform Google Search
+  author: luuquangvu
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/advanced_google_search_full_llm.yaml
+  description: |-
+    # Tool for searching Google information used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    - This blueprint is exclusively designed for Google Generative AI only.
+    - A Conversation Agent with Google Search tool enabled, create it if it doesn't already exist.
+    - Increase the agent's maximum token limit to enable it to gather comprehensive information, with a minimum requirement of 16384 tokens.
+    - Agent Instructions:
+
+    ```
+    You are a system expert and help users with their tasks. Always reply in the user's language. Current time: {{ now().isoformat(timespec='seconds') }}.
+    ```
+
+    ### Optional
+
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    - Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to search for information from Google.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+  domain: script
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    agent_settings:
+      name: Settings for Conversation Agent
+      icon: mdi:robot-outline
+      description: These settings enable you to configure the conversation agent used for searching Google information.
+      input:
+        agent_id:
+          name: Conversation Agent
+          selector:
+            entity:
+              filter:
+                domain: conversation
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        query_string_prompt:
+          name: Query String Prompt
+          description: The search string used by the AI to find information on Google
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Search query. Silence-correct misspellings. No clarification
+        language_prompt:
+          name: Language Prompt
+          description: The language tag (e.g., en-US) used by the AI for the Google search results
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Language tag (e.g. en-US). Match user language
+mode: parallel
+max_exceeded: silent
+description: Searches Google to retrieve real-time information or answers from the web
+variables:
+  version: 20260409
+fields:
+  query_string:
+    name: Query String
+    description: !input query_string_prompt
+    selector:
+      text:
+    required: true
+  language:
+    name: Language
+    description: !input language_prompt
+    selector:
+      text:
+    required: true
+sequence:
+  - variables:
+      query_string: "{{ query_string | default('') | trim }}"
+      language: "{{ language | default('') | trim }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ not query_string or not language }}"
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to search for information because the query string or language is empty.
+      - alias: Stop the script
+        stop: Unable to search for information because the query string or language is empty.
+        response_variable: response
+  - action: conversation.process
+    response_variable: response
+    data:
+      agent_id: !input agent_id
+      text: |-
+        Required: Google Search for: {{ query_string }}
+
+        Instructions:
+        - Max 3 iterative refinements. Prioritize recent/authoritative sources; no duplicates.
+        - Provide concise overview + expanded details.
+        - Optional: source names (publisher, date).
+        - Always use `Google Search` tool. If no results, suggest new queries. NEVER fabricate.
+
+        Language: {{ language }}
+      language: "{{ language }}"
+  - stop: ""
+    response_variable: response

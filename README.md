@@ -71,10 +71,11 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
 
 | File `.py` | Blueprint dùng nó |
 |---|---|
-| `common_utilities.py` | `devices_schedules_restart_handler.yaml`, `telegram_bot_webhook.yaml`, `zalo_bot_webhook.yaml`, `devices_schedules.yaml` |
-| `date_conversion_tool.py` | `date_lookup_and_conversion_full_llm.yaml` |
+| `common_utilities.py` | `devices_schedules_restart_handler.yaml`, `telegram_bot_webhook.yaml`, `zalo_bot_webhook.yaml`, `memory_tool_local.yaml`, `devices_schedules.yaml` |
+| `date_conversion_tool.py` | `create_lunar_events.yaml`, `date_lookup_and_conversion_full_llm.yaml` |
+| `devices_scheduler.py` | `devices_schedules_controller_v2_full_llm.yaml` |
 | `flow_image.py` | `ai_creat_image_weather_3.yaml` |
-| `memory.py` | `memory_tool_full_llm.yaml` |
+| `memory.py` | `memory_tool_local.yaml`, `memory_tool_full_llm.yaml` |
 | `telegram_bot_handle_tool.py` | `send_to_telegram_full_llm.yaml`, `telegram_bot_webhook.yaml` |
 | `weather_image.py` | `ai_creat_image_weather_2.yaml`, `ai_creat_image_weather_3.yaml` |
 | `youtube_data_tool.py` | `advanced_youtube_search_full_llm.yaml` |
@@ -710,10 +711,13 @@ Cài tích hợp **Pyscript** (HACS), bật `allow_all_imports` và `hass_is_glo
 | **Loại** | Automation |
 | **HA tối thiểu** | 2024.12.0 / 2025.8.0 |
 
-- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_restart_handler.yaml) — `devices_schedules_restart_handler.yaml`: Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại; cần `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_restart_handler.yaml) — `devices_schedules_restart_handler.yaml`: Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại (bản cũ); cần `common_utilities.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Flink_multiple_devices.yaml) — `link_multiple_devices.yaml`: Liên kết trạng thái bật/tắt của nhiều thiết bị; không cần file `.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_bot_webhook.yaml) — `telegram_bot_webhook.yaml`: Bot Telegram hai chiều với Home Assistant (webhook); cần `telegram_bot_handle_tool.py`, `common_utilities.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_bot_webhook.yaml) — `zalo_bot_webhook.yaml`: Bot Zalo hai chiều với Home Assistant (webhook); cần `zalo_bot_handle_tool.py`, `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcheck_the_device_turns_on_manually.yaml) — `check_the_device_turns_on_manually.yaml`: Phát hiện thiết bị bị bật tay; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fstate_activated_device_with_timer.yaml) — `state_activated_device_with_timer.yaml`: Thiết bị bật thì tự tắt sau một khoảng thời gian; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmemory_tool_local.yaml) — `memory_tool_local.yaml`: Bộ nhớ cục bộ cho Assist (dọn bộ nhớ theo lịch); cần `memory.py`, `common_utilities.py`
 
 ---
 
@@ -725,10 +729,22 @@ Cài tích hợp **Pyscript** (HACS), bật `allow_all_imports` và `hass_is_glo
 | **HA tối thiểu** | 2024.12.0 |
 
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fadvanced_youtube_search_full_llm.yaml) — `advanced_youtube_search_full_llm.yaml`: Tìm video YouTube cho Assist; cần `youtube_data_tool.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fget_youtube_video_info_full_llm.yaml) — `get_youtube_video_info_full_llm.yaml`: Lấy thông tin một video YouTube; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fplay_youtube_video_full_llm.yaml) — `play_youtube_video_full_llm.yaml`: Phát video YouTube lên thiết bị; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fadvanced_google_search_full_llm.yaml) — `advanced_google_search_full_llm.yaml`: Tìm kiếm Google cho Assist; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fweather_forecast_full_llm.yaml) — `weather_forecast_full_llm.yaml`: Dự báo thời tiết cho Assist; không cần file `.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcalendar_events_lookup_full_llm.yaml) — `calendar_events_lookup_full_llm.yaml`: Tra cứu sự kiện lịch cho Assist; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcreate_calendar_event_full_llm.yaml) — `create_calendar_event_full_llm.yaml`: Tạo sự kiện lịch bằng giọng nói; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcreate_lunar_events.yaml) — `create_lunar_events.yaml`: Tạo sự kiện lịch âm hằng năm; cần `date_conversion_tool.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdate_lookup_and_conversion_full_llm.yaml) — `date_lookup_and_conversion_full_llm.yaml`: Tra ngày và đổi dương lịch ↔ âm lịch cho Assist; cần `date_conversion_tool.py`
-- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules.yaml) — `devices_schedules.yaml`: Hẹn giờ nhiều thiết bị (bản cũ, nền cho controller); cần `common_utilities.py`
-- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_full_llm.yaml) — `devices_schedules_controller_full_llm.yaml`: Điều khiển hẹn giờ thiết bị bằng giọng nói (cần script «Devices Schedules»); không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcontrol_music_full_llm.yaml) — `control_music_full_llm.yaml`: Điều khiển nhạc bằng giọng nói; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fac_mode_and_fan_control_full_llm.yaml) — `ac_mode_and_fan_control_full_llm.yaml`: Điều khiển điều hoà (chế độ, quạt); không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ffan_speed_and_oscillation_control_full_llm.yaml) — `fan_speed_and_oscillation_control_full_llm.yaml`: Điều khiển tốc độ và xoay quạt; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevice_location_lookup_full_llm.yaml) — `device_location_lookup_full_llm.yaml`: Tìm vị trí thiết bị trong nhà; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevice_ringing_full_llm.yaml) — `device_ringing_full_llm.yaml`: Làm điện thoại kêu để tìm máy; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_v2_full_llm.yaml) — `devices_schedules_controller_v2_full_llm.yaml`: Hẹn giờ nhiều thiết bị bằng giọng nói (bản mới); cần `devices_scheduler.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules.yaml) — `devices_schedules.yaml`: Hẹn giờ nhiều thiết bị (bản cũ, nền cho controller cũ); cần `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_full_llm.yaml) — `devices_schedules_controller_full_llm.yaml`: Điều khiển hẹn giờ bằng giọng nói (bản cũ, cần script «Devices Schedules»); không cần file `.py`
 - [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmemory_tool_full_llm.yaml) — `memory_tool_full_llm.yaml`: Bộ nhớ ghi nhớ cho Assist; cần `memory.py`
 
 ---
@@ -1307,7 +1323,7 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 
 ## 📊 Tổng quan Blueprints
 
-| # | Blueprint | Loại | HA Min | Tính năng chính |
+| # | Blueprint | Loại | HA Min | Tính năng chính (file .py cần) |
 |---|-----------|------|--------|-----------------|
 | 1 | Tạo ảnh AI | Script | 2025.8.0 | Tạo ảnh từ prompt văn bản |
 | 2 | Tạo ảnh AI + tham chiếu | Script | 2025.8.0 | Tạo ảnh kèm ảnh mẫu |
@@ -1335,16 +1351,31 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 24 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
 | 25 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
 | 26 | Voice gửi Zalo Calling | Script | 2026.3.0 | Gửi tin/vị trí/ảnh tới nhiều người và nhóm |
-| 27 | Khôi phục hẹn giờ thiết bị | Automation | 2025.8.0 | Hẹn giờ thiết bị sống lại sau khi HA khởi động |
-| 28 | Liên kết nhiều thiết bị | Automation | 2024.12.0 | Một thiết bị bật/tắt thì các thiết bị khác theo |
-| 29 | Bot Telegram hai chiều | Automation | 2025.8.0 | Webhook Telegram với AI (cần `.py`) |
-| 30 | Bot Zalo hai chiều | Automation | 2025.8.0 | Webhook Zalo với AI (cần `.py`) |
-| 31 | Tìm YouTube cho Assist | Script | 2024.12.0 | Tìm video bằng giọng nói (cần `.py`) |
-| 32 | Tra lịch cho Assist | Script | 2024.12.0 | Tra sự kiện lịch bằng giọng nói |
-| 33 | Tra ngày / đổi âm dương | Script | 2024.12.0 | Đổi dương ↔ âm lịch (cần `.py`) |
-| 34 | Hẹn giờ thiết bị (bản cũ) | Script | 2024.12.0 | Nền cho controller (cần `.py`) |
-| 35 | Điều khiển hẹn giờ thiết bị | Script | 2024.12.0 | Hẹn giờ thiết bị bằng giọng nói |
-| 36 | Bộ nhớ cho Assist | Script | 2024.12.0 | Ghi nhớ/tra cứu (cần `.py`) |
+| 27 | Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại | Automation | — | common_utilities.py |
+| 28 | Liên kết trạng thái bật/tắt của nhiều thiết bị | Automation | 2024.12.0 | — |
+| 29 | Bot Telegram hai chiều với Home Assistant | Automation | 2025.8.0 | telegram_bot_handle_tool.py, common_utilities.py |
+| 30 | Bot Zalo hai chiều với Home Assistant | Automation | 2025.8.0 | zalo_bot_handle_tool.py, common_utilities.py |
+| 31 | Phát hiện thiết bị bị bật tay | Automation | 2024.12.0 | — |
+| 32 | Thiết bị bật thì tự tắt sau một khoảng thời gian | Automation | 2024.12.0 | — |
+| 33 | Bộ nhớ cục bộ cho Assist | Automation | 2024.12.0 | memory.py, common_utilities.py |
+| 34 | Tìm video YouTube cho Assist | Script | 2024.12.0 | youtube_data_tool.py |
+| 35 | Lấy thông tin một video YouTube | Script | 2024.12.0 | — |
+| 36 | Phát video YouTube lên thiết bị | Script | 2024.12.0 | — |
+| 37 | Tìm kiếm Google cho Assist | Script | 2024.12.0 | — |
+| 38 | Dự báo thời tiết cho Assist | Script | 2024.12.0 | — |
+| 39 | Tra cứu sự kiện lịch cho Assist | Script | 2024.12.0 | — |
+| 40 | Tạo sự kiện lịch bằng giọng nói | Script | 2024.12.0 | — |
+| 41 | Tạo sự kiện lịch âm hằng năm | Script | 2024.12.0 | date_conversion_tool.py |
+| 42 | Tra ngày và đổi dương lịch ↔ âm lịch cho Assist | Script | 2024.12.0 | date_conversion_tool.py |
+| 43 | Điều khiển nhạc bằng giọng nói | Script | 2024.12.0 | — |
+| 44 | Điều khiển điều hoà | Script | 2024.12.0 | — |
+| 45 | Điều khiển tốc độ và xoay quạt | Script | 2024.12.0 | — |
+| 46 | Tìm vị trí thiết bị trong nhà | Script | 2024.12.0 | — |
+| 47 | Làm điện thoại kêu để tìm máy | Script | 2024.12.0 | — |
+| 48 | Hẹn giờ nhiều thiết bị bằng giọng nói | Script | 2024.12.0 | devices_scheduler.py |
+| 49 | Hẹn giờ nhiều thiết bị | Script | 2024.12.0 | common_utilities.py |
+| 50 | Điều khiển hẹn giờ bằng giọng nói | Script | 2024.12.0 | — |
+| 51 | Bộ nhớ ghi nhớ cho Assist | Script | 2024.12.0 | memory.py |
 
 ---
 
