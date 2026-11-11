@@ -28,6 +28,7 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [🧩 Send to Zalo Custom Bot (Voice + Delete File)](#-send-to-zalo-custom-bot-voice--delete-file)
   - [🔗 Zalo Calling in the older blueprints](#-zalo-calling-in-the-older-blueprints)
   - [🎤 Voice send to Zalo Calling (many people and groups)](#-voice-send-to-zalo-calling-many-people-and-groups)
+  - [🧭 One button, many jobs (most recent request wins)](#-one-button-many-jobs-most-recent-request-wins)
   - [📞 Zalo Call alert call when a sensor triggers](#-zalo-call-alert-call-when-a-sensor-triggers)
   - [🔘 Zalo Call one button to answer, hang up or call](#-zalo-call-one-button-to-answer-hang-up-or-call)
   - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
@@ -677,6 +678,16 @@ The caller asks to switch from voice to video: **ask on your phone** (Accept / D
 
 ---
 
+## 🧭 One button, many jobs (most recent request wins)
+
+One button does whatever is needed: define up to 6 “jobs” (entity + state meaning it needs handling + action); on press it picks the job with the **most recent request** (e.g. an alarm rings, then a call comes in: press = answer; the call ends while the alarm still rings: press = dismiss the alarm). No job needed: run the default action (e.g. place a call). Works with the R1 middle button (from 0.17.0 the speaker has no built-in button actions).
+
+**Needs:** a button with a trigger (R1 middle button, Zigbee button...).
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmot_nut_nhieu_viec.yaml)
+
+---
+
 ## 🎤 Voice send to Zalo Calling (many people and groups)
 
 A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
@@ -1066,6 +1077,7 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 52 | Zalo Call custom outgoing call | Automation | 2026.3.0 | Zalo Call custom outgoing call |
 | 53 | Zalo Call button for incoming calls | Automation | 2026.3.0 | Zalo Call button for incoming calls |
 | 54 | Zalo Call caller asks to switch to video | Automation | 2026.3.0 | Zalo Call caller asks to switch to video |
+| 55 | One button, many jobs | Automation | 2026.3.0 | Most recent request wins |
 
 ---
 

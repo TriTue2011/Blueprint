@@ -28,6 +28,7 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Gửi Zalo Custom Bot (Voice + xóa file)](#-gửi-zalo-custom-bot-voice--xóa-file)
   - [🔗 Zalo Calling trong các blueprint cũ](#-zalo-calling-trong-các-blueprint-cũ)
   - [🎤 Voice gửi Zalo Calling (nhiều người và nhóm)](#-voice-gửi-zalo-calling-nhiều-người-và-nhóm)
+  - [🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất)](#-một-nút-nhiều-việc-ưu-tiên-yêu-cầu-gần-nhất)
   - [📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt](#-zalo-call-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
   - [🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi](#-zalo-call-một-nút-bấm-nghe-máy-cúp-máy-hoặc-gọi-đi)
   - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
@@ -705,6 +706,16 @@ Người gọi xin chuyển từ thoại sang video: **hỏi trên điện tho�
 **Cần:** Zalo Call từ bản 2026.11.11.4.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
+
+---
+
+## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất)
+
+Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (thực thể + trạng thái cần xử lý + hành động), khi nhấn nút chọn việc có **yêu cầu gần nhất** (ví dụ báo thức kêu, rồi có cuộc gọi đến thì nhấn = nghe máy; hết cuộc gọi mà báo thức còn kêu thì nhấn = tắt báo thức). Không việc nào cần thì chạy hành động mặc định (ví dụ gọi đi). Hợp với nút giữa loa R1 (từ bản 0.17.0 loa không còn hành động gắn sẵn).
+
+**Cần:** một nút có trigger (nút giữa R1, nút Zigbee...).
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmot_nut_nhieu_viec.yaml)
 
 ---
 
@@ -1412,6 +1423,7 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 52 | Zalo Call gọi đi tuỳ biến | Automation | 2026.3.0 | Zalo Call gọi đi tuỳ biến |
 | 53 | Zalo Call nút cho cuộc gọi đến | Automation | 2026.3.0 | Zalo Call nút cho cuộc gọi đến |
 | 54 | Zalo Call người gọi xin chuyển sang video | Automation | 2026.3.0 | Zalo Call người gọi xin chuyển sang video |
+| 55 | Một nút nhiều việc | Automation | 2026.3.0 | Việc có yêu cầu gần nhất |
 
 ---
 

@@ -1,0 +1,318 @@
+blueprint:
+  name: Một nút nhiều việc - ưu tiên yêu cầu gần nhất
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/mot_nut_nhieu_viec.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    **Một nút bấm, làm đúng việc đang cần.** Bạn khai tối đa 6 «việc», mỗi việc gồm một **thực thể** (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa...), **trạng thái** nghĩa là việc đó
+    đang cần xử lý, và **hành động** khi nhấn nút. Khi nhấn, blueprint xem việc nào đang cần xử lý và chọn việc có **yêu cầu gần nhất** (thực thể đổi sang trạng thái đó mới nhất).
+    Không việc nào đang cần thì chạy **hành động mặc định** (ví dụ: gọi đi).
+
+    <details>
+    <summary><b>Ví dụ cho nút giữa loa R1:</b> - Nhấn để mở rộng</summary>
+
+      - Việc 1: thực thể báo thức của loa, trạng thái `on`, hành động *Tắt báo thức* (dịch vụ `r1_speaker.bao_thuc_tat`).
+      - Việc 2: cảm biến «Trạng thái cuộc gọi» của Zalo Call, trạng thái `ringing`, thuộc tính `status` = `incoming`, hành động *Nghe máy* (`zalo_call.answer_call`).
+      - Việc 3: cùng cảm biến, trạng thái `active`, hành động *Cúp máy* (`zalo_call.end_call`).
+      - Mặc định: *Gọi đi* (`zalo_call.make_call`).
+      Báo thức kêu lúc 19:00 rồi 19:02 có cuộc gọi đến thì nhấn nút sẽ **nghe máy** (yêu cầu gần nhất); xong cuộc gọi mà báo thức còn kêu thì nhấn sẽ **tắt báo thức**.
+
+    </details>
+
+    **Phiên bản: v.2026.11.12**
+  input:
+    nut:
+      name: ① Nút bấm
+      icon: mdi:gesture-tap-button
+      input:
+        nut_bam:
+          name: Nút bấm
+          description: Chọn trigger của nút (nút giữa loa R1, nút Zigbee, nút ảo...).
+          selector:
+            trigger: {}
+    mac_dinh_nhom:
+      name: ② Khi không có việc nào đang cần
+      icon: mdi:gesture-tap
+      input:
+        mac_dinh:
+          name: Hành động mặc định
+          selector:
+            action: {}
+          default: []
+    viec_1:
+      name: ③ Việc 1
+      icon: mdi:numeric-1-circle-outline
+      collapsed: false
+      input:
+        thuc_the_1:
+          name: Thực thể của việc 1
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_1:
+          name: Trạng thái nghĩa là việc này đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_1:
+          name: Thuộc tính cần khớp (tuỳ chọn)
+          description: Tên thuộc tính, ví dụ status. Để trống = không xét thuộc tính.
+          selector:
+            text: {}
+          default: ""
+        gia_tri_1:
+          name: Giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_1:
+          name: Hành động khi nhấn nút lúc này
+          selector:
+            action: {}
+          default: []
+    viec_2:
+      name: ③ Việc 2
+      icon: mdi:numeric-2-circle-outline
+      collapsed: false
+      input:
+        thuc_the_2:
+          name: Thực thể của việc 2
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_2:
+          name: Trạng thái nghĩa là việc này đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_2:
+          name: Thuộc tính cần khớp (tuỳ chọn)
+          description: Tên thuộc tính, ví dụ status. Để trống = không xét thuộc tính.
+          selector:
+            text: {}
+          default: ""
+        gia_tri_2:
+          name: Giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_2:
+          name: Hành động khi nhấn nút lúc này
+          selector:
+            action: {}
+          default: []
+    viec_3:
+      name: ③ Việc 3
+      icon: mdi:numeric-3-circle-outline
+      collapsed: true
+      input:
+        thuc_the_3:
+          name: Thực thể của việc 3
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_3:
+          name: Trạng thái nghĩa là việc này đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_3:
+          name: Thuộc tính cần khớp (tuỳ chọn)
+          description: Tên thuộc tính, ví dụ status. Để trống = không xét thuộc tính.
+          selector:
+            text: {}
+          default: ""
+        gia_tri_3:
+          name: Giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_3:
+          name: Hành động khi nhấn nút lúc này
+          selector:
+            action: {}
+          default: []
+    viec_4:
+      name: ③ Việc 4
+      icon: mdi:numeric-4-circle-outline
+      collapsed: true
+      input:
+        thuc_the_4:
+          name: Thực thể của việc 4
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_4:
+          name: Trạng thái nghĩa là việc này đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_4:
+          name: Thuộc tính cần khớp (tuỳ chọn)
+          description: Tên thuộc tính, ví dụ status. Để trống = không xét thuộc tính.
+          selector:
+            text: {}
+          default: ""
+        gia_tri_4:
+          name: Giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_4:
+          name: Hành động khi nhấn nút lúc này
+          selector:
+            action: {}
+          default: []
+    viec_5:
+      name: ③ Việc 5
+      icon: mdi:numeric-5-circle-outline
+      collapsed: true
+      input:
+        thuc_the_5:
+          name: Thực thể của việc 5
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_5:
+          name: Trạng thái nghĩa là việc này đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_5:
+          name: Thuộc tính cần khớp (tuỳ chọn)
+          description: Tên thuộc tính, ví dụ status. Để trống = không xét thuộc tính.
+          selector:
+            text: {}
+          default: ""
+        gia_tri_5:
+          name: Giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_5:
+          name: Hành động khi nhấn nút lúc này
+          selector:
+            action: {}
+          default: []
+    viec_6:
+      name: ③ Việc 6
+      icon: mdi:numeric-6-circle-outline
+      collapsed: true
+      input:
+        thuc_the_6:
+          name: Thực thể của việc 6
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_6:
+          name: Trạng thái nghĩa là việc này đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_6:
+          name: Thuộc tính cần khớp (tuỳ chọn)
+          description: Tên thuộc tính, ví dụ status. Để trống = không xét thuộc tính.
+          selector:
+            text: {}
+          default: ""
+        gia_tri_6:
+          name: Giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_6:
+          name: Hành động khi nhấn nút lúc này
+          selector:
+            action: {}
+          default: []
+
+mode: single
+max_exceeded: silent
+
+variables:
+  version: 20261112
+  thuc_the_1: !input thuc_the_1
+  trang_thai_1: !input trang_thai_1
+  thuoc_tinh_1: !input thuoc_tinh_1
+  gia_tri_1: !input gia_tri_1
+  thuc_the_2: !input thuc_the_2
+  trang_thai_2: !input trang_thai_2
+  thuoc_tinh_2: !input thuoc_tinh_2
+  gia_tri_2: !input gia_tri_2
+  thuc_the_3: !input thuc_the_3
+  trang_thai_3: !input trang_thai_3
+  thuoc_tinh_3: !input thuoc_tinh_3
+  gia_tri_3: !input gia_tri_3
+  thuc_the_4: !input thuc_the_4
+  trang_thai_4: !input trang_thai_4
+  thuoc_tinh_4: !input thuoc_tinh_4
+  gia_tri_4: !input gia_tri_4
+  thuc_the_5: !input thuc_the_5
+  trang_thai_5: !input trang_thai_5
+  thuoc_tinh_5: !input thuoc_tinh_5
+  gia_tri_5: !input gia_tri_5
+  thuc_the_6: !input thuc_the_6
+  trang_thai_6: !input trang_thai_6
+  thuoc_tinh_6: !input thuoc_tinh_6
+  gia_tri_6: !input gia_tri_6
+  viec_dang_can: >-
+    {% set ns = namespace(l=[]) %}
+    {% set e = thuc_the_1 %}{% set st = trang_thai_1 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_1 == '' or (state_attr(e, thuoc_tinh_1) | string) == (gia_tri_1 | string)) %}{% set ns.l = ns.l + [{'i': 1, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_2 %}{% set st = trang_thai_2 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_2 == '' or (state_attr(e, thuoc_tinh_2) | string) == (gia_tri_2 | string)) %}{% set ns.l = ns.l + [{'i': 2, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_3 %}{% set st = trang_thai_3 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_3 == '' or (state_attr(e, thuoc_tinh_3) | string) == (gia_tri_3 | string)) %}{% set ns.l = ns.l + [{'i': 3, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_4 %}{% set st = trang_thai_4 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_4 == '' or (state_attr(e, thuoc_tinh_4) | string) == (gia_tri_4 | string)) %}{% set ns.l = ns.l + [{'i': 4, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_5 %}{% set st = trang_thai_5 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_5 == '' or (state_attr(e, thuoc_tinh_5) | string) == (gia_tri_5 | string)) %}{% set ns.l = ns.l + [{'i': 5, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_6 %}{% set st = trang_thai_6 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_6 == '' or (state_attr(e, thuoc_tinh_6) | string) == (gia_tri_6 | string)) %}{% set ns.l = ns.l + [{'i': 6, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {{ ns.l }}
+  chon: >-
+    {% set ns = namespace(i=0, t=0) %}{% for v in viec_dang_can %}{% if v.t > ns.t %}{% set ns.i = v.i %}{% set ns.t = v.t %}{% endif %}{% endfor %}{{ ns.i }}
+
+triggers: !input nut_bam
+
+actions:
+  - choose:
+      - alias: Việc 1
+        conditions:
+          - condition: template
+            value_template: "{{ chon | int == 1 }}"
+        sequence: !input hanh_dong_1
+      - alias: Việc 2
+        conditions:
+          - condition: template
+            value_template: "{{ chon | int == 2 }}"
+        sequence: !input hanh_dong_2
+      - alias: Việc 3
+        conditions:
+          - condition: template
+            value_template: "{{ chon | int == 3 }}"
+        sequence: !input hanh_dong_3
+      - alias: Việc 4
+        conditions:
+          - condition: template
+            value_template: "{{ chon | int == 4 }}"
+        sequence: !input hanh_dong_4
+      - alias: Việc 5
+        conditions:
+          - condition: template
+            value_template: "{{ chon | int == 5 }}"
+        sequence: !input hanh_dong_5
+      - alias: Việc 6
+        conditions:
+          - condition: template
+            value_template: "{{ chon | int == 6 }}"
+        sequence: !input hanh_dong_6
+    default: !input mac_dinh
