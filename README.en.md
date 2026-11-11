@@ -598,7 +598,7 @@ When a sensor triggers (person, smoke, water leak, open door, power loss...) **c
 
 **What it does:**
 - One button, three jobs by call state.
-- Recipient and devices picked from lists.
+- Pick **several recipients** (people and groups mixed): messages go to all, each with its own type, the call goes to the first person; devices picked from lists.
 - Works with the R1 speaker (`assist-phicom-R1` 0.16.0+): single / double / triple / long press.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
@@ -618,7 +618,7 @@ Decide what happens when **someone calls in**: **announce on a speaker**, **auto
 | **Requires** | Zalo Call 2026.11.11.2 or newer |
 
 **What it does:**
-- Speaker announcement «Incoming call from ...» (on/off, off by default).
+- Apply one rule to **several people and groups** at once; speaker announcement «Incoming call from ...» (on/off, off by default).
 - Auto-answer after a few seconds; voice, video or both.
 - AI picked from your Assist pipelines; home devices by tick boxes; turn the switch off and run again to remove the rule.
 

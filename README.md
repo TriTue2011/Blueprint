@@ -629,7 +629,7 @@ Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất �
 
 **Làm được:**
 - Một nút, ba việc theo trạng thái cuộc gọi.
-- Người nhận và thiết bị chọn từ danh sách.
+- Chọn **nhiều người nhận** (người và nhóm lẫn lộn): nhắn tin cho tất cả đúng loại từng người, gọi người đầu tiên; thiết bị chọn từ danh sách.
 - Dùng được với loa R1 (`assist-phicom-R1` từ bản 0.16.0): nhấn đơn / đúp / ba lần / giữ nút giữa.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
@@ -649,7 +649,7 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 | **Yêu cầu** | Zalo Call từ bản 2026.11.11.2 |
 
 **Làm được:**
-- Báo ra loa «Có cuộc gọi ... từ ...» (bật/tắt, mặc định tắt).
+- Đặt cùng một quy tắc cho **nhiều người và nhóm** cùng lúc; báo ra loa «Có cuộc gọi ... từ ...» (bật/tắt, mặc định tắt).
 - Tự nghe máy sau vài giây; chọn nghe thoại, video hoặc cả hai.
 - AI nói chuyện chọn từ danh sách Trợ lý giọng nói; thiết bị nhà chọn bằng ô tích; tắt công tắc rồi chạy lại để xoá quy tắc.
 

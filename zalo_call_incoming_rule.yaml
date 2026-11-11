@@ -57,14 +57,15 @@ blueprint:
                   value: groups
           default: contacts
         nguoi_cu_the:
-          name: Người hoặc nhóm cụ thể
-          description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Zalo Call.
+          name: Những người hoặc nhóm cụ thể (chọn nhiều)
+          description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Zalo Call, người và nhóm lẫn lộn đều được; mỗi người/nhóm được đặt một quy tắc giống nhau.
           selector:
             entity:
+              multiple: true
               filter:
                 - integration: zalo_call
                   domain: notify
-          default: ""
+          default: []
         ten_goi:
           name: Tên gọi (để bạn nhớ)
           description: Cũng là tên đọc ra loa khi báo có cuộc gọi. Bỏ trống thì dùng tên Zalo của người gọi.
@@ -246,43 +247,41 @@ variables:
   loa: !input loa
   mic: !input mic
   camera: !input camera
-  co_ma: "{{ nguoi_cu_the != '' and state_attr(nguoi_cu_the, 'thread_id') is not none }}"
+  muc_tieu: "{{ nguoi_cu_the if pham_vi == 'thread' else [''] }}"
 
 triggers:
   - trigger: homeassistant
     event: start
 
 actions:
-  - if:
-      - condition: template
-        alias: Chọn «một người cụ thể» thì phải chọn người
-        value_template: "{{ pham_vi != 'thread' or co_ma }}"
-    then:
-      - choose:
-          - alias: Xoá quy tắc
-            conditions:
-              - condition: template
-                value_template: "{{ not bat_quy_tac }}"
-            sequence:
-              - action: zalo_call.remove_rule
-                data: >-
-                  {% set d = {'scope': pham_vi} %}
-                  {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(nguoi_cu_the, 'thread_id')) %}{% endif %}
-                  {{ d }}
-        default:
-          - action: zalo_call.set_rule
-            data: >-
-              {% set d = {'scope': pham_vi, 'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
-                          'call_types': loai_cuoc_goi, 'ai': cho_ai_noi, 'trusted': nguoi_tin_cay,
-                          'reply_ai': ai_tra_loi_tin and cho_ai_noi, 'announce': bat_bao_loa and loa_bao | default('', true) != '',
-                          'connect': noi_khi_chuyen, 'connect_now': noi_ngay} %}
-              {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(nguoi_cu_the, 'thread_id')) %}{% endif %}
-              {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
-              {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
-              {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
-              {% if bat_bao_loa and loa_bao %}{% set d = dict(d, announce_to=loa_bao) %}{% endif %}
-              {% if cau_bao | trim != '' %}{% set d = dict(d, announce_text=cau_bao | trim) %}{% endif %}
-              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
-              {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
-              {{ d }}
+  - repeat:
+      for_each: "{{ muc_tieu }}"
+      sequence:
+        - choose:
+            - alias: Xoá quy tắc
+              conditions:
+                - condition: template
+                  value_template: "{{ not bat_quy_tac }}"
+              sequence:
+                - action: zalo_call.remove_rule
+                  data: >-
+                    {% set d = {'scope': pham_vi} %}
+                    {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(repeat.item, 'thread_id')) %}{% endif %}
+                    {{ d }}
+          default:
+            - action: zalo_call.set_rule
+              data: >-
+                {% set d = {'scope': pham_vi, 'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
+                            'call_types': loai_cuoc_goi, 'ai': cho_ai_noi, 'trusted': nguoi_tin_cay,
+                            'reply_ai': ai_tra_loi_tin and cho_ai_noi, 'announce': bat_bao_loa and loa_bao | default('', true) != '',
+                            'connect': noi_khi_chuyen, 'connect_now': noi_ngay} %}
+                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=state_attr(repeat.item, 'thread_id')) %}{% endif %}
+                {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
+                {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
+                {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
+                {% if bat_bao_loa and loa_bao %}{% set d = dict(d, announce_to=loa_bao) %}{% endif %}
+                {% if cau_bao | trim != '' %}{% set d = dict(d, announce_text=cau_bao | trim) %}{% endif %}
+                {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+                {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+                {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+                {{ d }}

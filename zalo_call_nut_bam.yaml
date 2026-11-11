@@ -12,7 +12,7 @@ blueprint:
     - Đang **trong cuộc gọi**: **cúp máy** (tắt được).
     - **Không có cuộc gọi nào**: **gọi đi**, hoặc **gọi cảnh báo**, hoặc **nhắn tin** cho người bạn chọn.
 
-    Mọi thứ chọn từ danh sách, không phải gõ mã.
+    Mọi thứ chọn từ danh sách, không phải gõ mã. **Chọn nhiều người nhận**, người và nhóm lẫn lộn đều được.
 
     <details>
     <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
@@ -64,14 +64,17 @@ blueprint:
                   value: khong
           default: goi_di
         nguoi_nhan:
-          name: Người nhận
-          description: Người (hoặc nhóm khi chỉ nhắn tin) từ danh sách Zalo Call.
+          name: Người nhận (chọn nhiều)
+          description: >-
+            Chọn từ danh sách Zalo Call, người và nhóm lẫn lộn đều được. Nhắn tin gửi cho TẤT CẢ (mỗi người đúng loại của mình).
+            Gọi điện chỉ gọi được người, và gọi người ĐẦU TIÊN trong danh sách (một lúc chỉ có một cuộc gọi).
           selector:
             entity:
+              multiple: true
               filter:
                 - integration: zalo_call
                   domain: notify
-          default: ""
+          default: []
         loai_cuoc_goi:
           name: Gọi thoại hay gọi video
           selector:
@@ -189,8 +192,8 @@ variables:
     ve_nha: Tôi đã về đến nhà
   noi_dung: >-
     {% if cau_noi == 'tu_viet' and cau_tu_viet | trim != '' %}{{ cau_tu_viet }}{% else %}{{ mau_cau.get(cau_noi, 'Cần giúp') }}{% endif %}
-  co_nguoi: "{{ nguoi_nhan != '' and state_attr(nguoi_nhan, 'thread_id') is not none }}"
-  loai_nguoi_nhan: "{{ state_attr(nguoi_nhan, 'type') if nguoi_nhan else '' }}"
+  nguoi_goi: >-
+    {% set ns = namespace(r='') %}{% for e in nguoi_nhan %}{% if ns.r == '' and state_attr(e, 'type') == 'user' %}{% set ns.r = e %}{% endif %}{% endfor %}{{ ns.r }}
   trang_thai_goi: "{{ states(cam_bien_cuoc_goi) }}"
   trang_thai_chi_tiet: "{{ state_attr(cam_bien_cuoc_goi, 'status') }}"
 
@@ -212,33 +215,47 @@ actions:
         sequence:
           - action: zalo_call.end_call
             data: {}
-      - alias: Rảnh - gọi điện
+      - alias: Rảnh - gọi điện cho người đầu tiên trong danh sách
         conditions:
           - condition: template
-            value_template: "{{ hanh_dong_ranh == 'goi_di' and co_nguoi and loai_nguoi_nhan == 'user' }}"
+            value_template: "{{ hanh_dong_ranh == 'goi_di' and nguoi_goi != '' }}"
         sequence:
           - action: zalo_call.make_call
             data: >-
-              {{ {'thread_id': state_attr(nguoi_nhan, 'thread_id'), 'type': loai_cuoc_goi} }}
-      - alias: Rảnh - gọi cảnh báo
+              {{ {'thread_id': state_attr(nguoi_goi, 'thread_id'), 'type': loai_cuoc_goi} }}
+      - alias: Rảnh - cảnh báo (nhắn tin cho tất cả, gọi cảnh báo người đầu tiên)
         conditions:
           - condition: template
-            value_template: "{{ hanh_dong_ranh == 'canh_bao' and co_nguoi and loai_nguoi_nhan == 'user' }}"
+            value_template: "{{ hanh_dong_ranh == 'canh_bao' and nguoi_nhan | count > 0 }}"
         sequence:
-          - action: zalo_call.alert_call
-            data: >-
-              {% set d = {'thread_id': state_attr(nguoi_nhan, 'thread_id'), 'message': noi_dung} %}
-              {% if loai_cuoc_goi == 'video' %}{% set d = dict(d, type='video') %}{% endif %}
-              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
-              {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
-              {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
-              {{ d }}
-      - alias: Rảnh - nhắn tin
+          - repeat:
+              for_each: "{{ nguoi_nhan }}"
+              sequence:
+                - action: zalo_call.send_message
+                  data: >-
+                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'),
+                        'message': noi_dung, 'emoji': 'alert'} }}
+          - if:
+              - condition: template
+                value_template: "{{ nguoi_goi != '' }}"
+            then:
+              - action: zalo_call.alert_call
+                data: >-
+                  {% set d = {'thread_id': state_attr(nguoi_goi, 'thread_id'), 'message': noi_dung} %}
+                  {% if loai_cuoc_goi == 'video' %}{% set d = dict(d, type='video') %}{% endif %}
+                  {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+                  {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+                  {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+                  {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
+                  {{ d }}
+      - alias: Rảnh - nhắn tin cho tất cả người nhận (người và nhóm)
         conditions:
           - condition: template
-            value_template: "{{ hanh_dong_ranh == 'nhan_tin' and co_nguoi }}"
+            value_template: "{{ hanh_dong_ranh == 'nhan_tin' and nguoi_nhan | count > 0 }}"
         sequence:
-          - action: zalo_call.send_message
-            data: >-
-              {{ {'thread_id': state_attr(nguoi_nhan, 'thread_id'), 'type': loai_nguoi_nhan, 'message': noi_dung} }}
+          - repeat:
+              for_each: "{{ nguoi_nhan }}"
+              sequence:
+                - action: zalo_call.send_message
+                  data: >-
+                    {{ {'thread_id': state_attr(repeat.item, 'thread_id'), 'type': state_attr(repeat.item, 'type'), 'message': noi_dung} }}
