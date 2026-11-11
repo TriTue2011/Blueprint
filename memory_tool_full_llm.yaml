@@ -1,0 +1,307 @@
+blueprint:
+  name: Memory Tool
+  author: luuquangvu
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/memory_tool_full_llm.yaml
+  description: |-
+    # Universal memory tool used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    - The Pyscript integration needs to be installed through HACS and properly configured.
+    - The `scripts/memory.py` script needs to be copied into the `config/pyscript` folder.
+    - The mentioned file(s) is/are included in the repository.
+    - You need to enable two Pyscript options through the UI or via YAML to allow importing all Python packages and to make hass available as a global variable.
+
+    ```
+    # File configuration.yaml
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+    ```
+
+    ### Optional
+
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+    - Check `sensor.memory_result` to quickly view the current status of the Memory Tool.
+
+    ### Note
+
+    - Provide a concise and precise description for the script. This description will enable the LLM to recognize that the script is designed to use as the Assist tool to let the LLM store and retrieve user/household memories reliably.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+  domain: script
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        operation_prompt:
+          name: Operation Prompt
+          description: The memory operation (set, get, search, forget) to perform, determined by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            set, get, search, or forget
+        key_prompt:
+          name: Key Prompt
+          description: The concise key in the user's language for identifying the memory, used by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Concise key in user language. No translation. Use search if unsure
+        value_prompt:
+          name: Value Prompt
+          description: The raw content to be stored in memory, extracted by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Raw value only
+        scope_prompt:
+          name: Scope Prompt
+          description: The access level (user, household, session) for the memory, chosen by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Default: user
+        expiration_days_prompt:
+          name: Expiration (days) Prompt
+          description: The number of days before the memory expires (0 for permanent), estimated by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Days before expiry (0=forever). Default: 180
+        tags_prompt:
+          name: Tags Prompt
+          description: Keywords related to the memory for easier searching, provided by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Keywords in user language. Same as key if none. Semicolon-separated
+        force_new_prompt:
+          name: Force New Prompt
+          description: Decides whether to override duplicate-tag protection, determined by the AI based on user intent
+          selector:
+            text:
+              multiline: true
+          default: |-
+            true ONLY if user confirms override
+        query_prompt:
+          name: Query Prompt
+          description: The search term or keywords for memory retrieval, provided by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Search term/keywords. No translation
+        search_limit_prompt:
+          name: Search Limit Prompt
+          description: The maximum number of results to return for a search, specified by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Integer 1-50. Default: 5
+fields:
+  operation:
+    name: Operation
+    description: !input operation_prompt
+    default: search
+    selector:
+      select:
+        options:
+          - set
+          - get
+          - search
+          - forget
+    required: true
+  key:
+    name: Key
+    description: !input key_prompt
+    default: ""
+    selector:
+      text:
+  value:
+    name: Value
+    description: !input value_prompt
+    default: ""
+    selector:
+      text:
+  scope:
+    name: Scope
+    description: !input scope_prompt
+    default: user
+    selector:
+      select:
+        options:
+          - user
+          - household
+          - session
+  expiration_days:
+    name: Expiration (days)
+    description: !input expiration_days_prompt
+    default: 180
+    selector:
+      number:
+        min: 0
+        max: 3650
+        mode: box
+  tags:
+    name: Tags
+    description: !input tags_prompt
+    default: ""
+    selector:
+      text:
+  force_new:
+    name: Force New
+    description: !input force_new_prompt
+    default: false
+    selector:
+      boolean:
+  query:
+    name: Query
+    description: !input query_prompt
+    default: ""
+    selector:
+      text:
+  search_limit:
+    name: Search limit
+    description: !input search_limit_prompt
+    default: 5
+    selector:
+      number:
+        min: 1
+        max: 50
+        mode: box
+mode: parallel
+max_exceeded: silent
+description: Saves, retrieves, searches, or deletes persistent notes and facts reliably
+variables:
+  version: 20260821
+sequence:
+  - variables:
+      op: "{{ operation | default('set') }}"
+      key_t: "{{ (key | default('')) | trim }}"
+      value_t: "{{ (value | default('')) | trim }}"
+      query_t: "{{ (query | default('')) | trim }}"
+      tags_t: "{{ (tags | default('')) | regex_replace('\\s+', ' ') | trim }}"
+      expiration_days_i: "{{ (expiration_days | default(180)) | int(180) }}"
+      scope_v: "{{ (scope | default('')) or 'user' }}"
+      in_limit: "{{ (search_limit | default(5)) | int(5) }}"
+      force_new_s: "{{ 'true' if force_new | default(false) else 'false' }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ op == 'set' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ key_t|length > 0 and value_t|length > 0 }}"
+                sequence:
+                  - action: pyscript.memory_set
+                    data:
+                      key: "{{ key_t }}"
+                      value: "{{ value_t }}"
+                      scope: "{{ scope_v }}"
+                      expiration_days: "{{ expiration_days_i }}"
+                      tags: "{{ tags_t if tags_t|length > 0 else key_t }}"
+                      force_new: "{{ force_new_s }}"
+                    response_variable: response
+            default:
+              - variables:
+                  response:
+                    status: "error"
+                    error: "missing_input"
+                    message: "Missing 'key' or 'value' for set operation."
+                    details:
+                      key: "{{ key_t }}"
+                      value_present: "{{ value_t|length > 0 }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ op == 'get' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ key_t|length > 0 }}"
+                sequence:
+                  - action: pyscript.memory_get
+                    data:
+                      key: "{{ key_t }}"
+                    response_variable: response
+            default:
+              - variables:
+                  response:
+                    status: "error"
+                    error: "missing_input"
+                    message: "Missing 'key' for get operation."
+                    details:
+                      key: "{{ key_t }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ op == 'search' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ query_t|length > 0 }}"
+                sequence:
+                  - action: pyscript.memory_search
+                    data:
+                      query: "{{ query_t }}"
+                      limit: "{{ in_limit | int(5) }}"
+                    response_variable: response
+            default:
+              - variables:
+                  response:
+                    status: "error"
+                    error: "missing_input"
+                    message: "Missing 'query' for search operation."
+                    details:
+                      query: "{{ query_t }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ op == 'forget' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ key_t|length > 0 }}"
+                sequence:
+                  - action: pyscript.memory_forget
+                    data:
+                      key: "{{ key_t }}"
+                    response_variable: response
+            default:
+              - variables:
+                  response:
+                    status: "error"
+                    error: "missing_input"
+                    message: "Missing 'key' for forget operation."
+                    details:
+                      key: "{{ key_t }}"
+    default:
+      - alias: Return response (invalid)
+        variables:
+          response:
+            status: "error"
+            error: "invalid_operation"
+            message: "Invalid operation. Use one of: set, get, search, forget."
+  - variables:
+      response: >-
+        {{ dict(response, current_time=now().strftime('%Y-%m-%d %H:%M:%S %z')) if response is mapping else response }}
+  - stop: ""
+    response_variable: response

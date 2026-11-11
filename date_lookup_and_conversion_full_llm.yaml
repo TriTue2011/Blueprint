@@ -1,0 +1,117 @@
+blueprint:
+  name: Convert Calendar Dates
+  author: luuquangvu
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/date_lookup_and_conversion_full_llm.yaml
+  description: |-
+    # Tool converts Solar dates to Lunar dates and vice versa used for Voice Assistant
+
+    ## Blueprint Setup
+
+    ### Required
+
+    - The Pyscript integration needs to be installed through HACS and properly configured.
+    - The `scripts/date_conversion_tool.py` script needs to be copied into the `config/pyscript` folder.
+    - The mentioned file(s) is/are included in the repository.
+    - You need to enable two Pyscript options through the UI or via YAML to allow importing all Python packages and to make hass available as a global variable.
+
+    ```
+    # File configuration.yaml
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+    ```
+
+    ### Optional
+
+    - Adjust the prompts for each field used in the script. The descriptions guide the LLM to provide the correct input.
+
+    ### Note
+
+    - Provide a concise and precise description for the script. This will be utilized by the LLM to understand it should use this script for date conversion from Solar date to Lunar date and vice versa.
+    - Make sure to expose the script to Assist after the script has been saved.
+    - Do not alter the default script name.
+    - Once the script is created, click the three dots in the top right corner, choose "Edit in YAML," and remove the `description: ...` line to restore the default. This step is important because it helps the LLM better understand the script's purpose.
+  domain: script
+  homeassistant:
+    min_version: 2024.12.0
+  input:
+    prompt_settings:
+      name: Prompt settings for the LLM
+      icon: mdi:robot
+      description: You can use these settings to finetune the prompts for your specific LLM (model). In most cases the defaults should be fine.
+      collapsed: true
+      input:
+        conversion_type_prompt:
+          name: Conversion Type Prompt
+          description: The type of conversion (Solar to Lunar or Lunar to Solar), provided by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            s2l or l2s
+        date_prompt:
+          name: Date Prompt
+          description: The input date (YYYY-MM-DD) for the conversion, provided by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            Date (YYYY-MM-DD). Optional, defaults to today if omitted.
+        leap_month_prompt:
+          name: Leap Month Prompt
+          description: Indicates whether the Lunar date is in a leap month, determined by the AI
+          selector:
+            text:
+              multiline: true
+          default: |-
+            true if leap month. Skip for s2l
+mode: parallel
+max_exceeded: silent
+description: Converts dates between Solar and Lunar calendars
+variables:
+  version: 20260821
+fields:
+  conversion_type:
+    name: Conversion Type
+    description: !input conversion_type_prompt
+    selector:
+      select:
+        options:
+          - s2l
+          - l2s
+    required: true
+  date:
+    name: Date
+    description: !input date_prompt
+    selector:
+      date:
+  leap_month:
+    name: Leap Month
+    description: !input leap_month_prompt
+    selector:
+      boolean:
+sequence:
+  - variables:
+      conversion_type: "{{ conversion_type | default('') | trim }}"
+      date: "{{ (date | as_datetime(default=now())).date() }}"
+      leap_month: "{{ leap_month | default(false) }}"
+  - alias: Check if variables were set correctly
+    if:
+      - condition: template
+        value_template: "{{ not (conversion_type in ['s2l', 'l2s']) }}"
+    then:
+      - alias: Set variable for error message
+        variables:
+          response:
+            error: Unable to perform the date conversion because the conversion type is invalid.
+      - alias: Stop the script
+        stop: Unable to perform the date conversion because the conversion type is invalid.
+        response_variable: response
+  - action: pyscript.date_conversion_tool
+    response_variable: response
+    data:
+      conversion_type: "{{ conversion_type }}"
+      date: "{{ date }}"
+      leap_month: "{{ leap_month }}"
+  - stop: ""
+    response_variable: response

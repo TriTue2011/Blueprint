@@ -493,8 +493,8 @@ mode: single
 # ============================================================
 # TRIGGER
 # ============================================================
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input door_contact_sensor
     id: door
     from: !input door_from_state
@@ -503,14 +503,14 @@ trigger:
 # ============================================================
 # CONDITION
 # ============================================================
-condition:
+conditions:
   - condition: and
     conditions: !input run_conditions
 
 # ============================================================
 # ACTION
 # ============================================================
-action:
+actions:
 
   # === 1. WAIT FOR PERSON (nếu bật) ===
   - choose:
@@ -530,7 +530,7 @@ action:
                         value_template: "{{ max_wait_time == 0 }}"
                     sequence:
                       - wait_for_trigger:
-                          - platform: state
+                          - trigger: state
                             entity_id: !input person_occupancy_sensor
                             to: !input person_detected_state
                         continue_on_timeout: true
@@ -539,7 +539,7 @@ action:
                         value_template: "{{ max_wait_time > 0 }}"
                     sequence:
                       - wait_for_trigger:
-                          - platform: state
+                          - trigger: state
                             entity_id: !input person_occupancy_sensor
                             to: !input person_detected_state
                         timeout:

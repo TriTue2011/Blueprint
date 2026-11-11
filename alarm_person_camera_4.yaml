@@ -1822,20 +1822,20 @@ mode: single
 trigger_variables:
   _trigger_sensors: !input trigger_sensor
 
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input trigger_sensor
     from: !input trigger_from_state
     to: !input trigger_to_state
 
-condition:
+conditions:
   - condition: and
     conditions: !input run_conditions
 
 # ============================================================
 # HÀNH ĐỘNG
 # ============================================================
-action:
+actions:
 
   # ============================================================
   # BƯỚC 0: ĐÁNH THỨC MODEL, SONG SONG VỚI VIỆC CHỜ XÁC NHẬN
@@ -1898,7 +1898,7 @@ action:
                                 value_template: "{{ cho_toi_da | int(0) == 0 }}"
                             sequence:
                               - wait_for_trigger:
-                                  - platform: state
+                                  - trigger: state
                                     entity_id: !input cam_bien_nguoi
                                     to: !input trang_thai_co_nguoi
                                 continue_on_timeout: true
@@ -1907,7 +1907,7 @@ action:
                                 value_template: "{{ cho_toi_da | int(0) > 0 }}"
                             sequence:
                               - wait_for_trigger:
-                                  - platform: state
+                                  - trigger: state
                                     entity_id: !input cam_bien_nguoi
                                     to: !input trang_thai_co_nguoi
                                 timeout:

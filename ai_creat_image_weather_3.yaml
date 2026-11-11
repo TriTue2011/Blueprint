@@ -537,18 +537,18 @@ blueprint:
                   domain: notify
 
 # ===== TRIGGER =====
-trigger:
-  - platform: time
+triggers:
+  - trigger: time
     at: "05:00:00"
-  - platform: time
+  - trigger: time
     at: "11:00:00"
-  - platform: time
+  - trigger: time
     at: "13:00:00"
-  - platform: time
+  - trigger: time
     at: "18:00:00"
-  - platform: time
+  - trigger: time
     at: "22:00:00"
-  - platform: state
+  - trigger: state
     entity_id: !input time_phase_sensor
     not_from:
       - unknown
@@ -558,14 +558,14 @@ trigger:
       - unavailable
 
 # ===== CONDITIONS =====
-condition:
+conditions:
   - condition: template
     value_template: >
       {{ trigger.platform == 'time'
          or trigger.from_state.state != trigger.to_state.state }}
 
 # ===== ACTIONS =====
-action:
+actions:
   # ── BƯỚC 1: THU THẬP DỮ LIỆU THỜI TIẾT ───────────────────────────────────
   - variables:
       ai_engine: !input ai_engine

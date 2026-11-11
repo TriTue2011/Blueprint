@@ -522,14 +522,14 @@ variables:
 # ============================================================
 # TRIGGER
 # ============================================================
-trigger:
-  - platform: time
+triggers:
+  - trigger: time
     at: !input notification_times
 
 # ============================================================
 # CONDITION
 # ============================================================
-condition:
+conditions:
   - condition: template
     value_template: >
       {{ enable_lunar_notification or enable_weather_notification }}
@@ -537,7 +537,7 @@ condition:
 # ============================================================
 # ACTION
 # ============================================================
-action:
+actions:
 
   # === THU THẬP DỮ LIỆU THỜI TIẾT ===
   - variables:

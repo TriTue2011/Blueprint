@@ -60,7 +60,7 @@ variables:
   timer_entity: !input timer_entity
   end_time_helper: !input end_time_helper
 
-trigger:
+triggers:
 
   - id: start_timer
     trigger: state
@@ -76,7 +76,7 @@ trigger:
     trigger: homeassistant
     event: start
 
-action:
+actions:
 
   - choose:
 

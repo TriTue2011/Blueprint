@@ -315,36 +315,36 @@ max_exceeded: silent
 # TRIGGER — multi-trigger, condition lọc đúng interval
 # FIX: !input không dùng được trong trigger platform
 # ============================================================
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     hours: "/1"
     id: trigger_1h
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/2"
     id: trigger_2h
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/3"
     id: trigger_3h
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/4"
     id: trigger_4h
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/6"
     id: trigger_6h
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/8"
     id: trigger_8h
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/12"
     id: trigger_12h
-  - platform: time
+  - trigger: time
     at: "00:00:00"
     id: trigger_24h
 
 # ============================================================
 # CONDITION — chỉ cho chạy đúng trigger khớp với setting
 # ============================================================
-condition:
+conditions:
   - condition: template
     value_template: >
       {% set interval = trigger_interval %}
@@ -361,7 +361,7 @@ condition:
 # ============================================================
 # ACTION
 # ============================================================
-action:
+actions:
 
   # === RESOLVE TẤT CẢ !INPUT VÀO VARIABLES ===
   # FIX: !input không dùng được trực tiếp trong condition value_template

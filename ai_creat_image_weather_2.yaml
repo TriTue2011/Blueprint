@@ -150,13 +150,13 @@ blueprint:
               step: 64.0
               mode: slider
 
-trigger:
-- platform: state
+triggers:
+- trigger: state
   entity_id: !input time_phase_sensor
 
-condition: []
+conditions: []
 
-action:
+actions:
 - variables:
     time_phase_sensor: !input time_phase_sensor
     weather_entity: !input weather_entity

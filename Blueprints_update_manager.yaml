@@ -191,17 +191,17 @@ blueprint:
 trigger_variables:
   _schedule_enabled: !input schedule_enabled
 
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     hours: !input schedule_hour
     id: scheduled_check
     enabled: "{{ _schedule_enabled }}"
 
-  - platform: event
+  - trigger: event
     event_type: blueprints_update_trigger
     id: manual_trigger
 
-condition: []
+conditions: []
 
 variables:
   update_mode: !input update_mode
@@ -232,7 +232,7 @@ variables:
 
   update_time: "{{ now().strftime('%H:%M:%S %d/%m/%Y') }}"
 
-action:
+actions:
 
   - variables:
       start_ts: "{{ as_timestamp(now()) }}"

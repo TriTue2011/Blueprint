@@ -172,17 +172,17 @@ blueprint:
 trigger_variables:
   _schedule_enabled: !input schedule_enabled
 
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     hours: !input schedule_hour
     id: scheduled
     enabled: "{{ _schedule_enabled }}"
 
-  - platform: event
+  - trigger: event
     event_type: pyscript_update_trigger
     id: manual
 
-condition: []
+conditions: []
 
 # Mirror tat ca !input -> variables
 # Bat buoc voi nested input sections (zalo_settings, notification_section)
@@ -222,7 +222,7 @@ variables:
     {% if update_mode == 'update' %}update
     {% else %}{% endif %}
 
-action:
+actions:
   - variables:
       start_ts: "{{ as_timestamp(now()) }}"
 

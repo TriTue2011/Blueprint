@@ -172,39 +172,39 @@ variables:
 # TRIGGER — tất cả intervals đều luôn fire
 # Condition bên dưới lọc đúng trigger theo setting của user
 # ============================================================
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     minutes: "/15"
     id: trigger_15min
-  - platform: time_pattern
+  - trigger: time_pattern
     minutes: "/20"
     id: trigger_20min
-  - platform: time_pattern
+  - trigger: time_pattern
     minutes: "/30"
     id: trigger_30min
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/1"
     id: trigger_1hour
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/2"
     id: trigger_2hours
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/3"
     id: trigger_3hours
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/6"
     id: trigger_6hours
-  - platform: time_pattern
+  - trigger: time_pattern
     hours: "/12"
     id: trigger_12hours
-  - platform: time
+  - trigger: time
     at: "00:00:00"
     id: trigger_daily
 
 # ============================================================
 # CONDITION — chỉ cho chạy đúng trigger khớp với setting
 # ============================================================
-condition:
+conditions:
   - condition: template
     value_template: >
       {% set interval = update_interval %}
@@ -222,7 +222,7 @@ condition:
 # ============================================================
 # ACTION
 # ============================================================
-action:
+actions:
 
   # === BUILD DANH SÁCH NGUỒN QUOTE ===
   - variables:

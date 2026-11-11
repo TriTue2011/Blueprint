@@ -1037,8 +1037,8 @@ trigger_variables:
 # ============================================================
 # TRIGGER
 # ============================================================
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input trigger_sensor
     from: !input trigger_from_state
     to: !input trigger_to_state
@@ -1046,14 +1046,14 @@ trigger:
 # ============================================================
 # CONDITION
 # ============================================================
-condition:
+conditions:
   - condition: and
     conditions: !input run_conditions
 
 # ============================================================
 # ACTION
 # ============================================================
-action:
+actions:
 
   # ============================================================
   # BƯỚC 1: WAIT FOR PERSON (tùy chọn)
@@ -1075,7 +1075,7 @@ action:
                         value_template: "{{ max_wait_time == 0 }}"
                     sequence:
                       - wait_for_trigger:
-                          - platform: state
+                          - trigger: state
                             entity_id: !input person_occupancy_sensor
                             to: !input person_detected_state
                         continue_on_timeout: true
@@ -1084,7 +1084,7 @@ action:
                         value_template: "{{ max_wait_time > 0 }}"
                     sequence:
                       - wait_for_trigger:
-                          - platform: state
+                          - trigger: state
                             entity_id: !input person_occupancy_sensor
                             to: !input person_detected_state
                         timeout:

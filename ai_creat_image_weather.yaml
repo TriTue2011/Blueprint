@@ -308,15 +308,15 @@ blueprint:
             boolean:
 
 # ===== TRIGGER =====
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input time_phase_sensor
 
 # ===== CONDITIONS =====
-condition: []
+conditions: []
 
 # ===== ACTIONS =====
-action:
+actions:
   # === THU THẬP DỮ LIỆU THỜI TIẾT ===
   - variables:
       time_phase_sensor: !input time_phase_sensor

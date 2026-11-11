@@ -33,6 +33,8 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
   - [💬 Zalo Call Messenger tuỳ biến](#-zalo-call-messenger-tuỳ-biến)
   - [⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch](#-zalo-call-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
+  - [🔁 Automation của luuquangvu (webhook, hẹn giờ, liên kết)](#-automation-của-luuquangvu-webhook-hẹn-giờ-liên-kết)
+  - [🧠 Script của luuquangvu cho Assist (tìm kiếm, lịch, bộ nhớ, hẹn giờ)](#-script-của-luuquangvu-cho-assist-tìm-kiếm-lịch-bộ-nhớ-hẹn-giờ)
 - **Tiện ích**
   - [Thông báo lịch âm & thời tiết](#️-thông-báo-lịch-âm--thời-tiết)
   - [Danh ngôn tự động hàng ngày](#-danh-ngôn-tự-động-hàng-ngày)
@@ -63,6 +65,20 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
 | **Voice Assistant** | Tùy chọn — cần cho các blueprint điều khiển bằng giọng nói |
 
 > **Lưu ý quan trọng:** Sau khi tạo script từ blueprint, hãy **expose script cho Assist** để có thể điều khiển bằng giọng nói. Không thay đổi tên script mặc định.
+
+
+**Blueprint nào cần file `.py` nào** (file nằm trong `scripts/`; cách cài ở mục «Cài đặt Pyscript»):
+
+| File `.py` | Blueprint dùng nó |
+|---|---|
+| `common_utilities.py` | `devices_schedules_restart_handler.yaml`, `telegram_bot_webhook.yaml`, `zalo_bot_webhook.yaml`, `devices_schedules.yaml` |
+| `date_conversion_tool.py` | `date_lookup_and_conversion_full_llm.yaml` |
+| `flow_image.py` | `ai_creat_image_weather_3.yaml` |
+| `memory.py` | `memory_tool_full_llm.yaml` |
+| `telegram_bot_handle_tool.py` | `send_to_telegram_full_llm.yaml`, `telegram_bot_webhook.yaml` |
+| `weather_image.py` | `ai_creat_image_weather_2.yaml`, `ai_creat_image_weather_3.yaml` |
+| `youtube_data_tool.py` | `advanced_youtube_search_full_llm.yaml` |
+| `zalo_bot_handle_tool.py` | `ai_creat_image_weather_3.yaml`, `alarm_person_camera.yaml`, `alarm_person_camera_2.yaml`, `alarm_person_camera_3.yaml`, `alarm_person_camera_4.yaml`, `calendar_weather_notification.yaml`, `send_to_zalo_bot_full_llm.yaml`, `zalo_bot_webhook.yaml` |
 
 ---
 
@@ -216,6 +232,8 @@ template:
 
 **Dùng Gemini. Sử dụng addon (dockercompse) https://github.com/luuquangvu/Gemini-FastAPI và tích hợp https://github.com/luuquangvu/hass_local_openai_llm** 
 
+**Cần file Pyscript:** `weather_image.py`, `flow_image.py`, `zalo_bot_handle_tool.py` (trong thư mục `scripts/`, chép vào `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_creat_image_weather.yaml)
 
 **Dùng api nvidia. đăng ký tại https://build.nvidia.com và dùng tích hợp https://github.com/luuquangvu/hass_local_openai_llm**
@@ -332,6 +350,8 @@ Tự động phân tích sự kiện camera bằng AI Task khi phát hiện có 
 
 **Gemini**
 
+**Cần file Pyscript:** `zalo_bot_handle_tool.py` (trong thư mục `scripts/`, chép vào `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera.yaml)
 
 **Open ai**
@@ -436,6 +456,8 @@ Thiếu dòng này thì AI Task và thông báo điện thoại không đọc đ
 
 Nhánh video muốn cho AI đọc thẳng tệp mp4 thì phải dùng provider đọc được video, hiện là Google Gemini. Model chạy tại nhà qua Ollama hay llama.cpp chỉ nhận ảnh tĩnh, nên với chúng hãy để video ở chế độ chỉ gửi kèm — đó cũng là mặc định.
 
+**Cần file Pyscript:** `zalo_bot_handle_tool.py` (trong thư mục `scripts/`, chép vào `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera_4.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
@@ -523,6 +545,8 @@ Gửi tin nhắn, ảnh hoặc file qua Telegram bằng giọng nói. Hỗ trợ
 - "Gửi ảnh camera sân vào Telegram"
 - "Gửi thông báo nhiệt độ phòng khách lên Telegram"
 
+**Cần file Pyscript:** `telegram_bot_handle_tool.py` (trong thư mục `scripts/`, chép vào `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_telegram_full_llm.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
@@ -563,6 +587,8 @@ Gửi tin nhắn đến Zalo qua bot chính thức bằng giọng nói. Địa �
 - "Tìm nhà hàng ngon ở Hà Nội và gửi lên Zalo"
 - "Gửi địa chỉ Văn Miếu lên Zalo"
 
+**Cần file Pyscript:** `zalo_bot_handle_tool.py` (trong thư mục `scripts/`, chép vào `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_bot_full_llm.yaml)
 
 *Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
@@ -602,20 +628,9 @@ Gửi tin nhắn, ảnh, video qua Zalo Custom Bot. Hỗ trợ webhook, đồng 
 
 Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất điện...) thì **gọi điện Zalo** cho người bạn chọn: máy đọc cảnh báo rồi nối thẳng loa, mic, camera trong nhà. Gọi **lần lượt** từng người cho tới khi có người nghe máy. **Mọi thứ chọn từ danh sách**, không phải gõ mã.
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| **Loại** | Automation |
-| **HA tối thiểu** | 2026.3.0 |
-| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình* |
-
-**Làm được:**
-- Cảm biến, người nhận, loa/mic/camera chọn từ danh sách; loại cảnh báo có sẵn (người lạ, khói, rò nước, gas, cửa mở, mất điện, người ngã).
-- Gọi lần lượt tới khi có người nghe máy; gửi thêm tin nhắn chữ.
-- Chống báo lặp, khung giờ, chỉ báo khi người đã chọn đều vắng nhà.
+**Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
-
-*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -623,20 +638,9 @@ Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất �
 
 **Cùng một nút bấm, việc khác nhau tuỳ lúc:** có cuộc gọi đến thì nghe máy, đang trong cuộc gọi thì cúp, rảnh thì gọi đi / gọi cảnh báo / nhắn tin. Nút chọn bằng bộ chọn trigger (nút giữa loa R1, nút Zigbee, nút ảo...).
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| **Loại** | Automation |
-| **HA tối thiểu** | 2026.3.0 |
-| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; cảm biến «Trạng thái cuộc gọi» của Zalo Call |
-
-**Làm được:**
-- Một nút, ba việc theo trạng thái cuộc gọi.
-- Chọn **nhiều người nhận** (người và nhóm lẫn lộn): nhắn tin cho tất cả đúng loại từng người, gọi người đầu tiên; thiết bị chọn từ danh sách.
-- Dùng được với loa R1 (`assist-phicom-R1` từ bản 0.16.0): nhấn đơn / đúp / ba lần / giữ nút giữa.
+**Cần:** Zalo Call từ bản 2026.11.11.2; cảm biến «Trạng thái cuộc gọi» của Zalo Call.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
-
-*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -644,20 +648,9 @@ Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất �
 
 Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra loa** cho cả nhà biết, **tự nghe máy**, cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp (tích Mic / Loa / Camera, tích Camera là cuộc gọi video). Áp cho một người, mọi người trong danh bạ, người lạ hoặc mọi nhóm.
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| **Loại** | Automation |
-| **HA tối thiểu** | 2026.3.0 |
-| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2 |
-
-**Làm được:**
-- Đặt cùng một quy tắc cho **nhiều người và nhóm** cùng lúc; báo ra loa «Có cuộc gọi ... từ ...» (bật/tắt, mặc định tắt).
-- Tự nghe máy sau vài giây; chọn nghe thoại, video hoặc cả hai.
-- AI nói chuyện chọn từ danh sách Trợ lý giọng nói; thiết bị nhà chọn bằng ô tích; tắt công tắc rồi chạy lại để xoá quy tắc.
+**Cần:** Zalo Call từ bản 2026.11.11.2.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
-
-*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -665,20 +658,9 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 
 Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộng nhưng chỉ chọn từ danh sách**: thiết bị theo dõi, chế độ (mọi thay đổi, bật, tắt, vượt ngưỡng, báo cáo hằng ngày), câu có sẵn, kiểu chữ (emoji, đậm, màu, cỡ chữ), người nhận.
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| **Loại** | Automation |
-| **HA tối thiểu** | 2026.3.0 |
-| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình* |
-
-**Làm được:**
-- 6 chế độ «Khi nào gửi» và 6 câu có sẵn có điền tên, khu vực, trạng thái, đơn vị, giờ tự động.
-- Kiểu chữ chọn từ danh sách: emoji, in đậm, cỡ chữ, màu chữ.
-- Gửi tin chữ, gọi điện đọc nội dung, hoặc cả hai; chống lặp, khung giờ.
+**Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
-
-*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -686,20 +668,9 @@ Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộ
 
 Đúng giờ đã chọn, **gọi điện Zalo đọc lời nhắc** (hoặc nhắn tin): uống thuốc, đi ngủ, thức dậy, ăn cơm, uống nước, tập thể dục, họp, tưới cây. Hợp cho người lớn tuổi ít nhìn tin nhắn.
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| **Loại** | Automation |
-| **HA tối thiểu** | 2026.3.0 |
-| **Yêu cầu** | Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình* |
-
-**Làm được:**
-- Chọn giờ và các ngày trong tuần; lọc ngày làm việc nếu có cảm biến Workday.
-- Lời nhắc có sẵn hoặc tự viết, gọi tên người được nhắc, đọc 1 đến 3 lần.
-- Giọng đọc chọn từ danh sách Trợ lý giọng nói.
+**Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
-
-*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -707,19 +678,9 @@ Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộ
 
 Script cho **Voice Assistant** (Assist): gửi tin nhắn, vị trí hoặc ảnh cho **nhiều người và nhóm cùng lúc** qua **Zalo Calling**. Người nhận **chọn từ danh sách** (thực thể `notify.zalo_call_...`), không gõ mã Zalo. Cùng khuôn với «Gửi Zalo Custom Bot», nhưng không cần số điện thoại tài khoản và mã nhóm.
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| **Loại** | Script |
-| **HA tối thiểu** | 2026.3.0 |
-| **Yêu cầu** | Zalo Calling từ bản 2026.11.11.3; người nhận chọn ở *Zalo Call → Cấu hình* |
-
-**Ví dụ lệnh giọng nói:**
-- "Gửi ảnh camera sân cho cả nhà trên Zalo"
-- "Nhắn Zalo cho bố và nhóm gia đình là tối nay về muộn"
+**Cần:** Zalo Calling từ bản 2026.11.11.3; người nhận chọn ở *Zalo Call → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
-
-*Hãy đọc kỹ mô tả blueprint trước khi sử dụng.*
 
 ---
 
@@ -735,6 +696,40 @@ Các blueprint sau **đã có thêm nhóm «Zalo Calling»** (cạnh Zalo Bot / 
 | Tạo ảnh thời tiết bằng AI | Ảnh vừa tạo |
 | Thông báo lịch âm & thời tiết | Tin lịch âm và tin thời tiết |
 | Tự động cập nhật Blueprints, Tự động cập nhật Pyscript | Báo cáo cập nhật |
+
+---
+
+## 🔁 Automation của luuquangvu (webhook, hẹn giờ, liên kết)
+
+Bản chép từ [luuquangvu/tutorials](https://github.com/luuquangvu/tutorials) (giấy phép MIT, xem `scripts/LICENSE-luuquangvu`). Các file `.py` nằm trong thư mục `scripts/` của kho này.
+
+Cài tích hợp **Pyscript** (HACS), bật `allow_all_imports` và `hass_is_global`, chép các file `.py` cần vào `/config/pyscript/` (chép cả `requirements.txt`). Chi tiết ở mục «Cài đặt Pyscript» bên dưới.
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **HA tối thiểu** | 2024.12.0 / 2025.8.0 |
+
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_restart_handler.yaml) — `devices_schedules_restart_handler.yaml`: Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại; cần `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Flink_multiple_devices.yaml) — `link_multiple_devices.yaml`: Liên kết trạng thái bật/tắt của nhiều thiết bị; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_bot_webhook.yaml) — `telegram_bot_webhook.yaml`: Bot Telegram hai chiều với Home Assistant (webhook); cần `telegram_bot_handle_tool.py`, `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_bot_webhook.yaml) — `zalo_bot_webhook.yaml`: Bot Zalo hai chiều với Home Assistant (webhook); cần `zalo_bot_handle_tool.py`, `common_utilities.py`
+
+---
+
+## 🧠 Script của luuquangvu cho Assist (tìm kiếm, lịch, bộ nhớ, hẹn giờ)
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Script |
+| **HA tối thiểu** | 2024.12.0 |
+
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fadvanced_youtube_search_full_llm.yaml) — `advanced_youtube_search_full_llm.yaml`: Tìm video YouTube cho Assist; cần `youtube_data_tool.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcalendar_events_lookup_full_llm.yaml) — `calendar_events_lookup_full_llm.yaml`: Tra cứu sự kiện lịch cho Assist; không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdate_lookup_and_conversion_full_llm.yaml) — `date_lookup_and_conversion_full_llm.yaml`: Tra ngày và đổi dương lịch ↔ âm lịch cho Assist; cần `date_conversion_tool.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules.yaml) — `devices_schedules.yaml`: Hẹn giờ nhiều thiết bị (bản cũ, nền cho controller); cần `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_full_llm.yaml) — `devices_schedules_controller_full_llm.yaml`: Điều khiển hẹn giờ thiết bị bằng giọng nói (cần script «Devices Schedules»); không cần file `.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmemory_tool_full_llm.yaml) — `memory_tool_full_llm.yaml`: Bộ nhớ ghi nhớ cho Assist; cần `memory.py`
 
 ---
 
@@ -763,6 +758,8 @@ Tự động nhắc nhở các sự kiện âm lịch kèm theo thông tin thờ
 - Telegram
 - Zalo Bot / Zalo Custom Bot
 - TTS (phát qua loa)
+
+**Cần file Pyscript:** `zalo_bot_handle_tool.py` (trong thư mục `scripts/`, chép vào `/config/pyscript/`).
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcalendar_weather_notification.yaml)
 
@@ -1247,6 +1244,13 @@ bash /config/scripts/pyscript_sync_from_urls.sh --update --no-reload
 - `jq` hoặc `python3` (để parse JSON từ GitHub API)
 - Trên HA OS: `apk add jq`
 
+### 3. Cài đặt Pyscript (cho các blueprint cần file `.py`)
+
+1. Cài tích hợp **Pyscript** qua HACS.
+2. Trong `configuration.yaml`: `pyscript:` với `allow_all_imports: true` và `hass_is_global: true`.
+3. Chép các file `.py` cần dùng và `requirements.txt` từ `scripts/` vào `/config/pyscript/` (hoặc dùng blueprint «Tự động cập nhật Pyscript» ở trên).
+4. Token bot đặt trong `secrets.yaml` (ví dụ `zalo_bot_token`, `telegram_bot_token`) như hướng dẫn trong mô tả từng blueprint.
+
 ---
 
 ## 🔒 Cấu hình Cloudflare Tunnel
@@ -1331,6 +1335,16 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 24 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
 | 25 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
 | 26 | Voice gửi Zalo Calling | Script | 2026.3.0 | Gửi tin/vị trí/ảnh tới nhiều người và nhóm |
+| 27 | Khôi phục hẹn giờ thiết bị | Automation | 2025.8.0 | Hẹn giờ thiết bị sống lại sau khi HA khởi động |
+| 28 | Liên kết nhiều thiết bị | Automation | 2024.12.0 | Một thiết bị bật/tắt thì các thiết bị khác theo |
+| 29 | Bot Telegram hai chiều | Automation | 2025.8.0 | Webhook Telegram với AI (cần `.py`) |
+| 30 | Bot Zalo hai chiều | Automation | 2025.8.0 | Webhook Zalo với AI (cần `.py`) |
+| 31 | Tìm YouTube cho Assist | Script | 2024.12.0 | Tìm video bằng giọng nói (cần `.py`) |
+| 32 | Tra lịch cho Assist | Script | 2024.12.0 | Tra sự kiện lịch bằng giọng nói |
+| 33 | Tra ngày / đổi âm dương | Script | 2024.12.0 | Đổi dương ↔ âm lịch (cần `.py`) |
+| 34 | Hẹn giờ thiết bị (bản cũ) | Script | 2024.12.0 | Nền cho controller (cần `.py`) |
+| 35 | Điều khiển hẹn giờ thiết bị | Script | 2024.12.0 | Hẹn giờ thiết bị bằng giọng nói |
+| 36 | Bộ nhớ cho Assist | Script | 2024.12.0 | Ghi nhớ/tra cứu (cần `.py`) |
 
 ---
 

@@ -112,11 +112,11 @@ variables:
 
 # Kích hoạt mỗi phút rồi tự lọc, vì trigger theo mẫu thời gian không nhận được
 # giá trị người dùng chọn — `minutes: "/4"` phải là hằng số viết cứng trong tệp.
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     minutes: "/1"
 
-condition:
+conditions:
   - condition: template
     value_template: "{{ now().minute % (chu_ky_phut | int(4)) == 0 }}"
 
@@ -129,7 +129,7 @@ condition:
   - condition: and
     conditions: !input dieu_kien_them
 
-action:
+actions:
   # Lời gọi rẻ nhất có thể: không ảnh, một từ trả về. Nó không cần kết quả gì,
   # chỉ cần chạm vào model để đồng hồ đếm rảnh của server quay lại từ đầu.
   #

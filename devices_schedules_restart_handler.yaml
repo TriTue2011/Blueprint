@@ -1,0 +1,265 @@
+blueprint:
+  name: Devices Schedules Restart Handler (Deprecated)
+  author: luuquangvu
+  source_url: https://github.com/luuquangvu/tutorials/blob/main/devices_schedules_restart_handler.yaml
+  description: |-
+    # Devices Schedules Restart Handler (Deprecated)
+
+    > [!WARNING]
+    > **DEPRECATED**: This legacy restart automation blueprint is part of Devices Schedules V1 and is deprecated in favor of [Devices Schedules Controller V2](https://github.com/luuquangvu/tutorials/blob/main/devices_schedules_controller_v2_full_llm.yaml) which handles restart recovery and persistence natively via `scripts/devices_scheduler.py`.
+
+    - Runs automatically when Home Assistant comes back online.
+    - Restores cached timers created by the Devices Schedules script, resuming ones still active and executing actions for any that expired while offline.
+
+    ## Blueprint Setup
+
+    ### Required
+
+    - The Pyscript integration needs to be installed through HACS and properly configured.
+    - The `scripts/common_utilities.py` script needs to be copied into the `config/pyscript` folder.
+    - The `devices_schedules.yaml` blueprint needs to be installed.
+    - The mentioned file(s) is/are included in the repository.
+    - You need to enable two Pyscript options through the UI or via YAML to allow importing all Python packages and to make hass available as a global variable.
+
+    ```
+    # File configuration.yaml
+    pyscript:
+      allow_all_imports: true
+      hass_is_global: true
+    ```
+  domain: automation
+  input:
+    required_settings:
+      name: Required settings
+      icon: mdi:script-text
+      description: Select the Devices Schedules script entity to resume timers for.
+      input:
+        timer_script:
+          name: Devices Schedules script entity
+          description: Script entity created from the Devices Schedules blueprint
+          selector:
+            entity:
+              filter:
+                - domain: script
+    advanced_settings:
+      name: Advanced settings
+      icon: mdi:tools
+      description: Optional cache parameters (index key, timer prefix, TTL buffer). Only change if you customized them in Devices Schedules.
+      collapsed: true
+      input:
+        registry_index_key:
+          name: Cache index key
+          description: Cache key that stores the full list of timer IDs
+          default: voice_timer_index
+          selector:
+            text:
+        registry_timer_prefix:
+          name: Per-timer cache key prefix
+          description: Prefix prepended to each individual timer key in cache
+          default: "voice_timer:"
+          selector:
+            text:
+        ttl_buffer_seconds:
+          name: TTL buffer (seconds)
+          description: Seconds added to each timer's remaining duration when writing to cache
+          default: 120
+          selector:
+            number:
+              min: 60
+              max: 3600
+              unit_of_measurement: s
+              mode: box
+
+mode: queued
+max_exceeded: silent
+
+variables:
+  version: 20261017
+
+triggers:
+  - trigger: homeassistant
+    event: start
+
+conditions: []
+
+actions:
+  - wait_template: "{{ is_state('binary_sensor.pyscript_common_utilities', 'on') }}"
+    timeout:
+      seconds: 60
+    continue_on_timeout: true
+
+  - variables:
+      _index_key: !input registry_index_key
+      _prefix: !input registry_timer_prefix
+      _buf: !input ttl_buffer_seconds
+      _script_entity: !input timer_script
+      _ids_to_remove: []
+
+  - action: pyscript.memory_cache_get
+    data:
+      key: "{{ _index_key }}"
+    response_variable: _idx_res
+
+  - variables:
+      _timer_ids: >-
+        {% set raw = _idx_res.value if _idx_res.status == 'ok' else [] %}
+        {% if raw is sequence %}
+          {{ raw }}
+        {% else %}
+          {{ [] }}
+        {% endif %}
+
+  - repeat:
+      for_each: "{{ _timer_ids if _timer_ids is sequence else [] }}"
+      sequence:
+        - variables:
+            _should_remove: false
+
+        - action: pyscript.memory_cache_get
+          data:
+            key: "{{ _prefix }}{{ repeat.item }}"
+          response_variable: _timer_res
+
+        - variables:
+            _timer_data: "{{ _timer_res.value | default({}) if _timer_res.status == 'ok' else {} }}"
+            _status: "{{ _timer_data.status | default('') | string | lower }}"
+
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ _timer_res.status == 'ok' and _status == 'running' }}"
+              sequence:
+                - variables:
+                    _end_iso: "{{ _timer_data.end | default('') }}"
+                    _end_dt: "{{ as_datetime(_end_iso, none) }}"
+                    _remaining: >-
+                      {% if _end_dt is not none %}
+                         {{ (as_timestamp(_end_dt) - as_timestamp(now())) | int(0) }}
+                      {% else %}
+                         -1
+                      {% endif %}
+
+                - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ _remaining > 0 }}"
+                      sequence:
+                        - variables:
+                            _paused_payload: >-
+                              {{
+                                dict(
+                                  _timer_data,
+                                  **{
+                                    'status': 'paused',
+                                    'paused_at': now().isoformat(),
+                                    'remaining': _remaining
+                                  }
+                                )
+                              }}
+                            _ttl_seconds: "{{ (_remaining | int(0)) + (_buf | int(0)) }}"
+
+                        - action: pyscript.memory_cache_set
+                          data:
+                            key: "{{ _prefix }}{{ repeat.item }}"
+                            value: "{{ _paused_payload }}"
+                            ttl_seconds: "{{ _ttl_seconds }}"
+                          response_variable: cache_set_timer_id
+
+                        - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ _script_entity | length > 0 }}"
+                              sequence:
+                                - action: script.turn_on
+                                  target:
+                                    entity_id: "{{ _script_entity }}"
+                                  data:
+                                    variables:
+                                      mode: resume
+                                      timer_id: "{{ repeat.item }}"
+                                      target_entity: "{{ _timer_data.entity_id | default('') }}"
+
+                  default:
+                    - variables:
+                        _actions_list: >-
+                          {% set raw = _timer_data.actions | default([]) %}
+                          {{ raw if raw is sequence else [] }}
+
+                    - choose:
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ _actions_list | length > 0 }}"
+                          sequence:
+                            - repeat:
+                                for_each: "{{ _actions_list }}"
+                                sequence:
+                                  - choose:
+                                      - conditions:
+                                          - condition: template
+                                            value_template: "{{ repeat.item.action is defined and repeat.item.action | string | length > 0 }}"
+                                        sequence:
+                                          - action: "{{ repeat.item.action }}"
+                                            target: "{{ repeat.item.target | default({}) }}"
+                                            data: "{{ repeat.item.data | default({}) }}"
+                                            continue_on_error: true
+
+                    - variables:
+                        _expired_payload: >-
+                          {{
+                            dict(
+                              _timer_data,
+                              **{
+                                'status': 'expired',
+                                'expired_at': now().isoformat(),
+                                'remaining': 0
+                              }
+                            )
+                          }}
+
+                    - action: pyscript.memory_cache_set
+                      data:
+                        key: "{{ _prefix }}{{ repeat.item }}"
+                        value: "{{ _expired_payload }}"
+                        ttl_seconds: "{{ _buf }}"
+                      response_variable: cache_set_timer_id
+
+                    - variables:
+                        _should_remove: true
+
+            - conditions:
+                - condition: template
+                  value_template: "{{ _timer_res.status == 'ok' and _status == 'paused' }}"
+              sequence: []
+
+          default:
+            - variables:
+                _should_remove: true
+
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ _should_remove }}"
+              sequence:
+                - variables:
+                    _ids_to_remove: >-
+                      {% set current = _ids_to_remove if _ids_to_remove is sequence else [] %}
+                      {{ current + [repeat.item] }}
+
+  - action: pyscript.memory_cache_get
+    data:
+      key: "{{ _index_key }}"
+    response_variable: _latest_idx_res
+
+  - variables:
+      _updated_index: >-
+        {% set fresh_index = _latest_idx_res.value if _latest_idx_res.status == 'ok' else [] %}
+        {% set fresh_index = fresh_index if fresh_index is sequence else [] %}
+        {% set remove = _ids_to_remove if _ids_to_remove is sequence else [] %}
+        {{ fresh_index | reject('in', remove) | list }}
+
+  - action: pyscript.memory_cache_index_update
+    data:
+      index_key: "{{ _index_key }}"
+      replace: "{{ _updated_index }}"
+      ttl_seconds: 2592000
+    response_variable: cache_set_index

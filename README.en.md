@@ -33,6 +33,8 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
   - [💬 Zalo Call custom Messenger](#-zalo-call-custom-messenger)
   - [⏰ Zalo Call scheduled reminder call or message](#-zalo-call-scheduled-reminder-call-or-message)
+  - [🔁 luuquangvu automations (webhooks, timers, linking)](#-luuquangvu-automations-webhooks-timers-linking)
+  - [🧠 luuquangvu scripts for Assist (search, calendar, memory, timers)](#-luuquangvu-scripts-for-assist-search-calendar-memory-timers)
 - **Utilities**
   - [🗓️ Lunar Calendar & Weather Notification](#️-lunar-calendar--weather-notification)
   - [💬 Daily Quote Automation](#-daily-quote-automation)
@@ -58,6 +60,20 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
 | **Voice Assistant** | Optional — required only for the voice-driven blueprints |
 
 > **Important:** after you create a script from a blueprint, **expose the script to Assist** so it can be voice-controlled. Do not rename the default script.
+
+
+**Which blueprint needs which `.py` file** (files are in `scripts/`; install steps in “Install Pyscript”):
+
+| `.py` file | Blueprints that use it |
+|---|---|
+| `common_utilities.py` | `devices_schedules_restart_handler.yaml`, `telegram_bot_webhook.yaml`, `zalo_bot_webhook.yaml`, `devices_schedules.yaml` |
+| `date_conversion_tool.py` | `date_lookup_and_conversion_full_llm.yaml` |
+| `flow_image.py` | `ai_creat_image_weather_3.yaml` |
+| `memory.py` | `memory_tool_full_llm.yaml` |
+| `telegram_bot_handle_tool.py` | `send_to_telegram_full_llm.yaml`, `telegram_bot_webhook.yaml` |
+| `weather_image.py` | `ai_creat_image_weather_2.yaml`, `ai_creat_image_weather_3.yaml` |
+| `youtube_data_tool.py` | `advanced_youtube_search_full_llm.yaml` |
+| `zalo_bot_handle_tool.py` | `ai_creat_image_weather_3.yaml`, `alarm_person_camera.yaml`, `alarm_person_camera_2.yaml`, `alarm_person_camera_3.yaml`, `alarm_person_camera_4.yaml`, `calendar_weather_notification.yaml`, `send_to_zalo_bot_full_llm.yaml`, `zalo_bot_webhook.yaml` |
 
 ---
 
@@ -209,6 +225,8 @@ template:
 
 **Gemini version.** Uses the [Gemini-FastAPI](https://github.com/luuquangvu/Gemini-FastAPI) add-on together with the [hass_local_openai_llm](https://github.com/luuquangvu/hass_local_openai_llm) integration.
 
+**Needs Pyscript file(s):** `weather_image.py`, `flow_image.py`, `zalo_bot_handle_tool.py` (in the `scripts/` folder, copy to `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fai_creat_image_weather.yaml)
 
 **NVIDIA API version.** Register at <https://build.nvidia.com> and use the [hass_local_openai_llm](https://github.com/luuquangvu/hass_local_openai_llm) integration.
@@ -321,6 +339,8 @@ Analyze camera events with AI Task when someone enters the monitored zone. Sends
 
 **Gemini**
 
+**Needs Pyscript file(s):** `zalo_bot_handle_tool.py` (in the `scripts/` folder, copy to `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera.yaml)
 
 **OpenAI**
@@ -425,6 +445,8 @@ Without it, neither AI Task nor phone notifications can read the images.
 
 If you want the video branch to feed the mp4 directly to the AI, you need a provider that reads video — currently Google Gemini. Models running at home through Ollama or llama.cpp accept still images only, so with those keep video on send-only, which is also the default.
 
+**Needs Pyscript file(s):** `zalo_bot_handle_tool.py` (in the `scripts/` folder, copy to `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Falarm_person_camera_4.yaml)
 
 *Please read the blueprint description carefully before getting started.*
@@ -512,6 +534,8 @@ Send messages, images, or files to Telegram by voice. Can delete the file automa
 - "Send the yard camera snapshot to Telegram"
 - "Send the living room temperature to Telegram"
 
+**Needs Pyscript file(s):** `telegram_bot_handle_tool.py` (in the `scripts/` folder, copy to `/config/pyscript/`).
+
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_telegram_full_llm.yaml)
 
 *Please read the blueprint description carefully before getting started.*
@@ -531,6 +555,8 @@ Send messages to Zalo via the official bot using voice commands. Locations autom
 **Example voice commands:**
 - "Find great restaurants in Hanoi and send to Zalo"
 - "Send the address of the Temple of Literature to Zalo"
+
+**Needs Pyscript file(s):** `zalo_bot_handle_tool.py` (in the `scripts/` folder, copy to `/config/pyscript/`).
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_bot_full_llm.yaml)
 
@@ -571,20 +597,9 @@ Send messages, images, and videos through a personal Zalo account. Supports webh
 
 When a sensor triggers (person, smoke, water leak, open door, power loss...) **call the person you pick on Zalo**: the alert is read out, then the home speaker, mic and camera are connected. Calls people **one after another** until someone answers. **Everything is picked from lists**, no typing ids.
 
-| Info | Details |
-|------|---------|
-| **Type** | Automation |
-| **HA minimum** | 2026.3.0 |
-| **Requires** | Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure* |
-
-**What it does:**
-- Sensors, recipients, speaker/mic/camera picked from lists; ready-made alert types (stranger, smoke, water leak, gas, door open, power loss, person fell).
-- Escalation until someone answers; optional text message too.
-- Anti-repeat, time window, only when the chosen people are away.
+**Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
-
-*Read the blueprint description before using it.*
 
 ---
 
@@ -592,20 +607,9 @@ When a sensor triggers (person, smoke, water leak, open door, power loss...) **c
 
 **One button, different jobs depending on the moment:** incoming call → answer, in a call → hang up, idle → call / alert call / message. Pick the button with the trigger picker (R1 speaker center key, Zigbee button, virtual button...).
 
-| Info | Details |
-|------|---------|
-| **Type** | Automation |
-| **HA minimum** | 2026.3.0 |
-| **Requires** | Zalo Call 2026.11.11.2 or newer; the Zalo Call «Call status» sensor |
-
-**What it does:**
-- One button, three jobs by call state.
-- Pick **several recipients** (people and groups mixed): messages go to all, each with its own type, the call goes to the first person; devices picked from lists.
-- Works with the R1 speaker (`assist-phicom-R1` 0.16.0+): single / double / triple / long press.
+**Needs:** Zalo Call 2026.11.11.2 or newer; the Zalo Call «Call status» sensor.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
-
-*Read the blueprint description before using it.*
 
 ---
 
@@ -613,20 +617,9 @@ When a sensor triggers (person, smoke, water leak, open door, power loss...) **c
 
 Decide what happens when **someone calls in**: **announce on a speaker**, **auto-answer**, let the **AI talk**, and **which home devices to connect** when a person takes over (tick Mic / Speaker / Camera; ticking Camera makes it a video call). Apply to one person, all contacts, strangers or all groups.
 
-| Info | Details |
-|------|---------|
-| **Type** | Automation |
-| **HA minimum** | 2026.3.0 |
-| **Requires** | Zalo Call 2026.11.11.2 or newer |
-
-**What it does:**
-- Apply one rule to **several people and groups** at once; speaker announcement «Incoming call from ...» (on/off, off by default).
-- Auto-answer after a few seconds; voice, video or both.
-- AI picked from your Assist pipelines; home devices by tick boxes; turn the switch off and run again to remove the rule.
+**Needs:** Zalo Call 2026.11.11.2 or newer.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
-
-*Read the blueprint description before using it.*
 
 ---
 
@@ -634,20 +627,9 @@ Decide what happens when **someone calls in**: **announce on a speaker**, **auto
 
 Send a Zalo message (or call) when a device changes, **widely customizable but only by picking from lists**: watched devices, mode (any change, on, off, above/below a threshold, daily report), ready-made sentences, text style (emoji, bold, color, size), recipients.
 
-| Info | Details |
-|------|---------|
-| **Type** | Automation |
-| **HA minimum** | 2026.3.0 |
-| **Requires** | Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure* |
-
-**What it does:**
-- 6 «When to send» modes and 6 ready-made sentences that fill in name, area, state, unit and time.
-- Text style from lists: emoji, bold, font size, color.
-- Text message, spoken call, or both; anti-repeat and time window.
+**Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
-
-*Read the blueprint description before using it.*
 
 ---
 
@@ -655,20 +637,9 @@ Send a Zalo message (or call) when a device changes, **widely customizable but o
 
 At the chosen time, **call someone on Zalo and read a reminder** (or message them): medicine, bedtime, wake-up, meals, water, exercise, meetings, watering plants. Great for older relatives who rarely read messages.
 
-| Info | Details |
-|------|---------|
-| **Type** | Automation |
-| **HA minimum** | 2026.3.0 |
-| **Requires** | Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure* |
-
-**What it does:**
-- Pick the time and weekdays; filter to workdays if you have a Workday sensor.
-- Ready-made or custom reminder, address the person by name, read 1 to 3 times.
-- Voice picked from your Assist pipelines.
+**Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
-
-*Read the blueprint description before using it.*
 
 ---
 
@@ -676,19 +647,9 @@ At the chosen time, **call someone on Zalo and read a reminder** (or message the
 
 A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
 
-| Info | Details |
-|------|---------|
-| **Type** | Script |
-| **HA minimum** | 2026.3.0 |
-| **Requires** | Zalo Calling 2026.11.11.3 or newer; recipients picked in *Zalo Call → Configure* |
-
-**Example voice commands:**
-- "Send the yard camera snapshot to everyone on Zalo"
-- "Message dad and the family group on Zalo that I'll be late tonight"
+**Needs:** Zalo Calling 2026.11.11.3 or newer; recipients picked in *Zalo Call → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
-
-*Read the blueprint description before using it.*
 
 ---
 
@@ -704,6 +665,40 @@ These blueprints **now have a «Zalo Calling» group** (next to Zalo Bot / Zalo 
 | AI Weather Image | The generated image |
 | Lunar Calendar & Weather | Lunar and weather messages |
 | Auto-Update Blueprints, Auto-Update Pyscript | Update report |
+
+---
+
+## 🔁 luuquangvu automations (webhooks, timers, linking)
+
+Copied from [luuquangvu/tutorials](https://github.com/luuquangvu/tutorials) (MIT licence, see `scripts/LICENSE-luuquangvu`). The `.py` files are in this repo's `scripts/` folder.
+
+Install the **Pyscript** integration (HACS), enable `allow_all_imports` and `hass_is_global`, and copy the needed `.py` files (and `requirements.txt`) into `/config/pyscript/`. See “Install Pyscript” below.
+
+| Info | Details |
+|------|---------|
+| **Type** | Automation |
+| **HA minimum** | 2024.12.0 / 2025.8.0 |
+
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_restart_handler.yaml) — `devices_schedules_restart_handler.yaml`: Restore device timers after Home Assistant restarts; needs `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Flink_multiple_devices.yaml) — `link_multiple_devices.yaml`: Link the on/off state of several devices; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_bot_webhook.yaml) — `telegram_bot_webhook.yaml`: Two-way Telegram bot for Home Assistant (webhook); needs `telegram_bot_handle_tool.py`, `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_bot_webhook.yaml) — `zalo_bot_webhook.yaml`: Two-way Zalo bot for Home Assistant (webhook); needs `zalo_bot_handle_tool.py`, `common_utilities.py`
+
+---
+
+## 🧠 luuquangvu scripts for Assist (search, calendar, memory, timers)
+
+| Info | Details |
+|------|---------|
+| **Type** | Script |
+| **HA minimum** | 2024.12.0 |
+
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fadvanced_youtube_search_full_llm.yaml) — `advanced_youtube_search_full_llm.yaml`: Search YouTube videos for Assist; needs `youtube_data_tool.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcalendar_events_lookup_full_llm.yaml) — `calendar_events_lookup_full_llm.yaml`: Look up calendar events for Assist; no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdate_lookup_and_conversion_full_llm.yaml) — `date_lookup_and_conversion_full_llm.yaml`: Date lookup and solar ↔ lunar conversion for Assist; needs `date_conversion_tool.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules.yaml) — `devices_schedules.yaml`: Multi-device timers (legacy, base for the controller); needs `common_utilities.py`
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fdevices_schedules_controller_full_llm.yaml) — `devices_schedules_controller_full_llm.yaml`: Voice control of device timers (needs the “Devices Schedules” script); no `.py` file needed
+- [Import](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmemory_tool_full_llm.yaml) — `memory_tool_full_llm.yaml`: Memory tool for Assist; needs `memory.py`
 
 ---
 
@@ -728,6 +723,8 @@ Daily reminders for lunar calendar events combined with weather information. The
 - **Event type:** all / death anniversaries only / 1st and 15th / custom sensors
 
 **Notification channels:** mobile app, Telegram, Zalo Bot / Zalo Custom Bot, and TTS.
+
+**Needs Pyscript file(s):** `zalo_bot_handle_tool.py` (in the `scripts/` folder, copy to `/config/pyscript/`).
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fcalendar_weather_notification.yaml)
 
@@ -932,6 +929,13 @@ You should get a JSON list containing `entity_id` and `aliases`. If you get `Non
 
 *Snippet source: [luuquangvu/tutorials](https://github.com/luuquangvu/tutorials).*
 
+### 3. Install Pyscript (for blueprints that need a `.py` file)
+
+1. Install the **Pyscript** integration through HACS.
+2. In `configuration.yaml`: `pyscript:` with `allow_all_imports: true` and `hass_is_global: true`.
+3. Copy the needed `.py` files and `requirements.txt` from `scripts/` into `/config/pyscript/` (or use the “Auto-Update Pyscript” blueprint above).
+4. Put bot tokens in `secrets.yaml` (for example `zalo_bot_token`, `telegram_bot_token`) as described in each blueprint.
+
 ---
 
 ## ✅ Validate Blueprints Before Pushing
@@ -985,6 +989,16 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 24 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
 | 25 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
 | 26 | Voice send to Zalo Calling | Script | 2026.3.0 | Send text/location/image to many people and groups |
+| 27 | Restore device timers | Automation | 2025.8.0 | Timers come back after Home Assistant restarts |
+| 28 | Link multiple devices | Automation | 2024.12.0 | Toggle one device and the others follow |
+| 29 | Two-way Telegram bot | Automation | 2025.8.0 | Telegram webhook with AI (needs `.py`) |
+| 30 | Two-way Zalo bot | Automation | 2025.8.0 | Zalo webhook with AI (needs `.py`) |
+| 31 | YouTube search for Assist | Script | 2024.12.0 | Voice video search (needs `.py`) |
+| 32 | Calendar lookup for Assist | Script | 2024.12.0 | Voice calendar lookup |
+| 33 | Date lookup / lunar conversion | Script | 2024.12.0 | Solar ↔ lunar conversion (needs `.py`) |
+| 34 | Device timers (legacy) | Script | 2024.12.0 | Base for the controller (needs `.py`) |
+| 35 | Device timers controller | Script | 2024.12.0 | Voice control of device timers |
+| 36 | Memory tool for Assist | Script | 2024.12.0 | Remember / recall (needs `.py`) |
 
 ---
 
