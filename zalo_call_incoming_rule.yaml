@@ -362,6 +362,12 @@ actions:
                     {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
                     {{ d }}
           default:
+            - alias: Xoá quy tắc cũ của mục tiêu (đặt lại từ đầu, không giữ trường cũ nào)
+              action: zalo_call.remove_rule
+              data: >-
+                {% set d = {'scope': pham_vi} %}
+                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                {{ d }}
             - action: zalo_call.set_rule
               data: >-
                 {% set d = {'scope': pham_vi, 'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
