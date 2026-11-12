@@ -33,7 +33,7 @@ blueprint:
                   value: groups
           default: thread
         nguoi_cu_the:
-          name: Những người hoặc nhóm cụ thể (chọn nhiều)
+          name: Những người hoặc nhóm cụ thể (chọn nhiều) (chỉ khi «Áp dụng cho» = Một người hoặc một nhóm cụ thể)
           description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Zalo Call, người và nhóm lẫn lộn đều được; mỗi người/nhóm được đặt một quy tắc giống nhau.
           selector:
             entity:
@@ -43,7 +43,7 @@ blueprint:
                   domain: notify
           default: []
         them_theo_ma:
-          name: Thêm người hoặc nhóm theo mã Zalo (threadID)
+          name: Thêm người hoặc nhóm theo mã Zalo (threadID) (chỉ khi «Áp dụng cho» = Một người hoặc một nhóm cụ thể)
           description: Mỗi dòng một mã (chỉ gồm chữ số). Không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts* (hiện id và tên của bạn bè và nhóm). Dùng cùng ô chọn bên trên cũng được.
           selector:
             text:
@@ -62,7 +62,7 @@ blueprint:
       collapsed: false
       input:
         loa:
-          name: Loa trong nhà (chọn nhiều = dự phòng theo thứ tự)
+          name: Loa trong nhà (chọn nhiều = dự phòng theo thứ tự) (chỉ dùng nếu tích ở ô «Dùng khi…» bên dưới)
           selector:
             entity:
               multiple: true
@@ -70,7 +70,7 @@ blueprint:
                 - domain: media_player
           default: []
         mic:
-          name: Mic trong nhà (chọn nhiều = dự phòng theo thứ tự)
+          name: Mic trong nhà (chọn nhiều = dự phòng theo thứ tự) (chỉ dùng nếu tích ở ô «Dùng khi…» bên dưới)
           description: Camera hoặc vệ tinh Assist có mic (ví dụ loa R1).
           selector:
             entity:
@@ -81,7 +81,7 @@ blueprint:
                     - assist_satellite
           default: []
         camera:
-          name: Camera trong nhà (chọn nhiều = dự phòng theo thứ tự)
+          name: Camera trong nhà (chọn nhiều = dự phòng theo thứ tự) (chỉ dùng nếu tích ở ô «Dùng khi…» bên dưới)
           selector:
             entity:
               multiple: true
@@ -154,25 +154,25 @@ blueprint:
             boolean: {}
           default: false
         tro_ly_giong_noi:
-          name: Trợ lý giọng nói (Assist)
+          name: Trợ lý giọng nói (Assist) (chỉ khi bật «Cho AI nói chuyện»)
           description: Bắt buộc khi cho AI nói chuyện. Chọn từ danh sách trợ lý giọng nói của Home Assistant.
           selector:
             assist_pipeline: {}
           default: ""
         nguoi_tin_cay:
-          name: Người tin cậy
+          name: Người tin cậy (chỉ khi bật «Cho AI nói chuyện»)
           description: Tin cậy thì AI nói chuyện bình thường. Không tin cậy thì AI được dặn không tiết lộ thông tin gia đình.
           selector:
             boolean: {}
           default: false
         cau_chao:
-          name: Câu AI chào khi nghe máy
+          name: Câu AI chào khi nghe máy (chỉ khi bật «Cho AI nói chuyện»)
           description: Bỏ trống = «Xin chào, tôi là trợ lý của gia đình. Bạn cần gì ạ?»
           selector:
             text: {}
           default: ""
         ai_tra_loi_tin:
-          name: AI trả lời cả tin nhắn chữ của người này
+          name: AI trả lời cả tin nhắn chữ của người này (chỉ khi bật «Cho AI nói chuyện»)
           selector:
             boolean: {}
           default: false
@@ -188,7 +188,7 @@ blueprint:
             boolean: {}
           default: false
         nghe_sau:
-          name: Nghe máy sau (giây)
+          name: Nghe máy sau (giây) (chỉ khi bật «Tự nghe máy»)
           selector:
             number:
               min: 0
@@ -197,7 +197,7 @@ blueprint:
               unit_of_measurement: giây
           default: 5
         loai_cuoc_goi:
-          name: Nghe loại cuộc gọi nào
+          name: Nghe loại cuộc gọi nào (chỉ khi bật «Tự nghe máy»)
           selector:
             select:
               multiple: true
@@ -216,7 +216,7 @@ blueprint:
             boolean: {}
           default: false
         loa_bao:
-          name: Loa dùng để báo (chọn nhiều = báo ra tất cả các loa)
+          name: Loa dùng để báo (chọn nhiều = báo ra tất cả các loa) (chỉ khi bật «Báo ra loa»)
           selector:
             entity:
               multiple: true
@@ -224,7 +224,7 @@ blueprint:
                 - domain: media_player
           default: []
         am_luong_bao:
-          name: Âm lượng lúc báo (0 = giữ nguyên)
+          name: Âm lượng lúc báo (0 = giữ nguyên) (chỉ khi bật «Báo ra loa»)
           description: Âm lượng loa khi đọc thông báo. Không ai nghe máy thì loa trở về mức cũ. Loa R1 có 15 mức, ví dụ mức 6 là 40%.
           selector:
             number:
@@ -234,7 +234,7 @@ blueprint:
               unit_of_measurement: "%"
           default: 0
         lap_bao:
-          name: Báo lại sau mỗi (giây)
+          name: Báo lại sau mỗi (giây) (chỉ khi bật «Báo ra loa»)
           description: Đọc xong thì chờ chừng này giây rồi đọc lại, tới khi nghe máy hoặc cuộc gọi kết thúc. 0 = chỉ báo một lần.
           selector:
             number:
@@ -244,7 +244,7 @@ blueprint:
               unit_of_measurement: giây
           default: 0
         cau_bao:
-          name: Câu báo
+          name: Câu báo (chỉ khi bật «Báo ra loa»)
           description: "Dùng {ten} (tên người gọi) và {loai} (thoại hoặc video). Bỏ trống = «Có cuộc gọi {loai} từ {ten}.»"
           selector:
             text: {}
@@ -272,7 +272,7 @@ blueprint:
                   value: accept_camera
           default: ask
         bat_cong_tac_chuyen_video:
-          name: Bật công tắc tổng «Cho phép đồng ý chuyển sang video»
+          name: "Bật công tắc tổng «Cho phép đồng ý chuyển sang video» (chỉ khi «Cách xử lý» là Tự đồng ý)"
           description: >-
             Tự đồng ý chỉ xảy ra khi công tắc tổng này BẬT (mặc định TẮT, nằm trên thiết bị Zalo Call). Tích ô này thì mỗi lần Home Assistant khởi
             động (hoặc bạn bấm *Chạy*) quy tắc sẽ BẬT công tắc đó, chỉ khi bạn chọn «Tự đồng ý» ở trên. Không tích thì blueprint không đụng tới
@@ -324,6 +324,8 @@ variables:
 triggers:
   - trigger: homeassistant
     event: start
+  - trigger: event
+    event_type: automation_reloaded
 
 actions:
   - alias: Gom mã Zalo của những người được chọn
@@ -394,3 +396,20 @@ actions:
       - action: zalo_call.set_default_devices
         data:
           video_consent: true
+  - alias: Báo cho bạn biết quy tắc đã được đặt (xem ở chuông thông báo)
+    action: persistent_notification.create
+    data:
+      notification_id: "zalo_call_quy_tac_{{ this.entity_id }}"
+      title: "Zalo Call: {{ 'ĐÃ ĐẶT' if bat_quy_tac else 'ĐÃ XOÁ' }} quy tắc cuộc gọi đến"
+      message: |-
+        {% set ten = {'thread': 'người/nhóm: ' ~ (ds_thread.ids | join(', ')), 'contacts': 'MỌI NGƯỜI trong danh bạ', 'strangers': 'mọi người lạ', 'groups': 'mọi nhóm'}[pham_vi] %}
+        Áp dụng cho: {{ ten }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
+        {% if bat_quy_tac %}
+        Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}
+        Báo ra loa: {{ loa_bao if (bat_bao_loa and loa_bao) else 'không' }}
+        AI nói chuyện: {{ 'có' if cho_ai_noi else 'không' }}
+        Loa: {{ loa or 'mặc định' }} | Mic: {{ mic or 'mặc định' }} | Camera: {{ camera or 'mặc định' }}
+        Nối ngay khi nghe máy: {{ noi_ngay | join(', ') or 'không' }}
+        Nối khi người nhà nói: {{ noi_khi_chuyen | join(', ') or 'không' }}
+        Xin chuyển video: {{ {'ask': 'không tự đồng ý', 'accept': 'tự đồng ý, không gửi hình', 'accept_camera': 'tự đồng ý và gửi camera'}[xu_ly_xin_video] }}
+        {% endif %}
