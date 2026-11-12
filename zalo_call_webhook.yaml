@@ -1,0 +1,219 @@
+blueprint:
+  name: Zalo Call - Nhắn tin hai chiều với trợ lý Home Assistant (AI trả lời tin Zalo)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_webhook.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    Ai nhắn Zalo cho tài khoản của bạn (người hoặc nhóm bạn chọn) thì **trợ lý hội thoại của Home Assistant** đọc và **trả lời lại trên Zalo**,
+    nhớ mạch trò chuyện theo từng người/nhóm. Giống `zalo_bot_webhook.yaml` (bot Zalo chính thức) nhưng chạy bằng tích hợp **Zalo Call**:
+    **không cần Pyscript, không cần token bot, không cần tạo webhook riêng** — tích hợp đã tự nhận tin từ app và phát sự kiện `zalo_call_message`.
+
+    <details>
+    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
+
+      - Tích hợp **Zalo Call** đã kết nối với app (tài khoản Zalo đã đăng nhập).
+      - Một **trợ lý hội thoại** (Cài đặt → Trợ lý giọng nói) đã chọn mô hình AI.
+      - **Người/nhóm được phép:** chọn từ danh bạ (ô ①), hoặc dán **mã Zalo (threadID)** cho người lạ/nhóm chưa có trong danh bạ: mở app Zalo Call, bấm người/nhóm đó, mã hiện ngay dưới tên (có nút sao chép). Có thể thêm bao nhiêu mục tuỳ ý ở mỗi ô.
+
+    </details>
+
+    <details>
+    <summary><b>Lưu ý quan trọng:</b> - Nhấn để mở rộng</summary>
+
+      - **Đừng bật cùng lúc** với quy tắc `reply_ai` của Zalo Call cho cùng một người/nhóm, nếu không mỗi tin sẽ bị trả lời hai lần.
+      - Chỉ trả lời tin **chữ** (và tin **thoại** nếu quy tắc của người đó bật `voice_text` để Zalo đổi giọng nói thành chữ).
+      - Trong **nhóm**, chỉ trả lời khi tin có **từ khóa gọi** (ô ③); để trống thì trả lời mọi tin của nhóm đã chọn.
+      - Tin do chính tài khoản của bạn gửi (kể cả câu trả lời của blueprint này) luôn bị bỏ qua nên không bao giờ lặp vô hạn.
+
+    </details>
+
+    **Phiên bản: v.2026.11.12.1**
+  input:
+    ai_noi_chuyen:
+      name: ① Ai được nói chuyện với trợ lý (nhiều người, nhiều nhóm, cả người lạ)
+      icon: mdi:account-voice
+      input:
+        nguoi_nhan:
+          name: Người và nhóm trong danh bạ Zalo Call
+          description: Chọn được NHIỀU người và NHIỀU nhóm (thực thể `notify.zalo_call_...`; cấu hình ở *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*).
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+          default: []
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID) - dành cho người lạ
+          description: Người KHÔNG có trong danh bạ thì dán mã vào đây, mỗi dòng một mã, chỉ gồm chữ số. Xem mã ở app Zalo Call (mục "Người lạ nhắn tin" hoặc dưới tên trong khung chat).
+          selector:
+            text:
+              multiple: true
+          default: []
+        ma_nhom:
+          name: Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số. Dùng cho nhóm chưa có trong danh bạ.
+          selector:
+            text:
+              multiple: true
+          default: []
+        user_ids:
+          name: Chỉ cho phép một số thành viên trong nhóm (tuỳ chọn)
+          description: Mã Zalo của người được phép nhắn trong NHÓM. Để trống = mọi thành viên của nhóm đã chọn. Tin 1-1 không bị ảnh hưởng.
+          selector:
+            text:
+              multiple: true
+              multiline: false
+          default: []
+    tro_ly:
+      name: ② Trợ lý trả lời
+      icon: mdi:robot-outline
+      input:
+        agent_id:
+          name: Trợ lý hội thoại
+          description: Cùng trợ lý bạn thấy ở Cài đặt → Trợ lý giọng nói.
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - conversation
+              multiple: false
+        language:
+          name: Ngôn ngữ
+          description: Mã ngôn ngữ theo chuẩn IETF, ví dụ `vi` hoặc `en-US`.
+          selector:
+            text:
+              multiline: false
+              multiple: false
+          default: vi
+        extra_prompt:
+          name: Lời dặn thêm cho trợ lý (tuỳ chọn)
+          description: Ví dụ "Trả lời ngắn gọn, xưng em, gọi người nhắn là anh/chị". Được gắn vào đầu mỗi câu hỏi.
+          selector:
+            text:
+              multiline: true
+          default: ""
+    cach_tra_loi:
+      name: ③ Cách trả lời
+      icon: mdi:message-reply-text-outline
+      input:
+        group_trigger:
+          name: Từ khóa gọi trợ lý trong nhóm (tuỳ chọn)
+          description: Trong nhóm, chỉ trả lời khi tin có từ này (không phân biệt hoa thường), ví dụ `bot`. Để trống = trả lời mọi tin của nhóm.
+          selector:
+            text:
+              multiline: false
+          default: ""
+        mention_sender:
+          name: Nhắc tên người hỏi khi trả lời trong nhóm
+          description: Thêm "@tên" ở đầu câu trả lời để người hỏi nhận được thông báo.
+          selector:
+            boolean: {}
+          default: false
+        send_error:
+          name: Báo lỗi lên Zalo khi trợ lý không trả lời được
+          description: Tắt đi thì im lặng khi lỗi (chỉ ghi vào nhật ký của Home Assistant).
+          selector:
+            boolean: {}
+          default: true
+
+mode: queued
+max: 20
+max_exceeded: silent
+
+variables:
+  version: 20261112
+  nguoi_nhan: !input nguoi_nhan
+  ma_nguoi: !input ma_nguoi
+  ma_nhom: !input ma_nhom
+  user_ids: !input user_ids
+  ds_duoc_phep: >-
+    {% set ns = namespace(ids=[]) %}
+    {% for e in nguoi_nhan %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ['', 'None'] and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% endif %}{% endfor %}
+    {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% endif %}{% endfor %}
+    {% for m in ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% endif %}{% endfor %}
+    {{ ns.ids }}
+  language: !input language
+  extra_prompt: !input extra_prompt
+  group_trigger: !input group_trigger
+  mention_sender: !input mention_sender
+  send_error: !input send_error
+  ev: "{{ trigger.event.data }}"
+  is_voice: "{{ trigger.event.event_type == 'zalo_call_voice_text' }}"
+  thread_id: "{{ ev.thread_id | default('', true) | string }}"
+  sender_id: "{{ ev.sender_id | default('', true) | string }}"
+  sender_name: "{{ ev.sender_name | default('', true) | string | trim }}"
+  is_group: "{{ not is_voice and (ev.thread_type | default(0, true)) in [1, '1', 'group'] }}"
+  text: "{{ ((ev.text if is_voice else ev.content) | default('', true)) | string | trim }}"
+
+triggers:
+  - trigger: event
+    event_type: zalo_call_message
+    id: message
+  - trigger: event
+    event_type: zalo_call_voice_text
+    id: voice
+
+conditions:
+  - alias: Không xử lý tin do chính mình gửi
+    condition: template
+    value_template: "{{ not (ev.is_self | default(false)) }}"
+  - alias: Chỉ tin chữ (hoặc tin thoại đã đổi thành chữ)
+    condition: template
+    value_template: "{{ is_voice or (ev.kind | default('text', true)) == 'text' }}"
+  - alias: Tin có nội dung
+    condition: template
+    value_template: "{{ text | length > 0 }}"
+  - alias: Người/nhóm nằm trong danh sách được phép
+    condition: template
+    value_template: "{{ thread_id in ds_duoc_phep }}"
+  - alias: Thành viên được phép (chỉ áp cho nhóm)
+    condition: template
+    value_template: "{{ not is_group or user_ids | length == 0 or sender_id in (user_ids | map('string') | list) }}"
+  - alias: Trong nhóm phải có từ khóa gọi (nếu có đặt)
+    condition: template
+    value_template: "{{ not is_group or (group_trigger | trim) == '' or (group_trigger | trim | lower) in (text | lower) }}"
+
+actions:
+  - alias: Hỏi trợ lý (nhớ mạch trò chuyện theo từng người/nhóm)
+    action: conversation.process
+    data:
+      agent_id: !input agent_id
+      language: "{{ language | trim }}"
+      conversation_id: "zalo_call_bp_{{ thread_id }}"
+      text: >-
+        {% if extra_prompt | trim | length > 0 %}{{ extra_prompt | trim }}
+
+        {% endif %}{% if is_group and sender_name | length > 0 %}{{ sender_name }}: {% endif %}{{ text }}
+    response_variable: result
+    continue_on_error: true
+  - alias: Lấy câu trả lời
+    variables:
+      speech: >-
+        {{ (result.response.speech.plain.speech | default('', true) | trim) if (result is defined and result.response is defined
+        and result.response.speech is defined and result.response.speech.plain is defined) else '' }}
+      can_mention: "{{ mention_sender and is_group and sender_name | length > 0 and sender_id | length > 0 }}"
+  - choose:
+      - alias: Có câu trả lời thì gửi lên Zalo
+        conditions:
+          - condition: template
+            value_template: "{{ speech | length > 0 }}"
+        sequence:
+          - action: zalo_call.send_message
+            data:
+              thread_id: "{{ thread_id }}"
+              type: "{{ 'group' if is_group else 'user' }}"
+              message: "{{ ('@' ~ sender_name ~ ' ') if can_mention else '' }}{{ speech }}"
+              mentions: "{{ [{'uid': sender_id, 'name': sender_name}] if can_mention else [] }}"
+      - alias: Không trả lời được thì báo lỗi (nếu bật)
+        conditions:
+          - condition: template
+            value_template: "{{ send_error }}"
+        sequence:
+          - action: zalo_call.send_message
+            data:
+              thread_id: "{{ thread_id }}"
+              type: "{{ 'group' if is_group else 'user' }}"
+              message: "Xin lỗi, trợ lý chưa trả lời được lúc này. Bạn thử lại sau nhé."
