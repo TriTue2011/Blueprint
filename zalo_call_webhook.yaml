@@ -5,31 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Ai nhắn Zalo cho tài khoản của bạn (người hoặc nhóm bạn chọn) thì **trợ lý hội thoại của Home Assistant** đọc và **trả lời lại trên Zalo**,
-    nhớ mạch trò chuyện theo từng người/nhóm. Giống `zalo_bot_webhook.yaml` (bot Zalo chính thức) nhưng chạy bằng tích hợp **Zalo Call**:
-    **không cần Pyscript, không cần token bot, không cần tạo webhook riêng** — tích hợp đã tự nhận tin từ app và phát sự kiện `zalo_call_message`.
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** đã kết nối với app (tài khoản Zalo đã đăng nhập).
-      - Một **trợ lý hội thoại** (Cài đặt → Trợ lý giọng nói) đã chọn mô hình AI.
-      - **Người/nhóm được phép:** chọn từ danh bạ (ô ①), hoặc dán **mã Zalo (threadID)** cho người lạ/nhóm chưa có trong danh bạ: mở app Zalo Call, bấm người/nhóm đó, mã hiện ngay dưới tên (có nút sao chép). Có thể thêm bao nhiêu mục tuỳ ý ở mỗi ô.
-
-    </details>
-
-    <details>
-    <summary><b>Lưu ý quan trọng:</b> - Nhấn để mở rộng</summary>
-
-      - **Đừng bật cùng lúc** với quy tắc `reply_ai` của Zalo Call cho cùng một người/nhóm, nếu không mỗi tin sẽ bị trả lời hai lần.
-      - Chỉ trả lời tin **chữ** (và tin **thoại** nếu quy tắc của người đó bật `voice_text` để Zalo đổi giọng nói thành chữ).
-      - Trong **nhóm**, chỉ trả lời khi tin có **từ khóa gọi** (ô ③); để trống thì trả lời mọi tin của nhóm đã chọn.
-      - Tin do chính tài khoản của bạn gửi (kể cả câu trả lời của blueprint này) luôn bị bỏ qua nên không bao giờ lặp vô hạn.
-
-    </details>
-
-    **Phiên bản: v.2026.11.12.1**
+  description: "**Phiên bản: v.2026.11.12.1**"
   input:
     ai_noi_chuyen:
       name: ① Ai được nói chuyện với trợ lý (nhiều người, nhiều nhóm, cả người lạ)

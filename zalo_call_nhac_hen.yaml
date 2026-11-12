@@ -5,24 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Đúng giờ đã chọn, **gọi điện Zalo đọc lời nhắc** (hoặc nhắn tin) cho người bạn chọn: uống thuốc, đi ngủ, thức dậy, ăn cơm, họp, tưới cây...
-    Rất hợp cho người lớn tuổi ít nhìn tin nhắn. Mọi thứ **chọn từ danh sách**.
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
-      - **Người nhận:** *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người/nhóm từ danh bạ (thành thực thể `notify.zalo_...`).
-      - Muốn nhắc đúng ngày làm việc: có sẵn cảm biến `binary_sensor.workday` (tích hợp Workday của Home Assistant).
-
-    </details>
-
-    **Khi người nhận xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
-    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
-    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     khi_nao:
       name: ① Khi nào nhắc

@@ -5,25 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    **Gọi điện Zalo** cho một người bạn chọn khi có **bất kỳ sự kiện nào**: bấm nút (nút loa R1, nút Zigbee, nút ảo), đúng giờ, cảm biến đổi trạng thái...
-
-    Chọn từ danh sách: **người gọi**, **thoại hay video**, **câu đọc**, **có AI nói chuyện không**, **dùng mic / loa / camera nào**, **âm lượng**.
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** từ bản `2026.11.11.4` trở lên; người nhận chọn ở *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*.
-      - Muốn gọi bằng nút loa R1: ở ô «Khi nào gọi» chọn *Thêm trigger → Thiết bị →* thiết bị R1 (`assist-phicom-R1` từ bản 0.16.0).
-      - Cho AI nói chuyện thì phải chọn **Trợ lý giọng nói** (không tự dùng bộ ưu tiên).
-
-    </details>
-
-    **Khi người nhận xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
-    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
-    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     khi_nao:
       name: ① Khi nào gọi

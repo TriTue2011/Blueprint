@@ -5,38 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất điện...) thì **gọi điện Zalo** cho người bạn chọn: máy đọc cảnh báo,
-    rồi nối thẳng loa, mic, camera trong nhà nếu bạn muốn. Mọi thứ đều **chọn từ danh sách**, không phải gõ mã.
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** (HACS, kho `TriTue2011/Zalo-calling`) từ bản `2026.11.11.2` trở lên, app Zalo đã đăng nhập.
-      - **Người nhận:** vào *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người/nhóm từ danh bạ.
-        Mỗi người chọn xong thành một thực thể `notify.zalo_...` để chọn ở đây. **Chỉ người** (không phải nhóm) nhận được cuộc gọi.
-      - Muốn **gọi lần lượt** cho tới khi có người nghe: chọn thêm cảm biến «Trạng thái cuộc gọi» của Zalo Call.
-
-    </details>
-
-    <details>
-    <summary><b>Cách chạy:</b> - Nhấn để mở rộng</summary>
-
-      1. Cảm biến chuyển sang trạng thái bạn chọn (và giữ đủ số giây), qua các điều kiện (khung giờ, chống lặp, người đang vắng nhà).
-      2. Nếu bật «Gửi tin nhắn kèm»: nhắn chữ cho mọi người nhận.
-      3. Gọi điện: **lần lượt** từng người (người đầu không nghe máy trong thời gian chờ thì gọi người kế), hoặc gọi **một mình người đầu**.
-      4. Người nhận nghe máy: máy đọc cảnh báo, rồi làm theo ô «Đọc xong thì» (cúp máy / nối thiết bị nhà / giữ máy).
-
-      **Báo người ngã, trộm, cháy:** để «Đọc xong thì» = **Nối thiết bị nhà** để người nhận thấy và nghe hiện trường.
-      **Báo mất điện, rò nước:** chọn **Cúp máy**.
-
-    </details>
-
-    **Khi người nhận xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
-    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
-    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     khi_nao:
       name: ① Khi nào cảnh báo

@@ -5,26 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Đang nói chuyện thoại mà **người gọi xin chuyển sang video**: blueprint này quyết định làm gì. Mặc định hệ thống **không tự đồng ý** (riêng tư), nên không có blueprint này
-    hoặc quy tắc thì lời xin bị bỏ qua.
-
-    - **Hỏi trên điện thoại** (có nút Đồng ý / Từ chối), hoặc **tự đồng ý**, hoặc **tự đồng ý và gửi camera** bạn chọn.
-    - Có thể đọc thông báo ra loa cho cả nhà biết.
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** từ bản `2026.11.11.4` trở lên (có dịch vụ «Đồng ý chuyển sang video»).
-      - Hỏi trên điện thoại cần ứng dụng Home Assistant (mobile_app) trên điện thoại đó.
-
-    </details>
-
-    **Blueprint này là đường THỦ CÔNG** (báo/hỏi khi người gọi xin chuyển sang video). Việc **tự đồng ý** là đường khác: chỉ xảy ra khi công tắc
-    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (blueprint
-    «Quy tắc cho cuộc gọi đến», mục ⑥).
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     ap_dung:
       name: ① Áp dụng cho ai

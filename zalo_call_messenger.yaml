@@ -5,36 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Một mẫu duy nhất để **nhắn tin Zalo** (hoặc gọi) khi thiết bị của bạn thay đổi, **tuỳ biến rộng nhưng chỉ chọn từ danh sách**:
-    chọn thiết bị, chọn khi nào gửi, chọn câu có sẵn, chọn kiểu chữ (emoji, đậm, màu, cỡ chữ), chọn người nhận.
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
-      - **Người nhận:** *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người/nhóm từ danh bạ (thành thực thể `notify.zalo_...`).
-
-    </details>
-
-    <details>
-    <summary><b>Các chế độ «Khi nào gửi»:</b> - Nhấn để mở rộng</summary>
-
-      | Chế độ | Gửi khi |
-      |---|---|
-      | Mọi thay đổi trạng thái | Trạng thái thiết bị đổi (mọi trạng thái) |
-      | Chuyển sang BẬT | Thiết bị chuyển sang `on` (cửa mở, có người, đèn bật...) |
-      | Chuyển sang TẮT | Thiết bị chuyển sang `off` |
-      | Số vượt ngưỡng trên | Giá trị số **vượt lên trên** ngưỡng (nhiệt độ cao...) |
-      | Số xuống dưới ngưỡng | Giá trị số **tụt xuống dưới** ngưỡng (pin yếu, nhiệt độ thấp...) |
-      | Báo cáo hằng ngày | Mỗi ngày đúng giờ đã chọn, gửi trạng thái của mọi thiết bị đã chọn |
-
-      **Câu có sẵn** dùng được các từ khoá: `{ten}` tên thiết bị, `{khu_vuc}` khu vực, `{tu}` trạng thái cũ, `{den}` trạng thái mới,
-      `{don_vi}` đơn vị, `{gio}` giờ phút, `{nguong}` ngưỡng (chỉ khi chọn «Tự viết»).
-
-    </details>
-
-    **Phiên bản: v.2026.11.11**
+  description: "**Phiên bản: v.2026.11.11**"
   input:
     khi_nao:
       name: ① Khi nào gửi

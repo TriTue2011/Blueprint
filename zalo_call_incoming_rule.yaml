@@ -5,35 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Quy định hệ thống làm gì khi **có người gọi đến** tài khoản Zalo: **báo ra loa** cho cả nhà biết, **tự nghe máy** sau vài giây,
-    cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp. Chọn mọi thứ từ danh sách.
-
-    Quy tắc được **đặt khi Home Assistant khởi động** và mỗi lần bạn bấm *Chạy*. Tắt công tắc «Bật quy tắc» rồi chạy lại để **xoá** quy tắc.
-
-    <details>
-    <summary><b>Nguyên tắc riêng tư:</b> - Nhấn để mở rộng</summary>
-
-      - **Chưa có quy tắc cho một người thì hệ thống không làm gì** với cuộc gọi của người đó (chỉ đổ chuông).
-      - Thiết bị nhà **tắt mặc định**: chỉ dùng thứ bạn tích **và** đã chọn thiết bị, và chỉ **khi người nhà nói trực tiếp** (trừ ô «Nối ngay»).
-      - Cho AI nói chuyện thì phải chọn **Trợ lý giọng nói** (không tự dùng bộ ưu tiên vì nó có quyền điều khiển nhà).
-      - Với **người lạ**, không tích «Người tin cậy» và chọn trợ lý không có quyền điều khiển thiết bị.
-
-    </details>
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** từ bản `2026.11.11.2` trở lên.
-      - Muốn áp cho **một người/nhóm cụ thể**: *Cài đặt → Thiết bị & dịch vụ → Zalo Call → Cấu hình*, chọn người từ danh bạ.
-
-    </details>
-
-    **Khi người gọi xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
-    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
-    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     ap_dung:
       name: ① Áp dụng cho ai
@@ -83,118 +55,8 @@ blueprint:
           selector:
             text: {}
           default: ""
-    nghe_may:
-      name: ② Nghe máy
-      icon: mdi:phone-check-outline
-      input:
-        tu_nghe_may:
-          name: Tự nghe máy
-          selector:
-            boolean: {}
-          default: false
-        nghe_sau:
-          name: Nghe máy sau (giây)
-          selector:
-            number:
-              min: 0
-              max: 120
-              step: 1
-              unit_of_measurement: giây
-          default: 5
-        loai_cuoc_goi:
-          name: Nghe loại cuộc gọi nào
-          selector:
-            select:
-              multiple: true
-              mode: list
-              options:
-                - label: Thoại
-                  value: voice
-                - label: Video
-                  value: video
-          default:
-            - voice
-            - video
-    bao_loa:
-      name: ③ Báo ra loa khi có cuộc gọi đến
-      icon: mdi:bullhorn-outline
-      description: Một loa trong nhà đọc «Có cuộc gọi ... từ ...» để người trong nhà biết (kể cả khi không tự nghe máy).
-      collapsed: true
-      input:
-        bat_bao_loa:
-          name: Báo ra loa
-          selector:
-            boolean: {}
-          default: false
-        loa_bao:
-          name: Loa dùng để báo (chọn nhiều = báo ra tất cả các loa)
-          selector:
-            entity:
-              multiple: true
-              filter:
-                - domain: media_player
-          default: []
-        am_luong_bao:
-          name: Âm lượng lúc báo (0 = giữ nguyên)
-          description: Âm lượng loa khi đọc thông báo. Không ai nghe máy thì loa trở về mức cũ. Loa R1 có 15 mức, ví dụ mức 6 là 40%.
-          selector:
-            number:
-              min: 0
-              max: 100
-              step: 1
-              unit_of_measurement: "%"
-          default: 0
-        lap_bao:
-          name: Báo lại sau mỗi (giây)
-          description: Đọc xong thì chờ chừng này giây rồi đọc lại, tới khi nghe máy hoặc cuộc gọi kết thúc. 0 = chỉ báo một lần.
-          selector:
-            number:
-              min: 0
-              max: 60
-              step: 1
-              unit_of_measurement: giây
-          default: 0
-        cau_bao:
-          name: Câu báo
-          description: "Dùng {ten} (tên người gọi) và {loai} (thoại hoặc video). Bỏ trống = «Có cuộc gọi {loai} từ {ten}.»"
-          selector:
-            text: {}
-          default: ""
-    ai:
-      name: ④ AI nói chuyện
-      icon: mdi:robot-outline
-      collapsed: true
-      input:
-        cho_ai_noi:
-          name: Cho AI nói chuyện khi nghe máy
-          selector:
-            boolean: {}
-          default: false
-        tro_ly_giong_noi:
-          name: Trợ lý giọng nói (Assist)
-          description: Bắt buộc khi cho AI nói chuyện. Chọn từ danh sách trợ lý giọng nói của Home Assistant.
-          selector:
-            assist_pipeline: {}
-          default: ""
-        nguoi_tin_cay:
-          name: Người tin cậy
-          description: Tin cậy thì AI nói chuyện bình thường. Không tin cậy thì AI được dặn không tiết lộ thông tin gia đình.
-          selector:
-            boolean: {}
-          default: false
-        cau_chao:
-          name: Câu AI chào khi nghe máy
-          description: Bỏ trống = «Xin chào, tôi là trợ lý của gia đình. Bạn cần gì ạ?»
-          selector:
-            text: {}
-          default: ""
-        ai_tra_loi_tin:
-          name: AI trả lời cả tin nhắn chữ của người này
-          selector:
-            boolean: {}
-          default: false
     thiet_bi:
-      name: ⑤ Thiết bị nhà dùng khi người nhà nói trực tiếp
+      name: ② Thiết bị trong nhà (loa, mic, camera, chế độ mic/loa)
       icon: mdi:video-wireless-outline
       description: Tích ô nào thì dùng thứ đó (tích 1 = dùng 1, tích 2 = dùng 2, tích 3 = dùng cả 3). Không tích gì = không dùng thiết bị nào. Tích Camera = cuộc gọi video.
       collapsed: true
@@ -267,22 +129,128 @@ blueprint:
               unit_of_measurement: "%"
           default: 0
         chong_vong:
-          name: Chống vọng tiếng (khi mic và loa ở gần nhau)
+          name: Chế độ mic/loa khi nói chuyện (song công chỉ áp dụng cho loa R1)
           selector:
             select:
               mode: dropdown
               options:
                 - label: Tự quyết (khuyên dùng)
                   value: auto
-                - label: Bật - tạm tắt mic khi loa đang phát
+                - label: Luân phiên - tạm tắt mic khi loa phát (êm tai, khuyên dùng với R1)
                   value: "on"
-                - label: Song công - nghe và nói cùng lúc
+                - label: Song công - nghe và nói cùng lúc (chỉ loa R1; dễ chói nếu mic gần loa)
                   value: duplex
                 - label: Tắt
                   value: "off"
           default: auto
+    ai:
+      name: ③ AI nói chuyện
+      icon: mdi:robot-outline
+      collapsed: true
+      input:
+        cho_ai_noi:
+          name: Cho AI nói chuyện khi nghe máy
+          selector:
+            boolean: {}
+          default: false
+        tro_ly_giong_noi:
+          name: Trợ lý giọng nói (Assist)
+          description: Bắt buộc khi cho AI nói chuyện. Chọn từ danh sách trợ lý giọng nói của Home Assistant.
+          selector:
+            assist_pipeline: {}
+          default: ""
+        nguoi_tin_cay:
+          name: Người tin cậy
+          description: Tin cậy thì AI nói chuyện bình thường. Không tin cậy thì AI được dặn không tiết lộ thông tin gia đình.
+          selector:
+            boolean: {}
+          default: false
+        cau_chao:
+          name: Câu AI chào khi nghe máy
+          description: Bỏ trống = «Xin chào, tôi là trợ lý của gia đình. Bạn cần gì ạ?»
+          selector:
+            text: {}
+          default: ""
+        ai_tra_loi_tin:
+          name: AI trả lời cả tin nhắn chữ của người này
+          selector:
+            boolean: {}
+          default: false
+    bao_loa:
+      name: ④ Nghe máy và báo cuộc gọi đến
+      icon: mdi:bullhorn-outline
+      description: Một loa trong nhà đọc «Có cuộc gọi ... từ ...» để người trong nhà biết (kể cả khi không tự nghe máy).
+      collapsed: true
+      input:
+        tu_nghe_may:
+          name: Tự nghe máy
+          selector:
+            boolean: {}
+          default: false
+        nghe_sau:
+          name: Nghe máy sau (giây)
+          selector:
+            number:
+              min: 0
+              max: 120
+              step: 1
+              unit_of_measurement: giây
+          default: 5
+        loai_cuoc_goi:
+          name: Nghe loại cuộc gọi nào
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Thoại
+                  value: voice
+                - label: Video
+                  value: video
+          default:
+            - voice
+            - video
+        bat_bao_loa:
+          name: Báo ra loa
+          selector:
+            boolean: {}
+          default: false
+        loa_bao:
+          name: Loa dùng để báo (chọn nhiều = báo ra tất cả các loa)
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+          default: []
+        am_luong_bao:
+          name: Âm lượng lúc báo (0 = giữ nguyên)
+          description: Âm lượng loa khi đọc thông báo. Không ai nghe máy thì loa trở về mức cũ. Loa R1 có 15 mức, ví dụ mức 6 là 40%.
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+          default: 0
+        lap_bao:
+          name: Báo lại sau mỗi (giây)
+          description: Đọc xong thì chờ chừng này giây rồi đọc lại, tới khi nghe máy hoặc cuộc gọi kết thúc. 0 = chỉ báo một lần.
+          selector:
+            number:
+              min: 0
+              max: 60
+              step: 1
+              unit_of_measurement: giây
+          default: 0
+        cau_bao:
+          name: Câu báo
+          description: "Dùng {ten} (tên người gọi) và {loai} (thoại hoặc video). Bỏ trống = «Có cuộc gọi {loai} từ {ten}.»"
+          selector:
+            text: {}
+          default: ""
     xin_video:
-      name: ⑥ Khi người gọi xin chuyển từ thoại sang video
+      name: ⑤ Chuyển từ thoại sang video
       icon: mdi:video-outline
       collapsed: true
       input:

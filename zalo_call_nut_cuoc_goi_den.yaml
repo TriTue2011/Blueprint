@@ -5,25 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    Gán **một nút bấm cho một việc** khi có cuộc gọi Zalo: **nghe máy**, **từ chối**, **cúp máy**, **tăng / giảm âm lượng loa**. Tạo mỗi nút một automation từ blueprint này.
-
-    Việc chỉ chạy đúng lúc: nghe máy và từ chối khi **đang đổ chuông có người gọi đến**; cúp máy khi **đang trong cuộc gọi**; âm lượng khi đang trong cuộc gọi.
-    Muốn một nút làm nhiều việc theo ngữ cảnh (nghe / cúp / gọi đi) thì dùng blueprint «Một nút bấm nghe máy, cúp máy hoặc gọi đi».
-
-    <details>
-    <summary><b>Cần có trước:</b> - Nhấn để mở rộng</summary>
-
-      - Tích hợp **Zalo Call** từ bản `2026.11.11.4` trở lên.
-      - Nút bấm: ở ô «Nút bấm» chọn *Thêm trigger → Thiết bị →* thiết bị của nút (loa R1 từ bản 0.16.0 có sẵn nhấn đơn / đúp / ba lần / giữ).
-
-    </details>
-
-    **Khi người gọi xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
-    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
-    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     nut:
       name: ① Nút và việc của nút

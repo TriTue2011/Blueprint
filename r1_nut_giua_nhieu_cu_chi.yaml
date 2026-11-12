@@ -5,30 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: >
-    **Một automation cho cả nút giữa loa R1.** Chọn loa R1, rồi với **từng cử chỉ** (nhấn đơn, đúp, ba lần, giữ) bạn khai tối đa 4 «việc» + một hành động mặc định. Mỗi việc gồm một **thực thể**, **trạng thái** nghĩa là việc đó đang cần xử lý, và **hành động** khi nhấn. Khi nhấn, blueprint xem việc nào của cử chỉ đó đang cần và làm việc có **yêu cầu gần nhất**; không việc nào đang cần thì làm **hành động mặc định**. Không phải tạo nhiều automation cho một nút.
-
-    <details>
-    <summary><b>Ví dụ (nhấn đơn làm ba việc theo ngữ cảnh):</b> - Nhấn để mở rộng</summary>
-
-      - Việc 1: thực thể báo thức của loa, trạng thái `on`, hành động *Tắt báo thức* (`r1_speaker.bao_thuc_tat`).
-      - Việc 2: cảm biến «Trạng thái cuộc gọi» của Zalo Call, trạng thái `ringing`, hành động *Nghe máy* (`zalo_call.answer_call`).
-      - Việc 3: cùng cảm biến, trạng thái `active`, hành động *Cúp máy* (`zalo_call.end_call`).
-      - Mặc định: *Gọi đi* (`zalo_call.make_call`).
-      - Nhấn đúp, ba, giữ khai riêng theo cùng cách.
-
-    </details>
-
-    <details>
-    <summary><b>Lưu ý:</b> - Nhấn để mở rộng</summary>
-
-      - Trong tích hợp R1, mỗi cử chỉ còn một **hành động tích hợp riêng**; muốn cử chỉ chỉ do automation này làm thì đặt hành động tích hợp của cử chỉ đó là «Không làm gì (chỉ phát sự kiện)», nếu không hai bên cùng chạy.
-      - Cử chỉ nào không khai việc và hành động mặc định đều để trống thì không làm gì.
-      - Cần thêm việc cho một cử chỉ: nhân bản automation hoặc dùng blueprint «Một nút nhiều việc» (tối đa 6 việc).
-
-    </details>
-
-    **Phiên bản: v.2026.11.13**
+  description: "**Phiên bản: v.2026.11.13**"
   input:
     loa_r1:
       name: ① Loa R1
