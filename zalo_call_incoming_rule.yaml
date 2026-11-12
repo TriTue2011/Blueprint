@@ -29,7 +29,11 @@ blueprint:
 
     </details>
 
-    **Phiên bản: v.2026.11.11**
+    **Khi người gọi xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
+    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
+    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
+
+    **Phiên bản: v.2026.11.13**
   input:
     ap_dung:
       name: ① Áp dụng cho ai
@@ -284,7 +288,10 @@ blueprint:
       input:
         xu_ly_xin_video:
           name: Cách xử lý
-          description: Mặc định không tự đồng ý. Muốn hỏi trên điện thoại thì dùng blueprint «Người gọi xin chuyển từ thoại sang video».
+          description: >-
+            Mặc định không tự đồng ý. Chọn «Tự đồng ý» thì người này được tự đồng ý **khi công tắc tổng «Cho phép đồng ý chuyển sang video»
+            trên thiết bị Zalo Call đang BẬT** (mặc định TẮT; xem ô bên dưới). Muốn hỏi trên điện thoại thì dùng blueprint «Người gọi xin chuyển
+            từ thoại sang video». Áp cho cả cuộc gọi đến lẫn cuộc gọi đi với người này.
           selector:
             select:
               mode: dropdown
@@ -296,11 +303,20 @@ blueprint:
                 - label: Tự đồng ý và gửi camera đã chọn ở trên
                   value: accept_camera
           default: ask
+        bat_cong_tac_chuyen_video:
+          name: Bật công tắc tổng «Cho phép đồng ý chuyển sang video»
+          description: >-
+            Tự đồng ý chỉ xảy ra khi công tắc tổng này BẬT (mặc định TẮT, nằm trên thiết bị Zalo Call). Tích ô này thì mỗi lần Home Assistant khởi
+            động (hoặc bạn bấm *Chạy*) quy tắc sẽ BẬT công tắc đó, chỉ khi bạn chọn «Tự đồng ý» ở trên. Không tích thì blueprint không đụng tới
+            công tắc: bạn tự bật/tắt trên thiết bị.
+          default: false
+          selector:
+            boolean:
 
 mode: restart
 
 variables:
-  version: 20261111
+  version: 20261113
   bat_quy_tac: !input bat_quy_tac
   pham_vi: !input pham_vi
   nguoi_cu_the: !input nguoi_cu_the
@@ -335,6 +351,7 @@ variables:
   am_luong: !input am_luong
   chong_vong: !input chong_vong
   xu_ly_xin_video: !input xu_ly_xin_video
+  bat_cong_tac_chuyen_video: !input bat_cong_tac_chuyen_video
 
 triggers:
   - trigger: homeassistant
@@ -395,3 +412,11 @@ actions:
                 {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
                 {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
                 {{ d }}
+  - alias: Bật công tắc tổng cho phép đồng ý chuyển sang video
+    if:
+      - condition: template
+        value_template: "{{ bat_quy_tac and bat_cong_tac_chuyen_video and xu_ly_xin_video != 'ask' }}"
+    then:
+      - action: zalo_call.set_default_devices
+        data:
+          video_consent: true

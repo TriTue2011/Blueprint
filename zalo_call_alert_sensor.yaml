@@ -32,7 +32,11 @@ blueprint:
 
     </details>
 
-    **Phiên bản: v.2026.11.11**
+    **Khi người nhận xin chuyển sang video** (họ bấm nút camera ở góc trên bên phải màn hình gọi): hệ thống chỉ **tự đồng ý** khi công tắc
+    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (đặt bằng blueprint
+    «Quy tắc cho cuộc gọi đến», mục ⑥). Công tắc tắt hoặc người đó chưa có quy tắc thì chỉ báo sự kiện, không ai được tự đồng ý.
+
+    **Phiên bản: v.2026.11.13**
   input:
     khi_nao:
       name: ① Khi nào cảnh báo
@@ -279,7 +283,7 @@ mode: single
 max_exceeded: silent
 
 variables:
-  version: 20261111
+  version: 20261113
   nguoi_nhan: !input nguoi_nhan
   ma_nguoi: !input ma_nguoi
   ma_nhom: !input ma_nhom

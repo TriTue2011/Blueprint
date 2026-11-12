@@ -20,7 +20,11 @@ blueprint:
 
     </details>
 
-    **Phiên bản: v.2026.11.11**
+    **Blueprint này là đường THỦ CÔNG** (báo/hỏi khi người gọi xin chuyển sang video). Việc **tự đồng ý** là đường khác: chỉ xảy ra khi công tắc
+    «Cho phép đồng ý chuyển sang video» trên thiết bị Zalo Call đang **BẬT** (mặc định TẮT) **và** người đó có quy tắc «Tự đồng ý» (blueprint
+    «Quy tắc cho cuộc gọi đến», mục ⑥).
+
+    **Phiên bản: v.2026.11.13**
   input:
     ap_dung:
       name: ① Áp dụng cho ai
@@ -122,7 +126,7 @@ mode: parallel
 max: 5
 
 variables:
-  version: 20261111
+  version: 20261113
   nguoi: !input nguoi
   ma_loc: !input ma_loc
   cach_xu_ly: !input cach_xu_ly
