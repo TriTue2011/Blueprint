@@ -31,7 +31,7 @@ blueprint:
                   value: strangers
                 - label: Mọi nhóm
                   value: groups
-          default: contacts
+          default: thread
         nguoi_cu_the:
           name: Những người hoặc nhóm cụ thể (chọn nhiều)
           description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Zalo Call, người và nhóm lẫn lộn đều được; mỗi người/nhóm được đặt một quy tắc giống nhau.
