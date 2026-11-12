@@ -56,38 +56,91 @@ blueprint:
             text: {}
           default: ""
     thiet_bi:
-      name: ② Thiết bị trong nhà (loa, mic, camera, chế độ mic/loa)
+      name: "② Thiết bị trong nhà (loa, mic, camera: ưu tiên và khi nào dùng)"
       icon: mdi:video-wireless-outline
-      description: Chọn loa, mic, camera trong nhà, rồi tích bên dưới thứ nào dùng khi người nhà nói trực tiếp và thứ nào dùng ngay khi nghe máy. Không tích gì = không dùng thiết bị nào. Tích Camera = cuộc gọi video.
+      description: "Mỗi thiết bị có hai ô: danh sách xếp theo ưu tiên (cái đầu hỏng thì dùng cái kế) và «khi nào dùng». Danh sách để trống thì dùng thiết bị mặc định của Zalo Call."
       collapsed: false
       input:
         loa:
-          name: Loa trong nhà (chọn nhiều = dự phòng theo thứ tự) (chỉ dùng nếu tích ở ô «Dùng khi…» bên dưới)
+          name: "Loa trong nhà (xếp theo thứ tự ưu tiên)"
+          description: "Loa đầu tiên không dùng được thì tự chuyển sang loa kế tiếp. Để trống = loa mặc định của thiết bị Zalo Call. Loa Google Home/Cast chỉ đọc tiếng báo, không nhận tiếng cuộc gọi, nên để cuối danh sách."
           selector:
             entity:
               multiple: true
+              reorder: true
               filter:
                 - domain: media_player
           default: []
+        che_do_loa:
+          name: "Loa - khi nào dùng"
+          description: "Phát tiếng người gọi ra loa trong nhà."
+          selector:
+            select:
+              mode: dropdown
+              multiple: false
+              custom_value: false
+              options:
+                - label: Không dùng
+                  value: tat
+                - label: Bật khi người nhà nói trực tiếp
+                  value: khi_noi
+                - label: Bật NGAY khi nghe máy (không chờ người nhà)
+                  value: ngay
+          default: khi_noi
         mic:
-          name: Mic trong nhà (chọn nhiều = dự phòng theo thứ tự) (chỉ dùng nếu tích ở ô «Dùng khi…» bên dưới)
-          description: Camera hoặc vệ tinh Assist có mic (ví dụ loa R1).
+          name: "Mic trong nhà (xếp theo thứ tự ưu tiên)"
+          description: "Mic đầu tiên không dùng được thì tự chuyển sang mic kế tiếp. Chọn vệ tinh Assist (mic loa R1, mic camera) hoặc camera. Để trống = mic mặc định."
           selector:
             entity:
               multiple: true
+              reorder: true
               filter:
                 - domain:
                     - camera
                     - assist_satellite
           default: []
+        che_do_mic:
+          name: "Mic - khi nào dùng"
+          description: "Gửi tiếng trong nhà cho người gọi."
+          selector:
+            select:
+              mode: dropdown
+              multiple: false
+              custom_value: false
+              options:
+                - label: Không dùng
+                  value: tat
+                - label: Bật khi người nhà nói trực tiếp
+                  value: khi_noi
+                - label: Bật NGAY khi nghe máy (không chờ người nhà)
+                  value: ngay
+          default: khi_noi
         camera:
-          name: Camera trong nhà (chọn nhiều = dự phòng theo thứ tự) (chỉ dùng nếu tích ở ô «Dùng khi…» bên dưới)
+          name: "Camera trong nhà (xếp theo thứ tự ưu tiên)"
+          description: "Camera đầu tiên không có hình thì tự chuyển sang camera kế tiếp. Để trống = camera mặc định."
           selector:
             entity:
               multiple: true
+              reorder: true
               filter:
                 - domain: camera
           default: []
+        che_do_camera:
+          name: "Camera - khi nào dùng"
+          description: "Gửi hình trong nhà cho người gọi (cuộc gọi video)."
+          selector:
+            select:
+              mode: dropdown
+              multiple: false
+              custom_value: false
+              options:
+                - label: Không dùng
+                  value: tat
+                - label: Bật khi người nhà nói trực tiếp
+                  value: khi_noi
+                - label: Bật NGAY khi nghe máy (không chờ người nhà)
+                  value: ngay
+          default: khi_noi
         am_luong:
           name: Âm lượng loa (0 = giữ nguyên)
           selector:
@@ -97,37 +150,12 @@ blueprint:
               step: 1
               unit_of_measurement: "%"
           default: 0
-        noi_khi_chuyen:
-          name: Dùng khi người nhà nói trực tiếp
+        ai_chon_thiet_bi:
+          name: Cho AI tự quyết bật loa/mic/camera nào
+          description: Chỉ trong các thiết bị đang để «Bật khi…» hoặc «Bật NGAY» ở trên.
           selector:
-            select:
-              multiple: true
-              mode: list
-              options:
-                - label: Mic - gửi tiếng trong nhà cho người gọi
-                  value: mic
-                - label: Loa - phát tiếng người gọi ra loa trong nhà
-                  value: speaker
-                - label: Camera - gửi hình trong nhà (cuộc gọi video)
-                  value: camera
-                - label: AI tự chọn trong các ô đã tích
-                  value: ai
-          default: []
-        noi_ngay:
-          name: Dùng NGAY khi nghe máy (không chờ người nhà)
-          description: Ví dụ chỉ tích Camera để người gọi thấy hình trong nhà ngay, còn Mic và Loa chờ tới khi người nhà nói trực tiếp.
-          selector:
-            select:
-              multiple: true
-              mode: list
-              options:
-                - label: Mic
-                  value: mic
-                - label: Loa
-                  value: speaker
-                - label: Camera
-                  value: camera
-          default: []
+            boolean: {}
+          default: false
         chong_vong:
           name: Chế độ mic/loa khi nói chuyện (song công chỉ áp dụng cho loa R1)
           selector:
@@ -305,8 +333,23 @@ variables:
   nguoi_tin_cay: !input nguoi_tin_cay
   cau_chao: !input cau_chao
   ai_tra_loi_tin: !input ai_tra_loi_tin
-  noi_khi_chuyen: !input noi_khi_chuyen
-  noi_ngay: !input noi_ngay
+  che_do_loa: !input che_do_loa
+  che_do_mic: !input che_do_mic
+  che_do_camera: !input che_do_camera
+  ai_chon_thiet_bi: !input ai_chon_thiet_bi
+  noi_khi_chuyen: >-
+    {% set l = [] %}
+    {% if che_do_mic != 'tat' %}{% set l = l + ['mic'] %}{% endif %}
+    {% if che_do_loa != 'tat' %}{% set l = l + ['speaker'] %}{% endif %}
+    {% if che_do_camera != 'tat' %}{% set l = l + ['camera'] %}{% endif %}
+    {% if ai_chon_thiet_bi %}{% set l = l + ['ai'] %}{% endif %}
+    {{ l }}
+  noi_ngay: >-
+    {% set l = [] %}
+    {% if che_do_mic == 'ngay' %}{% set l = l + ['mic'] %}{% endif %}
+    {% if che_do_loa == 'ngay' %}{% set l = l + ['speaker'] %}{% endif %}
+    {% if che_do_camera == 'ngay' %}{% set l = l + ['camera'] %}{% endif %}
+    {{ l }}
   loa_goc: !input loa
   loa: >-
     {{ (loa_goc if loa_goc is not string else ([loa_goc] if loa_goc else [])) | join(',') }}
