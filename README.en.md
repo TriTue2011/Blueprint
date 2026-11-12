@@ -622,6 +622,8 @@ When a sensor triggers (person, smoke, water leak, open door, power loss...) **c
 
 Decide what happens when **someone calls in**: **announce on a speaker**, **auto-answer**, let the **AI talk**, and **which home devices to connect** when a person takes over (tick Mic / Speaker / Camera; ticking Camera makes it a video call). Apply to one person, all contacts, strangers or all groups.
 
+**Video switch request:** pick «Auto-accept» per person; it only takes effect when the **«Cho phép đồng ý chuyển sang video»** switch (video-switch consent) on the Zalo Call device is **ON** (off by default; there is a box that turns it on when Home Assistant starts). Applies to incoming and outgoing calls.
+
 **Needs:** Zalo Call 2026.11.11.2 or newer.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
@@ -635,6 +637,16 @@ Send a Zalo message (or call) when a device changes, **widely customizable but o
 **Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
+
+---
+
+## 💬 Zalo Call two-way chat with the assistant
+
+Whoever messages your Zalo account (the people or groups you pick) gets a reply from the **Home Assistant conversation assistant**, which keeps the thread per person/group. Pick people/groups from the address book or paste a **Zalo ID** for strangers; in groups it only answers when the message contains the **trigger word**. **No Pyscript, no bot token, no separate webhook**: the integration receives the messages from the app.
+
+**Needs:** Zalo Call connected to the app and a conversation assistant with an AI model selected. Do not enable it together with Zalo Call's `reply_ai` rule for the same person/group (each message would be answered twice).
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_webhook.yaml)
 
 ---
 
@@ -671,6 +683,8 @@ Give one button one job: **answer**, **reject**, **hang up**, **volume up/down**
 ## 🎥 Zalo Call caller asks to switch to video
 
 The caller asks to switch from voice to video: **ask on your phone** (Accept / Decline), accept automatically, or accept and send a camera; can announce on a speaker. Never accepts by default.
+
+**Auto-accept** is a separate path that only happens when the **«Cho phép đồng ý chuyển sang video»** switch (video-switch consent) on the Zalo Call device is **ON** (off by default) **and** that person has an «Auto-accept» rule (the «incoming-call rules» blueprint). The caller asks with the camera button at the top right of the call screen.
 
 **Needs:** Zalo Call 2026.11.11.4 or newer.
 

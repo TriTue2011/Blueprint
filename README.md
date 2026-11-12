@@ -653,6 +653,8 @@ Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất �
 
 Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra loa** cho cả nhà biết, **tự nghe máy**, cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp (tích Mic / Loa / Camera, tích Camera là cuộc gọi video). Áp cho một người, mọi người trong danh bạ, người lạ hoặc mọi nhóm.
 
+**Xin chuyển sang video:** chọn «Tự đồng ý» cho từng người; chỉ có tác dụng khi công tắc **«Cho phép đồng ý chuyển sang video»** trên thiết bị Zalo Call đang **BẬT** (mặc định tắt; có ô bật sẵn công tắc khi Home Assistant khởi động). Áp cho cả cuộc gọi đến lẫn cuộc gọi đi.
+
 **Cần:** Zalo Call từ bản 2026.11.11.2.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
@@ -666,6 +668,16 @@ Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộ
 **Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
+
+---
+
+## 💬 Zalo Call nhắn tin hai chiều với trợ lý
+
+Ai nhắn Zalo cho tài khoản của bạn (người hoặc nhóm bạn chọn) thì **trợ lý hội thoại của Home Assistant** đọc và **trả lời lại trên Zalo**, nhớ mạch trò chuyện theo từng người/nhóm. Chọn người/nhóm từ danh bạ hoặc dán **mã Zalo** cho người lạ; trong nhóm chỉ trả lời khi tin có **từ khóa gọi**. **Không cần Pyscript, không cần token bot, không cần tạo webhook riêng**: tích hợp tự nhận tin từ app.
+
+**Cần:** Zalo Call đã kết nối với app và một trợ lý hội thoại đã chọn mô hình AI. Đừng bật cùng lúc với quy tắc `reply_ai` của Zalo Call cho cùng một người/nhóm (mỗi tin sẽ bị trả lời hai lần).
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_webhook.yaml)
 
 ---
 
@@ -702,6 +714,8 @@ Gán một nút cho một việc: **nghe máy**, **từ chối**, **cúp**, **t�
 ## 🎥 Zalo Call người gọi xin chuyển sang video
 
 Người gọi xin chuyển từ thoại sang video: **hỏi trên điện thoại** (Đồng ý / Từ chối), tự đồng ý, hoặc tự đồng ý và gửi camera; có thể đọc thông báo ra loa. Mặc định không tự đồng ý.
+
+**Tự đồng ý** là đường khác, chỉ xảy ra khi công tắc **«Cho phép đồng ý chuyển sang video»** trên thiết bị Zalo Call đang **BẬT** (mặc định tắt) **và** người đó có quy tắc «Tự đồng ý» (blueprint «quy tắc cho cuộc gọi đến»). Người xin bằng nút camera ở góc trên bên phải màn hình gọi.
 
 **Cần:** Zalo Call từ bản 2026.11.11.4.
 
