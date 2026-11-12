@@ -29,10 +29,12 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [🔗 Zalo Calling in the older blueprints](#-zalo-calling-in-the-older-blueprints)
   - [🎤 Voice send to Zalo Calling (many people and groups)](#-voice-send-to-zalo-calling-many-people-and-groups)
   - [🧭 One button, many jobs (most recent request wins)](#-one-button-many-jobs-most-recent-request-wins)
+  - [🎮 R1 speaker middle button, every gesture in one automation](#-r1-speaker-middle-button-every-gesture-in-one-automation)
   - [📞 Zalo Call alert call when a sensor triggers](#-zalo-call-alert-call-when-a-sensor-triggers)
   - [🔘 Zalo Call one button to answer, hang up or call](#-zalo-call-one-button-to-answer-hang-up-or-call)
   - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
   - [💬 Zalo Call custom Messenger](#-zalo-call-custom-messenger)
+  - [💬 Zalo Call two-way chat with the assistant](#-zalo-call-two-way-chat-with-the-assistant)
   - [⏰ Zalo Call scheduled reminder call or message](#-zalo-call-scheduled-reminder-call-or-message)
   - [📱 Zalo Call custom outgoing call](#-zalo-call-custom-outgoing-call)
   - [🔔 Zalo Call button for incoming calls](#-zalo-call-button-for-incoming-calls)
@@ -702,6 +704,16 @@ One button does whatever is needed: define up to 6 “jobs” (entity + state me
 
 ---
 
+## 🎮 R1 speaker middle button, every gesture in one automation
+
+**One automation for the whole R1 middle button**: pick the speaker, then for **each gesture** (single, double, triple press, hold) define up to 4 “jobs” (entity + state that needs handling + action) and a default action. On press it runs the job with the **most recent request**, otherwise the default (e.g. single press = stop alarm / answer / hang up / call, depending on the moment). No need for several automations per button.
+
+**Needs:** the Phicomm R1 integration (middle button). Set that gesture's built-in action to “Do nothing (only fire the event)”, otherwise both run.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fr1_nut_giua_nhieu_cu_chi.yaml)
+
+---
+
 ## 🎤 Voice send to Zalo Calling (many people and groups)
 
 A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
@@ -1092,6 +1104,8 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 53 | Zalo Call button for incoming calls | Automation | 2026.3.0 | Zalo Call button for incoming calls |
 | 54 | Zalo Call caller asks to switch to video | Automation | 2026.3.0 | Zalo Call caller asks to switch to video |
 | 55 | One button, many jobs | Automation | 2026.3.0 | Most recent request wins |
+| 56 | Zalo Call two-way chat with the assistant | Automation | 2026.3.0 | The assistant answers Zalo messages |
+| 57 | R1 speaker middle button, every gesture in one automation | Automation | 2026.3.0 | Many jobs per gesture |
 
 ---
 

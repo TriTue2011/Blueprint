@@ -1,0 +1,737 @@
+blueprint:
+  name: Loa R1 - nút giữa, mọi cử chỉ trong MỘT automation (mỗi cử chỉ nhiều việc theo ngữ cảnh)
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/r1_nut_giua_nhieu_cu_chi.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: >
+    **Một automation cho cả nút giữa loa R1.** Chọn loa R1, rồi với **từng cử chỉ** (nhấn đơn, đúp, ba lần, giữ) bạn khai tối đa 4 «việc» + một hành động mặc định. Mỗi việc gồm một **thực thể**, **trạng thái** nghĩa là việc đó đang cần xử lý, và **hành động** khi nhấn. Khi nhấn, blueprint xem việc nào của cử chỉ đó đang cần và làm việc có **yêu cầu gần nhất**; không việc nào đang cần thì làm **hành động mặc định**. Không phải tạo nhiều automation cho một nút.
+
+    <details>
+    <summary><b>Ví dụ (nhấn đơn làm ba việc theo ngữ cảnh):</b> - Nhấn để mở rộng</summary>
+
+      - Việc 1: thực thể báo thức của loa, trạng thái `on`, hành động *Tắt báo thức* (`r1_speaker.bao_thuc_tat`).
+      - Việc 2: cảm biến «Trạng thái cuộc gọi» của Zalo Call, trạng thái `ringing`, hành động *Nghe máy* (`zalo_call.answer_call`).
+      - Việc 3: cùng cảm biến, trạng thái `active`, hành động *Cúp máy* (`zalo_call.end_call`).
+      - Mặc định: *Gọi đi* (`zalo_call.make_call`).
+      - Nhấn đúp, ba, giữ khai riêng theo cùng cách.
+
+    </details>
+
+    <details>
+    <summary><b>Lưu ý:</b> - Nhấn để mở rộng</summary>
+
+      - Trong tích hợp R1, mỗi cử chỉ còn một **hành động tích hợp riêng**; muốn cử chỉ chỉ do automation này làm thì đặt hành động tích hợp của cử chỉ đó là «Không làm gì (chỉ phát sự kiện)», nếu không hai bên cùng chạy.
+      - Cử chỉ nào không khai việc và hành động mặc định đều để trống thì không làm gì.
+      - Cần thêm việc cho một cử chỉ: nhân bản automation hoặc dùng blueprint «Một nút nhiều việc» (tối đa 6 việc).
+
+    </details>
+
+    **Phiên bản: v.2026.11.13**
+  input:
+    loa_r1:
+      name: ① Loa R1
+      icon: mdi:speaker
+      input:
+        thiet_bi:
+          name: Thiết bị loa R1
+          description: Chọn loa R1 (tích hợp Phicomm R1). Sự kiện nút bấm của đúng loa này mới chạy automation.
+          selector:
+            device:
+              integration: r1_speaker
+    cu_chi_don:
+      name: ② Nhấn đơn
+      icon: mdi:gesture-tap
+      collapsed: false
+      input:
+        mac_dinh_don:
+          name: Hành động mặc định (khi không việc nào đang cần)
+          selector:
+            action: {}
+          default: []
+        thuc_the_don_1:
+          name: Việc 1 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_don_1:
+          name: Việc 1 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_don_1:
+          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_don_1:
+          name: Việc 1 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_don_1:
+          name: Việc 1 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_don_2:
+          name: Việc 2 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_don_2:
+          name: Việc 2 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_don_2:
+          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_don_2:
+          name: Việc 2 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_don_2:
+          name: Việc 2 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_don_3:
+          name: Việc 3 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_don_3:
+          name: Việc 3 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_don_3:
+          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_don_3:
+          name: Việc 3 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_don_3:
+          name: Việc 3 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_don_4:
+          name: Việc 4 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_don_4:
+          name: Việc 4 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_don_4:
+          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_don_4:
+          name: Việc 4 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_don_4:
+          name: Việc 4 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+    cu_chi_doi:
+      name: ③ Nhấn đúp
+      icon: mdi:gesture-double-tap
+      collapsed: true
+      input:
+        mac_dinh_doi:
+          name: Hành động mặc định (khi không việc nào đang cần)
+          selector:
+            action: {}
+          default: []
+        thuc_the_doi_1:
+          name: Việc 1 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_doi_1:
+          name: Việc 1 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_doi_1:
+          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_doi_1:
+          name: Việc 1 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_doi_1:
+          name: Việc 1 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_doi_2:
+          name: Việc 2 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_doi_2:
+          name: Việc 2 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_doi_2:
+          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_doi_2:
+          name: Việc 2 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_doi_2:
+          name: Việc 2 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_doi_3:
+          name: Việc 3 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_doi_3:
+          name: Việc 3 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_doi_3:
+          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_doi_3:
+          name: Việc 3 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_doi_3:
+          name: Việc 3 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_doi_4:
+          name: Việc 4 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_doi_4:
+          name: Việc 4 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_doi_4:
+          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_doi_4:
+          name: Việc 4 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_doi_4:
+          name: Việc 4 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+    cu_chi_ba:
+      name: ④ Nhấn ba lần
+      icon: mdi:gesture-tap-hold
+      collapsed: true
+      input:
+        mac_dinh_ba:
+          name: Hành động mặc định (khi không việc nào đang cần)
+          selector:
+            action: {}
+          default: []
+        thuc_the_ba_1:
+          name: Việc 1 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_ba_1:
+          name: Việc 1 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_ba_1:
+          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_ba_1:
+          name: Việc 1 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_ba_1:
+          name: Việc 1 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_ba_2:
+          name: Việc 2 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_ba_2:
+          name: Việc 2 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_ba_2:
+          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_ba_2:
+          name: Việc 2 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_ba_2:
+          name: Việc 2 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_ba_3:
+          name: Việc 3 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_ba_3:
+          name: Việc 3 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_ba_3:
+          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_ba_3:
+          name: Việc 3 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_ba_3:
+          name: Việc 3 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_ba_4:
+          name: Việc 4 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_ba_4:
+          name: Việc 4 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_ba_4:
+          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_ba_4:
+          name: Việc 4 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_ba_4:
+          name: Việc 4 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+    cu_chi_giu:
+      name: ⑤ Nhấn giữ
+      icon: mdi:gesture-tap-hold
+      collapsed: true
+      input:
+        mac_dinh_giu:
+          name: Hành động mặc định (khi không việc nào đang cần)
+          selector:
+            action: {}
+          default: []
+        thuc_the_giu_1:
+          name: Việc 1 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_giu_1:
+          name: Việc 1 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_giu_1:
+          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_giu_1:
+          name: Việc 1 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_giu_1:
+          name: Việc 1 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_giu_2:
+          name: Việc 2 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_giu_2:
+          name: Việc 2 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_giu_2:
+          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_giu_2:
+          name: Việc 2 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_giu_2:
+          name: Việc 2 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_giu_3:
+          name: Việc 3 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_giu_3:
+          name: Việc 3 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_giu_3:
+          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_giu_3:
+          name: Việc 3 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_giu_3:
+          name: Việc 3 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+        thuc_the_giu_4:
+          name: Việc 4 - thực thể
+          selector:
+            entity: {}
+          default: ""
+        trang_thai_giu_4:
+          name: Việc 4 - trạng thái nghĩa là đang cần xử lý
+          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này.
+          selector:
+            text:
+              multiple: true
+          default: []
+        thuoc_tinh_giu_4:
+          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        gia_tri_giu_4:
+          name: Việc 4 - giá trị của thuộc tính (tuỳ chọn)
+          selector:
+            text: {}
+          default: ""
+        hanh_dong_giu_4:
+          name: Việc 4 - hành động khi nhấn lúc này
+          selector:
+            action: {}
+          default: []
+
+mode: single
+max_exceeded: silent
+
+variables:
+  version: 20261113
+  thuc_the_don_1: !input thuc_the_don_1
+  trang_thai_don_1: !input trang_thai_don_1
+  thuoc_tinh_don_1: !input thuoc_tinh_don_1
+  gia_tri_don_1: !input gia_tri_don_1
+  thuc_the_don_2: !input thuc_the_don_2
+  trang_thai_don_2: !input trang_thai_don_2
+  thuoc_tinh_don_2: !input thuoc_tinh_don_2
+  gia_tri_don_2: !input gia_tri_don_2
+  thuc_the_don_3: !input thuc_the_don_3
+  trang_thai_don_3: !input trang_thai_don_3
+  thuoc_tinh_don_3: !input thuoc_tinh_don_3
+  gia_tri_don_3: !input gia_tri_don_3
+  thuc_the_don_4: !input thuc_the_don_4
+  trang_thai_don_4: !input trang_thai_don_4
+  thuoc_tinh_don_4: !input thuoc_tinh_don_4
+  gia_tri_don_4: !input gia_tri_don_4
+  thuc_the_doi_1: !input thuc_the_doi_1
+  trang_thai_doi_1: !input trang_thai_doi_1
+  thuoc_tinh_doi_1: !input thuoc_tinh_doi_1
+  gia_tri_doi_1: !input gia_tri_doi_1
+  thuc_the_doi_2: !input thuc_the_doi_2
+  trang_thai_doi_2: !input trang_thai_doi_2
+  thuoc_tinh_doi_2: !input thuoc_tinh_doi_2
+  gia_tri_doi_2: !input gia_tri_doi_2
+  thuc_the_doi_3: !input thuc_the_doi_3
+  trang_thai_doi_3: !input trang_thai_doi_3
+  thuoc_tinh_doi_3: !input thuoc_tinh_doi_3
+  gia_tri_doi_3: !input gia_tri_doi_3
+  thuc_the_doi_4: !input thuc_the_doi_4
+  trang_thai_doi_4: !input trang_thai_doi_4
+  thuoc_tinh_doi_4: !input thuoc_tinh_doi_4
+  gia_tri_doi_4: !input gia_tri_doi_4
+  thuc_the_ba_1: !input thuc_the_ba_1
+  trang_thai_ba_1: !input trang_thai_ba_1
+  thuoc_tinh_ba_1: !input thuoc_tinh_ba_1
+  gia_tri_ba_1: !input gia_tri_ba_1
+  thuc_the_ba_2: !input thuc_the_ba_2
+  trang_thai_ba_2: !input trang_thai_ba_2
+  thuoc_tinh_ba_2: !input thuoc_tinh_ba_2
+  gia_tri_ba_2: !input gia_tri_ba_2
+  thuc_the_ba_3: !input thuc_the_ba_3
+  trang_thai_ba_3: !input trang_thai_ba_3
+  thuoc_tinh_ba_3: !input thuoc_tinh_ba_3
+  gia_tri_ba_3: !input gia_tri_ba_3
+  thuc_the_ba_4: !input thuc_the_ba_4
+  trang_thai_ba_4: !input trang_thai_ba_4
+  thuoc_tinh_ba_4: !input thuoc_tinh_ba_4
+  gia_tri_ba_4: !input gia_tri_ba_4
+  thuc_the_giu_1: !input thuc_the_giu_1
+  trang_thai_giu_1: !input trang_thai_giu_1
+  thuoc_tinh_giu_1: !input thuoc_tinh_giu_1
+  gia_tri_giu_1: !input gia_tri_giu_1
+  thuc_the_giu_2: !input thuc_the_giu_2
+  trang_thai_giu_2: !input trang_thai_giu_2
+  thuoc_tinh_giu_2: !input thuoc_tinh_giu_2
+  gia_tri_giu_2: !input gia_tri_giu_2
+  thuc_the_giu_3: !input thuc_the_giu_3
+  trang_thai_giu_3: !input trang_thai_giu_3
+  thuoc_tinh_giu_3: !input thuoc_tinh_giu_3
+  gia_tri_giu_3: !input gia_tri_giu_3
+  thuc_the_giu_4: !input thuc_the_giu_4
+  trang_thai_giu_4: !input trang_thai_giu_4
+  thuoc_tinh_giu_4: !input thuoc_tinh_giu_4
+  gia_tri_giu_4: !input gia_tri_giu_4
+  viec_dang_can_don: >-
+    {% set ns = namespace(l=[]) %}
+    {% set e = thuc_the_don_1 %}{% set st = trang_thai_don_1 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_don_1 == '' or (state_attr(e, thuoc_tinh_don_1) | string) == (gia_tri_don_1 | string)) %}{% set ns.l = ns.l + [{'i': 1, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_don_2 %}{% set st = trang_thai_don_2 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_don_2 == '' or (state_attr(e, thuoc_tinh_don_2) | string) == (gia_tri_don_2 | string)) %}{% set ns.l = ns.l + [{'i': 2, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_don_3 %}{% set st = trang_thai_don_3 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_don_3 == '' or (state_attr(e, thuoc_tinh_don_3) | string) == (gia_tri_don_3 | string)) %}{% set ns.l = ns.l + [{'i': 3, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_don_4 %}{% set st = trang_thai_don_4 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_don_4 == '' or (state_attr(e, thuoc_tinh_don_4) | string) == (gia_tri_don_4 | string)) %}{% set ns.l = ns.l + [{'i': 4, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {{ ns.l }}
+  chon_don: >-
+    {% set ns = namespace(i=0, t=0) %}{% for v in viec_dang_can_don %}{% if v.t > ns.t %}{% set ns.i = v.i %}{% set ns.t = v.t %}{% endif %}{% endfor %}{{ ns.i }}
+  viec_dang_can_doi: >-
+    {% set ns = namespace(l=[]) %}
+    {% set e = thuc_the_doi_1 %}{% set st = trang_thai_doi_1 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_doi_1 == '' or (state_attr(e, thuoc_tinh_doi_1) | string) == (gia_tri_doi_1 | string)) %}{% set ns.l = ns.l + [{'i': 1, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_doi_2 %}{% set st = trang_thai_doi_2 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_doi_2 == '' or (state_attr(e, thuoc_tinh_doi_2) | string) == (gia_tri_doi_2 | string)) %}{% set ns.l = ns.l + [{'i': 2, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_doi_3 %}{% set st = trang_thai_doi_3 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_doi_3 == '' or (state_attr(e, thuoc_tinh_doi_3) | string) == (gia_tri_doi_3 | string)) %}{% set ns.l = ns.l + [{'i': 3, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_doi_4 %}{% set st = trang_thai_doi_4 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_doi_4 == '' or (state_attr(e, thuoc_tinh_doi_4) | string) == (gia_tri_doi_4 | string)) %}{% set ns.l = ns.l + [{'i': 4, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {{ ns.l }}
+  chon_doi: >-
+    {% set ns = namespace(i=0, t=0) %}{% for v in viec_dang_can_doi %}{% if v.t > ns.t %}{% set ns.i = v.i %}{% set ns.t = v.t %}{% endif %}{% endfor %}{{ ns.i }}
+  viec_dang_can_ba: >-
+    {% set ns = namespace(l=[]) %}
+    {% set e = thuc_the_ba_1 %}{% set st = trang_thai_ba_1 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_ba_1 == '' or (state_attr(e, thuoc_tinh_ba_1) | string) == (gia_tri_ba_1 | string)) %}{% set ns.l = ns.l + [{'i': 1, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_ba_2 %}{% set st = trang_thai_ba_2 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_ba_2 == '' or (state_attr(e, thuoc_tinh_ba_2) | string) == (gia_tri_ba_2 | string)) %}{% set ns.l = ns.l + [{'i': 2, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_ba_3 %}{% set st = trang_thai_ba_3 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_ba_3 == '' or (state_attr(e, thuoc_tinh_ba_3) | string) == (gia_tri_ba_3 | string)) %}{% set ns.l = ns.l + [{'i': 3, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_ba_4 %}{% set st = trang_thai_ba_4 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_ba_4 == '' or (state_attr(e, thuoc_tinh_ba_4) | string) == (gia_tri_ba_4 | string)) %}{% set ns.l = ns.l + [{'i': 4, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {{ ns.l }}
+  chon_ba: >-
+    {% set ns = namespace(i=0, t=0) %}{% for v in viec_dang_can_ba %}{% if v.t > ns.t %}{% set ns.i = v.i %}{% set ns.t = v.t %}{% endif %}{% endfor %}{{ ns.i }}
+  viec_dang_can_giu: >-
+    {% set ns = namespace(l=[]) %}
+    {% set e = thuc_the_giu_1 %}{% set st = trang_thai_giu_1 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_giu_1 == '' or (state_attr(e, thuoc_tinh_giu_1) | string) == (gia_tri_giu_1 | string)) %}{% set ns.l = ns.l + [{'i': 1, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_giu_2 %}{% set st = trang_thai_giu_2 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_giu_2 == '' or (state_attr(e, thuoc_tinh_giu_2) | string) == (gia_tri_giu_2 | string)) %}{% set ns.l = ns.l + [{'i': 2, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_giu_3 %}{% set st = trang_thai_giu_3 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_giu_3 == '' or (state_attr(e, thuoc_tinh_giu_3) | string) == (gia_tri_giu_3 | string)) %}{% set ns.l = ns.l + [{'i': 3, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {% set e = thuc_the_giu_4 %}{% set st = trang_thai_giu_4 %}{% if e != '' and st | count > 0 and states(e) in st and (thuoc_tinh_giu_4 == '' or (state_attr(e, thuoc_tinh_giu_4) | string) == (gia_tri_giu_4 | string)) %}{% set ns.l = ns.l + [{'i': 4, 't': states[e].last_changed.timestamp()}] %}{% endif %}
+    {{ ns.l }}
+  chon_giu: >-
+    {% set ns = namespace(i=0, t=0) %}{% for v in viec_dang_can_giu %}{% if v.t > ns.t %}{% set ns.i = v.i %}{% set ns.t = v.t %}{% endif %}{% endfor %}{{ ns.i }}
+
+triggers:
+  - trigger: event
+    event_type: r1_speaker_phim
+    event_data:
+      device_id: !input thiet_bi
+
+actions:
+  - choose:
+      - alias: Nhấn đơn
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'don' }}"
+        sequence:
+          - choose:
+              - alias: Việc 1
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_don | int == 1 }}"
+                sequence: !input hanh_dong_don_1
+              - alias: Việc 2
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_don | int == 2 }}"
+                sequence: !input hanh_dong_don_2
+              - alias: Việc 3
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_don | int == 3 }}"
+                sequence: !input hanh_dong_don_3
+              - alias: Việc 4
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_don | int == 4 }}"
+                sequence: !input hanh_dong_don_4
+            default: !input mac_dinh_don
+      - alias: Nhấn đúp
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'doi' }}"
+        sequence:
+          - choose:
+              - alias: Việc 1
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_doi | int == 1 }}"
+                sequence: !input hanh_dong_doi_1
+              - alias: Việc 2
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_doi | int == 2 }}"
+                sequence: !input hanh_dong_doi_2
+              - alias: Việc 3
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_doi | int == 3 }}"
+                sequence: !input hanh_dong_doi_3
+              - alias: Việc 4
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_doi | int == 4 }}"
+                sequence: !input hanh_dong_doi_4
+            default: !input mac_dinh_doi
+      - alias: Nhấn ba lần
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'ba' }}"
+        sequence:
+          - choose:
+              - alias: Việc 1
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_ba | int == 1 }}"
+                sequence: !input hanh_dong_ba_1
+              - alias: Việc 2
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_ba | int == 2 }}"
+                sequence: !input hanh_dong_ba_2
+              - alias: Việc 3
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_ba | int == 3 }}"
+                sequence: !input hanh_dong_ba_3
+              - alias: Việc 4
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_ba | int == 4 }}"
+                sequence: !input hanh_dong_ba_4
+            default: !input mac_dinh_ba
+      - alias: Nhấn giữ
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'giu' }}"
+        sequence:
+          - choose:
+              - alias: Việc 1
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_giu | int == 1 }}"
+                sequence: !input hanh_dong_giu_1
+              - alias: Việc 2
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_giu | int == 2 }}"
+                sequence: !input hanh_dong_giu_2
+              - alias: Việc 3
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_giu | int == 3 }}"
+                sequence: !input hanh_dong_giu_3
+              - alias: Việc 4
+                conditions:
+                  - condition: template
+                    value_template: "{{ chon_giu | int == 4 }}"
+                sequence: !input hanh_dong_giu_4
+            default: !input mac_dinh_giu

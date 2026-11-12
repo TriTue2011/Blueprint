@@ -29,10 +29,12 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [🔗 Zalo Calling trong các blueprint cũ](#-zalo-calling-trong-các-blueprint-cũ)
   - [🎤 Voice gửi Zalo Calling (nhiều người và nhóm)](#-voice-gửi-zalo-calling-nhiều-người-và-nhóm)
   - [🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất)](#-một-nút-nhiều-việc-ưu-tiên-yêu-cầu-gần-nhất)
+  - [🎮 Loa R1 nút giữa mọi cử chỉ trong một automation](#-loa-r1-nút-giữa-mọi-cử-chỉ-trong-một-automation)
   - [📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt](#-zalo-call-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
   - [🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi](#-zalo-call-một-nút-bấm-nghe-máy-cúp-máy-hoặc-gọi-đi)
   - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
   - [💬 Zalo Call Messenger tuỳ biến](#-zalo-call-messenger-tuỳ-biến)
+  - [💬 Zalo Call nhắn tin hai chiều với trợ lý](#-zalo-call-nhắn-tin-hai-chiều-với-trợ-lý)
   - [⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch](#-zalo-call-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
   - [📱 Zalo Call gọi đi tuỳ biến](#-zalo-call-gọi-đi-tuỳ-biến)
   - [🔔 Zalo Call nút cho cuộc gọi đến](#-zalo-call-nút-cho-cuộc-gọi-đến)
@@ -730,6 +732,16 @@ Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (th
 **Cần:** một nút có trigger (nút giữa R1, nút Zigbee...).
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmot_nut_nhieu_viec.yaml)
+
+---
+
+## 🎮 Loa R1 nút giữa mọi cử chỉ trong một automation
+
+**Một automation cho cả nút giữa loa R1**: chọn loa, rồi với **từng cử chỉ** (nhấn đơn, đúp, ba lần, giữ) khai tối đa 4 «việc» (thực thể + trạng thái cần xử lý + hành động) và một hành động mặc định. Nhấn thì làm việc có **yêu cầu gần nhất**, không việc nào thì làm hành động mặc định (ví dụ: nhấn đơn = tắt báo thức / nghe máy / cúp máy / gọi đi tuỳ lúc). Không phải tạo nhiều automation cho một nút.
+
+**Cần:** tích hợp Phicomm R1 (nút giữa). Nên đặt hành động tích hợp của cử chỉ đó là «Không làm gì (chỉ phát sự kiện)», nếu không hai bên cùng chạy.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fr1_nut_giua_nhieu_cu_chi.yaml)
 
 ---
 
@@ -1438,6 +1450,8 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 53 | Zalo Call nút cho cuộc gọi đến | Automation | 2026.3.0 | Zalo Call nút cho cuộc gọi đến |
 | 54 | Zalo Call người gọi xin chuyển sang video | Automation | 2026.3.0 | Zalo Call người gọi xin chuyển sang video |
 | 55 | Một nút nhiều việc | Automation | 2026.3.0 | Việc có yêu cầu gần nhất |
+| 56 | Zalo Call nhắn tin hai chiều với trợ lý | Automation | 2026.3.0 | Trợ lý trả lời tin Zalo |
+| 57 | Loa R1 nút giữa mọi cử chỉ trong một automation | Automation | 2026.3.0 | Nhiều việc cho mỗi cử chỉ |
 
 ---
 
