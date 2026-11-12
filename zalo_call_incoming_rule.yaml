@@ -58,40 +58,9 @@ blueprint:
     thiet_bi:
       name: ② Thiết bị trong nhà (loa, mic, camera, chế độ mic/loa)
       icon: mdi:video-wireless-outline
-      description: Tích ô nào thì dùng thứ đó (tích 1 = dùng 1, tích 2 = dùng 2, tích 3 = dùng cả 3). Không tích gì = không dùng thiết bị nào. Tích Camera = cuộc gọi video.
-      collapsed: true
+      description: Chọn loa, mic, camera trong nhà, rồi tích bên dưới thứ nào dùng khi người nhà nói trực tiếp và thứ nào dùng ngay khi nghe máy. Không tích gì = không dùng thiết bị nào. Tích Camera = cuộc gọi video.
+      collapsed: false
       input:
-        noi_khi_chuyen:
-          name: Dùng khi người nhà nói trực tiếp
-          selector:
-            select:
-              multiple: true
-              mode: list
-              options:
-                - label: Mic - gửi tiếng trong nhà cho người gọi
-                  value: mic
-                - label: Loa - phát tiếng người gọi ra loa trong nhà
-                  value: speaker
-                - label: Camera - gửi hình trong nhà (cuộc gọi video)
-                  value: camera
-                - label: AI tự chọn trong các ô đã tích
-                  value: ai
-          default: []
-        noi_ngay:
-          name: Dùng NGAY khi nghe máy (không chờ người nhà)
-          description: Ví dụ chỉ tích Camera để người gọi thấy hình trong nhà ngay, còn Mic và Loa chờ tới khi người nhà nói trực tiếp.
-          selector:
-            select:
-              multiple: true
-              mode: list
-              options:
-                - label: Mic
-                  value: mic
-                - label: Loa
-                  value: speaker
-                - label: Camera
-                  value: camera
-          default: []
         loa:
           name: Loa trong nhà (chọn nhiều = dự phòng theo thứ tự)
           selector:
@@ -128,6 +97,37 @@ blueprint:
               step: 1
               unit_of_measurement: "%"
           default: 0
+        noi_khi_chuyen:
+          name: Dùng khi người nhà nói trực tiếp
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic - gửi tiếng trong nhà cho người gọi
+                  value: mic
+                - label: Loa - phát tiếng người gọi ra loa trong nhà
+                  value: speaker
+                - label: Camera - gửi hình trong nhà (cuộc gọi video)
+                  value: camera
+                - label: AI tự chọn trong các ô đã tích
+                  value: ai
+          default: []
+        noi_ngay:
+          name: Dùng NGAY khi nghe máy (không chờ người nhà)
+          description: Ví dụ chỉ tích Camera để người gọi thấy hình trong nhà ngay, còn Mic và Loa chờ tới khi người nhà nói trực tiếp.
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic
+                  value: mic
+                - label: Loa
+                  value: speaker
+                - label: Camera
+                  value: camera
+          default: []
         chong_vong:
           name: Chế độ mic/loa khi nói chuyện (song công chỉ áp dụng cho loa R1)
           selector:
