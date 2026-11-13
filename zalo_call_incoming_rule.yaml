@@ -25,6 +25,8 @@ blueprint:
               options:
                 - label: Một người hoặc một nhóm cụ thể (chọn ở ô bên dưới)
                   value: thread
+                - label: Mọi người mang một thẻ (điền ô «Thẻ» bên dưới; gắn thẻ bằng dịch vụ zalo_call.set_contact_tags)
+                  value: tag
                 - label: Mọi người trong danh bạ (bạn bè)
                   value: contacts
                 - label: Mọi người lạ (không có trong danh bạ)
@@ -49,6 +51,12 @@ blueprint:
             text:
               multiple: true
           default: []
+        the_tag:
+          name: "Thẻ (chỉ khi «Áp dụng cho» = Mọi người mang một thẻ)"
+          description: "Tên thẻ đã gắn cho người trong danh bạ, ví dụ gia đình. Không phân biệt hoa thường."
+          selector:
+            text:
+          default: ""
         ten_goi:
           name: Tên gọi (để bạn nhớ)
           description: Cũng là tên đọc ra loa khi báo có cuộc gọi. Bỏ trống thì dùng tên Zalo của người gọi.
@@ -318,6 +326,7 @@ variables:
   nguoi_cu_the: !input nguoi_cu_the
   them_theo_ma: !input them_theo_ma
   ten_goi: !input ten_goi
+  the_tag: !input the_tag
   tu_nghe_may: !input tu_nghe_may
   nghe_sau: !input nghe_sau
   loai_cuoc_goi: !input loai_cuoc_goi
@@ -405,6 +414,7 @@ actions:
                   data: >-
                     {% set d = {'scope': pham_vi} %}
                     {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                    {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
                     {{ d }}
           default:
             - alias: Xoá quy tắc cũ của mục tiêu (đặt lại từ đầu, không giữ trường cũ nào)
@@ -412,6 +422,7 @@ actions:
               data: >-
                 {% set d = {'scope': pham_vi} %}
                 {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
                 {{ d }}
             - action: zalo_call.set_rule
               data: >-
@@ -421,6 +432,7 @@ actions:
                             'connect': noi_khi_chuyen, 'connect_now': noi_ngay,
                             'echo_guard': chong_vong, 'video_request': xu_ly_xin_video, 'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0)} %}
                 {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
                 {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
                 {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
                 {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
@@ -445,7 +457,7 @@ actions:
       notification_id: "zalo_call_quy_tac_{{ this.entity_id }}"
       title: "Zalo Call: {{ 'ĐÃ ĐẶT' if bat_quy_tac else 'ĐÃ XOÁ' }} quy tắc cuộc gọi đến"
       message: |-
-        {% set ten = {'thread': 'người/nhóm: ' ~ (ds_thread.ids | join(', ')), 'contacts': 'MỌI NGƯỜI trong danh bạ', 'strangers': 'mọi người lạ', 'groups': 'mọi nhóm'}[pham_vi] %}
+        {% set ten = {'thread': 'người/nhóm: ' ~ (ds_thread.ids | join(', ')), 'contacts': 'MỌI NGƯỜI trong danh bạ', 'strangers': 'mọi người lạ', 'groups': 'mọi nhóm', 'tag': 'mọi người mang thẻ: ' ~ (the_tag | trim)}[pham_vi] %}
         Áp dụng cho: {{ ten }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
         {% if bat_quy_tac %}
         Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}
