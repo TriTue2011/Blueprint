@@ -2471,14 +2471,11 @@ actions:
                   data: >-
                     {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (zalo_custom_initial_caption) | trim} }}
-            - repeat:
-                for_each: "{{ (duong_dan_anh if som_nhieu_anh else [duong_dan_anh[0]]) }}"
-                sequence:
-                  - continue_on_error: true
-                    action: zalo_call.send_image
-                    data: >-
-                      {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
-                          'file': repeat.item} }}
+            - continue_on_error: true
+              action: "{{ 'zalo_call.send_images_to_group' if zc_to.type == 'group' else 'zalo_call.send_images_to_user' }}"
+              data: >-
+                {{ {'thread_id': zc_to.thread_id,
+                    'files': ((duong_dan_anh if som_nhieu_anh else [duong_dan_anh[0]]) | join(','))} }}
 
   # --- Zalo cá nhân: video ---
   # Hai đường, chọn theo ô "Địa chỉ Home Assistant nhìn từ Internet" ở mục 10.
@@ -3550,14 +3547,11 @@ actions:
                   data: >-
                     {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (pb_zl.anh if pb_zl.anh | length > 0 else zalo_custom_initial_caption) | trim} }}
-            - repeat:
-                for_each: "{{ (anh_comma.split(',') if muon_nhieu_anh else [anh_chon]) }}"
-                sequence:
-                  - continue_on_error: true
-                    action: zalo_call.send_image
-                    data: >-
-                      {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
-                          'file': repeat.item} }}
+            - continue_on_error: true
+              action: "{{ 'zalo_call.send_images_to_group' if zc_to.type == 'group' else 'zalo_call.send_images_to_user' }}"
+              data: >-
+                {{ {'thread_id': zc_to.thread_id,
+                    'files': (anh_comma if muon_nhieu_anh else anh_chon)} }}
 
   # --- Zalo cá nhân: video muộn (cũng đi bằng send_file, xem lý do ở trên) ---
   - choose:
