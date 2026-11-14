@@ -725,6 +725,24 @@ Người gọi xin chuyển từ thoại sang video: **hỏi trên điện tho�
 
 ---
 
+## 🔊 Zalo Call cài đặt âm thanh và chống vọng mặc định
+
+Đặt bằng automation **độ to phần mềm của mic và loa** (%, 100 % = 0 dB, 200 % = +6 dB, 50 % = −6 dB; độc lập với cài đặt của loa R1) và các tham số **chống vọng trễ** (cửa sổ trễ loa→mic, ngưỡng), chế độ chống vọng, âm lượng loa lúc nghe máy, tự phát mic. Áp dụng khi Home Assistant khởi động hoặc khi nhấn một nút. Giá trị nằm trong app Zalo Call nên **khớp với trang Cài đặt → Cuộc gọi của WebUI** và với năm thực thể `number` trên thiết bị Zalo Call. Ô để «Không đổi» thì không gửi gì.
+
+**Cần:** Zalo Call từ bản 2026.11.14.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_cai_dat_am_thanh.yaml)
+
+---
+
+## 🧩 Tham số của dịch vụ Zalo Calling trong các mẫu
+
+Các blueprint có nhánh **Zalo Calling** (camera 1–4, LLM Vision, lịch và thời tiết, tạo ảnh thời tiết, cập nhật Pyscript, cập nhật blueprint) có thêm các ô chọn từ danh sách, cùng nhóm với ô chọn người nhận: **tự xóa tin**, **tự thu hồi**, **định dạng, màu chữ, cỡ chữ, đậm, nghiêng, gạch chân, tiêu đề, emoji, nhờ AI chọn định dạng**; với video: **chú thích nằm trong video** (một tin duy nhất) và **ảnh bìa** (mặc định là khung hình đầu của chính video). Mọi ô mặc định «Theo mặc định trên thiết bị» nên automation cũ chạy như trước. Ô «thêm người / nhóm theo mã» nay nằm cùng nhóm Zalo Calling.
+
+Các mẫu có gọi điện (gọi đi, cảnh báo, nút bấm, nghe máy, nhắc hẹn, messenger) có thêm ô **độ to mic / loa (%)**, **engine TTS** (chọn từ danh sách thực thể tts) và **ngôn ngữ đọc**.
+
+---
+
 ## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất)
 
 Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (thực thể + trạng thái cần xử lý + hành động), khi nhấn nút chọn việc có **yêu cầu gần nhất** (ví dụ báo thức kêu, rồi có cuộc gọi đến thì nhấn = nghe máy; hết cuộc gọi mà báo thức còn kêu thì nhấn = tắt báo thức). Không việc nào cần thì chạy hành động mặc định (ví dụ gọi đi). Hợp với nút giữa loa R1 (từ bản 0.17.0 loa không còn hành động gắn sẵn).

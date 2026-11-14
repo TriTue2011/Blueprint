@@ -396,6 +396,283 @@ blueprint:
           selector:
             text:
               multiple: true
+
+        # ---- Tham số của dịch vụ gửi tin Zalo Calling (sinh bởi bp_zalo_params.py; «Theo mặc định» = không gửi trường đó) ----
+        zalo_calling_ttl:
+          name: ⏳ Tự xóa tin sau (ms)
+          description: >-
+            0 = không tự xóa. Zalo chỉ nhận một số mức cố định (1, 7, 14, 30 ngày); mức khác app sẽ báo lỗi.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 2592000000
+              step: 1000
+              mode: box
+              unit_of_measurement: "ms"
+        zalo_calling_recall_after:
+          name: ↩️ Tự thu hồi sau (giây)
+          description: >-
+            0 = không thu hồi. Tin biến mất ở cả hai bên đúng giờ; hẹn giờ nằm trong app nên vẫn chạy khi HA khởi động lại. Tối đa 86400 giây.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 86400
+              step: 1
+              mode: box
+              unit_of_measurement: "s"
+        zalo_calling_format:
+          name: 🔤 Định dạng chữ
+          description: >-
+            plain = chữ thường · markdown = **đậm**, __gạch chân__… Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "plain"
+                  value: "plain"
+                - label: "markdown"
+                  value: "markdown"
+        zalo_calling_text_color:
+          name: 🎨 Màu chữ
+          description: >-
+            auto = tô màu các con số; hoặc chọn một màu cho cả tin. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "off"
+                  value: "off"
+                - label: "auto"
+                  value: "auto"
+                - label: "red"
+                  value: "red"
+                - label: "orange"
+                  value: "orange"
+                - label: "yellow"
+                  value: "yellow"
+                - label: "green"
+                  value: "green"
+        zalo_calling_font_size:
+          name: 🔠 Cỡ chữ
+          description: >-
+            auto = tiêu đề to, dòng trong ngoặc nhỏ. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "off"
+                  value: "off"
+                - label: "small"
+                  value: "small"
+                - label: "big"
+                  value: "big"
+                - label: "auto"
+                  value: "auto"
+        zalo_calling_bold:
+          name: 🅱️ In đậm
+          description: >-
+            auto = in đậm các con số. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "off"
+                  value: "off"
+                - label: "on"
+                  value: "on"
+                - label: "auto"
+                  value: "auto"
+        zalo_calling_italic:
+          name: 𝑰 In nghiêng
+          description: >-
+            auto = nghiêng đoạn trong dấu "…" hoặc (…). Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "off"
+                  value: "off"
+                - label: "on"
+                  value: "on"
+                - label: "auto"
+                  value: "auto"
+        zalo_calling_underline:
+          name: U̲ Gạch chân
+          description: >-
+            auto = gạch chân liên kết, email. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "off"
+                  value: "off"
+                - label: "on"
+                  value: "on"
+                - label: "auto"
+                  value: "auto"
+        zalo_calling_heading:
+          name: 📰 Tiêu đề
+          description: >-
+            on = dòng đầu thành tiêu đề; auto = tự nhận dòng đầu ngắn. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "off"
+                  value: "off"
+                - label: "on"
+                  value: "on"
+                - label: "auto"
+                  value: "auto"
+        zalo_calling_auto_emoji:
+          name: 😀 Tự thêm emoji
+          description: >-
+            true = tự chọn emoji theo nội dung; false = không. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "true"
+                  value: "true"
+                - label: "false"
+                  value: "false"
+        zalo_calling_ai_style:
+          name: 🧠 Nhờ AI chọn định dạng
+          description: >-
+            true = nhờ trợ lý AI đánh giá các mục «auto» (thêm vài giây); false = quy tắc tức thì. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "true"
+                  value: "true"
+                - label: "false"
+                  value: "false"
+        zalo_calling_emoji:
+          name: 🎯 Emoji đầu tin
+          description: >-
+            Tên emoji gắn vào đầu tin chữ (alert = 🚨, door = 🚪…); gõ thêm tên riêng được. Chọn «Theo mặc định» để không gửi trường này.
+          default: default
+          selector:
+            select:
+              mode: dropdown
+              custom_value: true
+              options:
+                - label: "Theo mặc định trên thiết bị"
+                  value: "default"
+                - label: "ok"
+                  value: "ok"
+                - label: "x"
+                  value: "x"
+                - label: "warn"
+                  value: "warn"
+                - label: "alert"
+                  value: "alert"
+                - label: "info"
+                  value: "info"
+                - label: "hoi"
+                  value: "hoi"
+                - label: "idea"
+                  value: "idea"
+                - label: "fire"
+                  value: "fire"
+                - label: "water"
+                  value: "water"
+                - label: "temp"
+                  value: "temp"
+                - label: "sun"
+                  value: "sun"
+                - label: "rain"
+                  value: "rain"
+                - label: "moon"
+                  value: "moon"
+                - label: "door"
+                  value: "door"
+                - label: "lock"
+                  value: "lock"
+                - label: "unlock"
+                  value: "unlock"
+                - label: "bell"
+                  value: "bell"
+                - label: "home"
+                  value: "home"
+                - label: "car"
+                  value: "car"
+                - label: "wifi"
+                  value: "wifi"
+                - label: "battery"
+                  value: "battery"
+                - label: "power"
+                  value: "power"
+                - label: "tv"
+                  value: "tv"
+                - label: "music"
+                  value: "music"
+                - label: "camera"
+                  value: "camera"
+                - label: "video"
+                  value: "video"
+                - label: "phone"
+                  value: "phone"
+                - label: "time"
+                  value: "time"
+                - label: "calendar"
+                  value: "calendar"
+                - label: "heart"
+                  value: "heart"
+                - label: "like"
+                  value: "like"
+                - label: "clap"
+                  value: "clap"
+                - label: "party"
+                  value: "party"
+                - label: "star"
+                  value: "star"
+                - label: "money"
+                  value: "money"
+        zalo_calling_video_caption_inside:
+          name: 🎬 Chú thích nằm TRONG video
+          description: >-
+            Bật: chữ chú thích đi cùng video (một tin duy nhất). Tắt: gửi một tin chữ riêng rồi mới tới video.
+          default: true
+          selector:
+            boolean: {}
+        zalo_calling_video_thumbnail:
+          name: 🖼️ Ảnh bìa video (tùy chọn)
+          description: >-
+            Đường dẫn JPEG trong HA (thư mục được phép) hoặc URL. Để trống = khung hình đầu của chính video.
+          default: ""
+          selector:
+            text: {}
     tts_section:
       name: 🔊 TTS Speaker Settings
       icon: mdi:speaker
@@ -521,6 +798,46 @@ variables:
   zalo_calling_recipients: !input zalo_calling_recipients
   zalo_calling_ma_nguoi: !input zalo_calling_ma_nguoi
   zalo_calling_ma_nhom: !input zalo_calling_ma_nhom
+  zalo_calling_ttl: !input zalo_calling_ttl
+  zalo_calling_recall_after: !input zalo_calling_recall_after
+  zalo_calling_format: !input zalo_calling_format
+  zalo_calling_text_color: !input zalo_calling_text_color
+  zalo_calling_font_size: !input zalo_calling_font_size
+  zalo_calling_bold: !input zalo_calling_bold
+  zalo_calling_italic: !input zalo_calling_italic
+  zalo_calling_underline: !input zalo_calling_underline
+  zalo_calling_heading: !input zalo_calling_heading
+  zalo_calling_auto_emoji: !input zalo_calling_auto_emoji
+  zalo_calling_ai_style: !input zalo_calling_ai_style
+  zalo_calling_emoji: !input zalo_calling_emoji
+  zalo_calling_video_caption_inside: !input zalo_calling_video_caption_inside
+  zalo_calling_video_thumbnail: !input zalo_calling_video_thumbnail
+  zc_opt_msg: >-
+    {% set o = {} %}
+    {% if zalo_calling_ttl | int(0) > 0 %}{% set o = dict(o, ttl=zalo_calling_ttl | int) %}{% endif %}
+    {% if zalo_calling_recall_after | int(0) > 0 %}{% set o = dict(o, recall_after=zalo_calling_recall_after | int) %}{% endif %}
+    {% if zalo_calling_format | string not in ['default', ''] %}{% set o = dict(o, format=zalo_calling_format) %}{% endif %}
+    {% if zalo_calling_text_color | string not in ['default', ''] %}{% set o = dict(o, text_color=zalo_calling_text_color) %}{% endif %}
+    {% if zalo_calling_font_size | string not in ['default', ''] %}{% set o = dict(o, font_size=zalo_calling_font_size) %}{% endif %}
+    {% if zalo_calling_bold | string not in ['default', ''] %}{% set o = dict(o, bold=zalo_calling_bold) %}{% endif %}
+    {% if zalo_calling_italic | string not in ['default', ''] %}{% set o = dict(o, italic=zalo_calling_italic) %}{% endif %}
+    {% if zalo_calling_underline | string not in ['default', ''] %}{% set o = dict(o, underline=zalo_calling_underline) %}{% endif %}
+    {% if zalo_calling_heading | string not in ['default', ''] %}{% set o = dict(o, heading=zalo_calling_heading) %}{% endif %}
+    {% if zalo_calling_auto_emoji | string not in ['default', ''] %}{% set o = dict(o, auto_emoji=(zalo_calling_auto_emoji == 'true')) %}{% endif %}
+    {% if zalo_calling_ai_style | string not in ['default', ''] %}{% set o = dict(o, ai_style=(zalo_calling_ai_style == 'true')) %}{% endif %}
+    {% if zalo_calling_emoji | string not in ['default', ''] %}{% set o = dict(o, emoji=zalo_calling_emoji | string) %}{% endif %}
+    {{ o }}
+  zc_opt_media: >-
+    {% set o = {} %}
+    {% if zalo_calling_ttl | int(0) > 0 %}{% set o = dict(o, ttl=zalo_calling_ttl | int) %}{% endif %}
+    {% if zalo_calling_recall_after | int(0) > 0 %}{% set o = dict(o, recall_after=zalo_calling_recall_after | int) %}{% endif %}
+    {{ o }}
+  zc_opt_video: >-
+    {% set o = {} %}
+    {% if zalo_calling_ttl | int(0) > 0 %}{% set o = dict(o, ttl=zalo_calling_ttl | int) %}{% endif %}
+    {% if zalo_calling_recall_after | int(0) > 0 %}{% set o = dict(o, recall_after=zalo_calling_recall_after | int) %}{% endif %}
+    {% if zalo_calling_video_thumbnail | string | trim != '' %}{% set o = dict(o, thumbnail=zalo_calling_video_thumbnail | string | trim) %}{% endif %}
+    {{ o }}
   zalo_calling_ds: >-
     {% set ns = namespace(l=[], ids=[]) %}
     {% for e in zalo_calling_recipients %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
@@ -954,7 +1271,7 @@ actions:
                               action: zalo_call.send_message
                               data: >-
                                 {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
-                                    'message': zalo_calling_msg | trim} }}
+                                    'message': zalo_calling_msg | trim} | combine(zc_opt_msg) }}
 
                 # ── TTS CÓ LỊCH ÂM (Chỗ 2) ───────────────────────────────
                 - choose:
@@ -1363,7 +1680,7 @@ actions:
                         action: zalo_call.send_message
                         data: >-
                           {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
-                              'message': zalo_calling_msg | trim} }}
+                              'message': zalo_calling_msg | trim} | combine(zc_opt_msg) }}
 
           # ── TTS CHỈ THỜI TIẾT (Chỗ 4) ─────────────────────────────────
           - choose:

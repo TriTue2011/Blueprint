@@ -1,0 +1,202 @@
+blueprint:
+  name: Zalo Call - Cài đặt âm thanh và chống vọng mặc định
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_cai_dat_am_thanh.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: |
+    Đặt các cài đặt ÂM THANH mặc định của Zalo Call bằng automation: độ to phần mềm của mic và loa (độc lập với cài đặt của loa R1) và các tham số chống vọng.
+    Các giá trị này nằm trong app Zalo Call (cùng nơi trang **Cài đặt → Cuộc gọi** của WebUI), nên đổi ở đây hay ở WebUI đều khớp nhau. Quy tắc cuộc gọi, make_call/answer_call
+    và nút −/+ trong cuộc gọi vẫn ghi đè khi cần. Ô để «Không đổi» thì không gửi gì.
+
+    100 % = 0 dB (giữ nguyên) · 200 % = +6 dB · 50 % = −6 dB.
+
+    **Phiên bản: v.2026.11.14**
+  input:
+    khi_nao:
+      name: ① Khi nào áp dụng
+      icon: mdi:clock-outline
+      input:
+        luc_khoi_dong:
+          name: Áp dụng khi Home Assistant khởi động
+          default: true
+          selector:
+            boolean: {}
+        nut_bam:
+          name: Hoặc khi nhấn nút này (tuỳ chọn)
+          description: Thực thể button / input_button; để trống nếu chỉ dùng lúc khởi động.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              domain:
+                - button
+                - input_button
+    am_luong:
+      name: ② Độ to phần mềm
+      icon: mdi:volume-plus
+      input:
+        do_to_mic:
+          name: 🎙️ Độ to mic gửi sang bên kia (%)
+          description: 0 = giữ nguyên. Dùng khi loa R1 thu nhỏ, hoặc mic camera quá to.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              mode: slider
+              unit_of_measurement: "%"
+        do_to_loa:
+          name: 🔊 Độ to tiếng bên kia ra loa (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              mode: slider
+              unit_of_measurement: "%"
+        dat_lai_do_to:
+          name: Trở về 100 % (xoá cả hai độ to mặc định)
+          description: Bật thì gửi mic = 0 và loa = 0 (giữ nguyên), bỏ qua hai ô trên.
+          default: false
+          selector:
+            boolean: {}
+    chong_vong:
+      name: ③ Chống vọng
+      icon: mdi:ear-hearing-off
+      input:
+        che_do:
+          name: Chế độ chống vọng
+          description: auto = chỉ chặn mic khi mic và loa là cùng một thiết bị; duplex = song công (loa R1 tự khử vọng, nói chen được); on = luôn chặn mic khi loa đang phát; off = tắt.
+          default: khong_doi
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Không đổi
+                  value: khong_doi
+                - label: Tự chọn (auto)
+                  value: auto
+                - label: Luôn chặn (on)
+                  value: "on"
+                - label: Song công (duplex)
+                  value: duplex
+                - label: Tắt (off)
+                  value: "off"
+        tre_thap:
+          name: Trễ loa → mic thấp nhất (ms)
+          description: Cửa sổ trễ để nhận ra VỌNG TRỄ (loa R1 song công đo được 450–550 ms). 0 ở cả hai ô = tắt bù trễ. Cả hai ô bằng 0 và «Dùng mặc định» tắt = không đổi khi để nguyên ô.
+          default: -1
+          selector:
+            number:
+              min: -1
+              max: 3000
+              step: 10
+              mode: box
+              unit_of_measurement: ms
+        tre_cao:
+          name: Trễ loa → mic cao nhất (ms)
+          description: Đặt -1 ở cả hai ô trễ = không đổi. Phải lớn hơn ô thấp nhất.
+          default: -1
+          selector:
+            number:
+              min: -1
+              max: 3000
+              step: 10
+              mode: box
+              unit_of_measurement: ms
+        nguong:
+          name: Ngưỡng vọng (×)
+          description: Mic bị coi là vọng khi to < ngưỡng × đỉnh tiếng loa trong cửa sổ trễ. Mặc định 2,0; tăng nếu vẫn lọt vọng, giảm nếu người nhà nói chen bị cắt. 0 = không đổi.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 10
+              step: 0.1
+              mode: box
+        dung_mac_dinh:
+          name: Trở về mặc định của máy chủ (xoá ba giá trị chống vọng trễ)
+          default: false
+          selector:
+            boolean: {}
+    khac:
+      name: ④ Khác
+      icon: mdi:cog-outline
+      input:
+        am_luong_loa:
+          name: Âm lượng loa lúc nghe máy (%)
+          description: Âm lượng loa HA đặt khi nghe máy rồi trả lại khi cuộc gọi kết thúc. 0 = giữ nguyên âm lượng loa.
+          default: -1
+          selector:
+            number:
+              min: -1
+              max: 100
+              step: 1
+              mode: box
+              unit_of_measurement: "%"
+        tu_phat_mic:
+          name: Tự phát mic khi nghe máy
+          default: khong_doi
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Không đổi
+                  value: khong_doi
+                - label: Bật
+                  value: "true"
+                - label: Tắt
+                  value: "false"
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  luc_khoi_dong: !input luc_khoi_dong
+  do_to_mic: !input do_to_mic
+  do_to_loa: !input do_to_loa
+  dat_lai_do_to: !input dat_lai_do_to
+  che_do: !input che_do
+  tre_thap: !input tre_thap
+  tre_cao: !input tre_cao
+  nguong: !input nguong
+  dung_mac_dinh: !input dung_mac_dinh
+  am_luong_loa: !input am_luong_loa
+  tu_phat_mic: !input tu_phat_mic
+  du_lieu: >-
+    {% set d = {} %}
+    {% if dat_lai_do_to %}{% set d = dict(d, mic_gain=0, speaker_gain=0) %}
+    {% else %}
+      {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
+      {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
+    {% endif %}
+    {% if che_do != 'khong_doi' %}{% set d = dict(d, echo_guard=che_do) %}{% endif %}
+    {% if dung_mac_dinh %}{% set d = dict(d, echo_use_default=true) %}
+    {% elif tre_thap | int(-1) >= 0 and tre_cao | int(-1) >= 0 %}{% set d = dict(d, echo_delay_min_ms=tre_thap | int, echo_delay_max_ms=tre_cao | int) %}{% endif %}
+    {% if nguong | float(0) > 0 %}{% set d = dict(d, echo_ratio=nguong | float) %}{% endif %}
+    {% if am_luong_loa | int(-1) >= 0 %}{% set d = dict(d, call_volume=am_luong_loa | int) %}{% endif %}
+    {% if tu_phat_mic != 'khong_doi' %}{% set d = dict(d, auto_mic=(tu_phat_mic == 'true')) %}{% endif %}
+    {{ d }}
+
+triggers:
+  - trigger: homeassistant
+    event: start
+    id: khoi_dong
+  - trigger: state
+    entity_id: !input nut_bam
+    id: nut_bam
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ (trigger.id == 'khoi_dong' and luc_khoi_dong) or trigger.id == 'nut_bam' }}
+  - condition: template
+    value_template: "{{ du_lieu | count > 0 }}"
+
+actions:
+  - action: zalo_call.set_default_devices
+    data: "{{ du_lieu }}"

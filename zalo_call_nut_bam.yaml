@@ -165,10 +165,64 @@ blueprint:
                 - domain: camera
           default: []
 
+        do_to_mic:
+          name: 🎙️ Độ to mic gửi sang bên kia (phần mềm, %)
+          description: >-
+            Độ to PHẦN MỀM của tiếng mic gửi đi, độc lập với cài đặt của loa R1. 100 % = 0 dB (giữ nguyên), 200 % = +6 dB, 50 % = −6 dB.
+            0 = theo mặc định đặt trong Zalo Call (WebUI hoặc dịch vụ set_default_devices).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              mode: slider
+              unit_of_measurement: "%"
+        do_to_loa:
+          name: 🔊 Độ to tiếng bên kia ra loa (phần mềm, %)
+          description: >-
+            Độ to PHẦN MỀM của tiếng bên kia phát ra loa. 100 % = 0 dB, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              mode: slider
+              unit_of_measurement: "%"
+        giong_tts:
+          name: 🗣️ Engine đọc (TTS)
+          description: >-
+            Chọn thực thể tts để đọc lời lên cuộc gọi. Để trống = theo trợ lý giọng nói / TTS mặc định của Zalo Call.
+          default: ""
+          selector:
+            entity:
+              domain: tts
+        ngon_ngu_doc:
+          name: 🌐 Ngôn ngữ đọc
+          description: >-
+            Mã ngôn ngữ cho TTS, ví dụ vi, en. Để trống = mặc định của engine.
+          default: ""
+          selector:
+            text: {}
 mode: single
 max_exceeded: silent
 
 variables:
+  do_to_mic: !input do_to_mic
+  do_to_loa: !input do_to_loa
+  giong_tts: !input giong_tts
+  ngon_ngu_doc: !input ngon_ngu_doc
+  zc_audio: >-
+    {% set o = {} %}
+    {% if do_to_mic | int(0) > 0 %}{% set o = dict(o, mic_gain=do_to_mic | int) %}{% endif %}
+    {% if do_to_loa | int(0) > 0 %}{% set o = dict(o, speaker_gain=do_to_loa | int) %}{% endif %}
+    {{ o }}
+  zc_tts: >-
+    {% set o = {} %}
+    {% if giong_tts | string | trim != '' %}{% set o = dict(o, tts_engine=giong_tts | string | trim) %}{% endif %}
+    {% if ngon_ngu_doc | string | trim != '' %}{% set o = dict(o, language=ngon_ngu_doc | string | trim) %}{% endif %}
+    {{ o }}
   version: 20261113
   cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
   hanh_dong_ranh: !input hanh_dong_ranh
@@ -218,7 +272,7 @@ actions:
             value_template: "{{ nghe_may and trang_thai_goi == 'ringing' and trang_thai_chi_tiet == 'incoming' }}"
         sequence:
           - action: zalo_call.answer_call
-            data: {}
+            data: "{{ zc_audio | combine(zc_tts) }}"
       - alias: Đang trong cuộc gọi - cúp máy
         conditions:
           - condition: template
@@ -233,7 +287,7 @@ actions:
         sequence:
           - action: zalo_call.make_call
             data: >-
-              {{ {'thread_id': nguoi_goi_id | string, 'type': loai_cuoc_goi} }}
+              {{ {'thread_id': nguoi_goi_id | string, 'type': loai_cuoc_goi} | combine(zc_audio) | combine(zc_tts) }}
       - alias: Rảnh - cảnh báo (nhắn tin cho tất cả, gọi cảnh báo người đầu tiên)
         conditions:
           - condition: template
@@ -258,6 +312,7 @@ actions:
                   {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
                   {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
                   {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
+                  {% set d = d | combine(zc_audio) | combine(zc_tts) %}
                   {{ d }}
       - alias: Rảnh - nhắn tin cho tất cả người nhận (người và nhóm)
         conditions:
