@@ -127,6 +127,22 @@ blueprint:
       name: ④ Khác
       icon: mdi:cog-outline
       input:
+        kieu_dang_nhap:
+          name: Áp dụng cho kiểu đăng nhập
+          description: >-
+            Web và PC là hai phiên Zalo riêng nên Zalo Call lưu bộ cài đặt thiết bị RIÊNG cho từng kiểu. «Kiểu đang dùng» sửa bộ của kiểu app đang đăng nhập;
+            chọn Web hoặc PC để sửa sẵn bộ của kiểu đó (kể cả khi chưa đăng nhập bằng kiểu ấy).
+          default: dang_dung
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Kiểu đang dùng
+                  value: dang_dung
+                - label: Web (Qua Web)
+                  value: web
+                - label: PC (Zalo PC)
+                  value: pc
         am_luong_loa:
           name: Âm lượng loa lúc nghe máy (%)
           description: Âm lượng loa HA đặt khi nghe máy rồi trả lại khi cuộc gọi kết thúc. 0 = giữ nguyên âm lượng loa.
@@ -167,6 +183,7 @@ variables:
   dung_mac_dinh: !input dung_mac_dinh
   am_luong_loa: !input am_luong_loa
   tu_phat_mic: !input tu_phat_mic
+  kieu_dang_nhap: !input kieu_dang_nhap
   du_lieu: >-
     {% set d = {} %}
     {% if dat_lai_do_to %}{% set d = dict(d, mic_gain=0, speaker_gain=0) %}
@@ -180,6 +197,7 @@ variables:
     {% if nguong | float(0) > 0 %}{% set d = dict(d, echo_ratio=nguong | float) %}{% endif %}
     {% if am_luong_loa | int(-1) >= 0 %}{% set d = dict(d, call_volume=am_luong_loa | int) %}{% endif %}
     {% if tu_phat_mic != 'khong_doi' %}{% set d = dict(d, auto_mic=(tu_phat_mic == 'true')) %}{% endif %}
+    {% if d | count > 0 and kieu_dang_nhap in ['web', 'pc'] %}{% set d = dict(d, client=kieu_dang_nhap) %}{% endif %}
     {{ d }}
 
 triggers:
