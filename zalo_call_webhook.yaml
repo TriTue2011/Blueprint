@@ -144,10 +144,10 @@ conditions:
     value_template: "{{ text | length > 0 }}"
   - alias: Người/nhóm nằm trong danh sách được phép
     condition: template
-    value_template: "{{ thread_id in ds_duoc_phep }}"
+    value_template: "{{ thread_id | string in ds_duoc_phep }}"
   - alias: Thành viên được phép (chỉ áp cho nhóm)
     condition: template
-    value_template: "{{ not is_group or user_ids | length == 0 or sender_id in (user_ids | map('string') | list) }}"
+    value_template: "{{ not is_group or user_ids | length == 0 or sender_id | string in (user_ids | map('string') | list) }}"
   - alias: Trong nhóm phải có từ khóa gọi (nếu có đặt)
     condition: template
     value_template: "{{ not is_group or (group_trigger | trim) == '' or (group_trigger | trim | lower) in (text | lower) }}"
@@ -170,7 +170,7 @@ actions:
       speech: >-
         {{ (result.response.speech.plain.speech | default('', true) | trim) if (result is defined and result.response is defined
         and result.response.speech is defined and result.response.speech.plain is defined) else '' }}
-      can_mention: "{{ mention_sender and is_group and sender_name | length > 0 and sender_id | length > 0 }}"
+      can_mention: "{{ mention_sender and is_group and sender_name | length > 0 and (sender_id | string) | length > 0 }}"
   - choose:
       - alias: Có câu trả lời thì gửi lên Zalo
         conditions:
@@ -182,7 +182,7 @@ actions:
               thread_id: "{{ thread_id }}"
               type: "{{ 'group' if is_group else 'user' }}"
               message: "{{ ('@' ~ sender_name ~ ' ') if can_mention else '' }}{{ speech }}"
-              mentions: "{{ [{'uid': sender_id, 'name': sender_name}] if can_mention else [] }}"
+              mentions: "{{ [{'uid': sender_id | string, 'name': sender_name}] if can_mention else [] }}"
       - alias: Không trả lời được thì báo lỗi (nếu bật)
         conditions:
           - condition: template
