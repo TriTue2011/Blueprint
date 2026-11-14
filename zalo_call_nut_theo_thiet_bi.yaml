@@ -1,0 +1,941 @@
+blueprint:
+  name: Zalo Call - Nhấn nút ở đâu, nói chuyện hoặc video bằng thiết bị ở đó
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_nut_theo_thiet_bi.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: |
+    **Mỗi nút một bộ thiết bị.** Khai tối đa 6 nút (ví dụ nút phòng khách, nút bếp, nút phòng ngủ...). Nút nào được nhấn thì cuộc gọi Zalo dùng **loa, mic, camera và âm lượng của nút đó**,
+    nên nhấn ở phòng nào thì nói chuyện hoặc gọi video bằng thiết bị ở phòng đó.
+
+    - **Thiết bị dự phòng**: mỗi nút có thể chọn nhiều loa / mic / camera theo thứ tự ưu tiên; phần **thiết bị dự phòng chung** được nối vào cuối danh sách, nên thiết bị của nút không dùng được thì lấy thiết bị kế.
+    - **Việc làm khi nhấn** (theo từng nút): *Thông minh* (có cuộc gọi đến thì nghe máy, đang nói chuyện thì cúp, rảnh thì gọi), *Gọi đi*, *Nghe máy*, *Cúp máy*.
+    - **Thoại hay video** theo từng nút: tự chọn (có camera thì gọi video), chỉ thoại hoặc luôn video.
+    - Người nhận: mỗi nút có thể gọi một người riêng, không chọn thì gọi người đầu tiên trong danh sách chung.
+    - Nút là thực thể bất kỳ có đổi trạng thái khi nhấn (button, input_button, event, công tắc, cảm biến). Chuyển sang «không khả dụng» không tính là nhấn.
+
+    **Phiên bản: v.2026.11.15**
+  input:
+    chung:
+      name: ① Dùng chung
+      icon: mdi:cog-outline
+      input:
+        nguoi_nhan:
+          name: Người gọi mặc định (chọn nhiều)
+          description: Thực thể notify.zalo_call_... Nút nào không chọn người riêng thì gọi người ĐẦU TIÊN (chỉ người 1-1 gọi điện được).
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        ma_nguoi:
+          name: Hoặc theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số.
+          default: []
+          selector:
+            text:
+              multiple: true
+        cam_bien_cuoc_goi:
+          name: Cảm biến «Trạng thái cuộc gọi» của Zalo Call
+          description: Để việc «Thông minh» biết đang đổ chuông, đang nói chuyện hay rảnh. Để trống thì coi như luôn rảnh.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: sensor
+        loa_chung:
+          name: Loa dự phòng chung
+          description: Nối vào cuối danh sách loa của mỗi nút (thứ tự ưu tiên).
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_chung:
+          name: Mic dự phòng chung
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_chung:
+          name: Camera dự phòng chung
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_chung:
+          name: Âm lượng loa mặc định (%)
+          description: Dùng khi nút không đặt âm lượng riêng. 0 = giữ nguyên âm lượng loa.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+    nut_1:
+      name: ② Nút 1
+      icon: mdi:gesture-tap-button
+      collapsed: false
+      input:
+        nut_1:
+          name: Nút (thực thể, chọn nhiều nếu cùng một chỗ)
+          description: Để trống = bỏ qua nút này. Mỗi lần thực thể đổi trạng thái là một lần nhấn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+        ten_1:
+          name: Tên chỗ đặt nút
+          description: Ví dụ «Phòng khách». Dùng trong nhật ký.
+          default: ""
+          selector:
+            text: {}
+        hanh_dong_1:
+          name: Khi nhấn thì
+          default: thong_minh
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Thông minh (đến thì nghe, đang nói thì cúp, rảnh thì gọi)
+                  value: thong_minh
+                - label: Gọi đi
+                  value: goi
+                - label: Nghe máy
+                  value: nghe_may
+                - label: Cúp máy
+                  value: cup_may
+        kieu_1:
+          name: Thoại hay video
+          default: tu_chon
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera thì gọi video)
+                  value: tu_chon
+                - label: Chỉ thoại
+                  value: thoai
+                - label: Luôn video
+                  value: video
+        nguoi_1:
+          name: Gọi người riêng cho nút này (tuỳ chọn)
+          description: Để trống = gọi người đầu tiên trong danh sách chung.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loa_1:
+          name: Loa của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_1:
+          name: Mic của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_1:
+          name: Camera của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_1:
+          name: Âm lượng loa của nút (%)
+          description: 0 = dùng âm lượng mặc định chung.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_mic_1:
+          name: Độ to mic gửi đi của nút (%)
+          description: Độ to phần mềm, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa_1:
+          name: Độ to tiếng bên kia ra loa của nút (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+    nut_2:
+      name: ③ Nút 2
+      icon: mdi:gesture-tap-button
+      collapsed: true
+      input:
+        nut_2:
+          name: Nút (thực thể, chọn nhiều nếu cùng một chỗ)
+          description: Để trống = bỏ qua nút này. Mỗi lần thực thể đổi trạng thái là một lần nhấn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+        ten_2:
+          name: Tên chỗ đặt nút
+          description: Ví dụ «Phòng khách». Dùng trong nhật ký.
+          default: ""
+          selector:
+            text: {}
+        hanh_dong_2:
+          name: Khi nhấn thì
+          default: thong_minh
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Thông minh (đến thì nghe, đang nói thì cúp, rảnh thì gọi)
+                  value: thong_minh
+                - label: Gọi đi
+                  value: goi
+                - label: Nghe máy
+                  value: nghe_may
+                - label: Cúp máy
+                  value: cup_may
+        kieu_2:
+          name: Thoại hay video
+          default: tu_chon
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera thì gọi video)
+                  value: tu_chon
+                - label: Chỉ thoại
+                  value: thoai
+                - label: Luôn video
+                  value: video
+        nguoi_2:
+          name: Gọi người riêng cho nút này (tuỳ chọn)
+          description: Để trống = gọi người đầu tiên trong danh sách chung.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loa_2:
+          name: Loa của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_2:
+          name: Mic của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_2:
+          name: Camera của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_2:
+          name: Âm lượng loa của nút (%)
+          description: 0 = dùng âm lượng mặc định chung.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_mic_2:
+          name: Độ to mic gửi đi của nút (%)
+          description: Độ to phần mềm, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa_2:
+          name: Độ to tiếng bên kia ra loa của nút (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+    nut_3:
+      name: ④ Nút 3
+      icon: mdi:gesture-tap-button
+      collapsed: true
+      input:
+        nut_3:
+          name: Nút (thực thể, chọn nhiều nếu cùng một chỗ)
+          description: Để trống = bỏ qua nút này. Mỗi lần thực thể đổi trạng thái là một lần nhấn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+        ten_3:
+          name: Tên chỗ đặt nút
+          description: Ví dụ «Phòng khách». Dùng trong nhật ký.
+          default: ""
+          selector:
+            text: {}
+        hanh_dong_3:
+          name: Khi nhấn thì
+          default: thong_minh
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Thông minh (đến thì nghe, đang nói thì cúp, rảnh thì gọi)
+                  value: thong_minh
+                - label: Gọi đi
+                  value: goi
+                - label: Nghe máy
+                  value: nghe_may
+                - label: Cúp máy
+                  value: cup_may
+        kieu_3:
+          name: Thoại hay video
+          default: tu_chon
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera thì gọi video)
+                  value: tu_chon
+                - label: Chỉ thoại
+                  value: thoai
+                - label: Luôn video
+                  value: video
+        nguoi_3:
+          name: Gọi người riêng cho nút này (tuỳ chọn)
+          description: Để trống = gọi người đầu tiên trong danh sách chung.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loa_3:
+          name: Loa của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_3:
+          name: Mic của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_3:
+          name: Camera của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_3:
+          name: Âm lượng loa của nút (%)
+          description: 0 = dùng âm lượng mặc định chung.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_mic_3:
+          name: Độ to mic gửi đi của nút (%)
+          description: Độ to phần mềm, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa_3:
+          name: Độ to tiếng bên kia ra loa của nút (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+    nut_4:
+      name: ⑤ Nút 4
+      icon: mdi:gesture-tap-button
+      collapsed: true
+      input:
+        nut_4:
+          name: Nút (thực thể, chọn nhiều nếu cùng một chỗ)
+          description: Để trống = bỏ qua nút này. Mỗi lần thực thể đổi trạng thái là một lần nhấn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+        ten_4:
+          name: Tên chỗ đặt nút
+          description: Ví dụ «Phòng khách». Dùng trong nhật ký.
+          default: ""
+          selector:
+            text: {}
+        hanh_dong_4:
+          name: Khi nhấn thì
+          default: thong_minh
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Thông minh (đến thì nghe, đang nói thì cúp, rảnh thì gọi)
+                  value: thong_minh
+                - label: Gọi đi
+                  value: goi
+                - label: Nghe máy
+                  value: nghe_may
+                - label: Cúp máy
+                  value: cup_may
+        kieu_4:
+          name: Thoại hay video
+          default: tu_chon
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera thì gọi video)
+                  value: tu_chon
+                - label: Chỉ thoại
+                  value: thoai
+                - label: Luôn video
+                  value: video
+        nguoi_4:
+          name: Gọi người riêng cho nút này (tuỳ chọn)
+          description: Để trống = gọi người đầu tiên trong danh sách chung.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loa_4:
+          name: Loa của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_4:
+          name: Mic của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_4:
+          name: Camera của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_4:
+          name: Âm lượng loa của nút (%)
+          description: 0 = dùng âm lượng mặc định chung.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_mic_4:
+          name: Độ to mic gửi đi của nút (%)
+          description: Độ to phần mềm, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa_4:
+          name: Độ to tiếng bên kia ra loa của nút (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+    nut_5:
+      name: ⑥ Nút 5
+      icon: mdi:gesture-tap-button
+      collapsed: true
+      input:
+        nut_5:
+          name: Nút (thực thể, chọn nhiều nếu cùng một chỗ)
+          description: Để trống = bỏ qua nút này. Mỗi lần thực thể đổi trạng thái là một lần nhấn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+        ten_5:
+          name: Tên chỗ đặt nút
+          description: Ví dụ «Phòng khách». Dùng trong nhật ký.
+          default: ""
+          selector:
+            text: {}
+        hanh_dong_5:
+          name: Khi nhấn thì
+          default: thong_minh
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Thông minh (đến thì nghe, đang nói thì cúp, rảnh thì gọi)
+                  value: thong_minh
+                - label: Gọi đi
+                  value: goi
+                - label: Nghe máy
+                  value: nghe_may
+                - label: Cúp máy
+                  value: cup_may
+        kieu_5:
+          name: Thoại hay video
+          default: tu_chon
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera thì gọi video)
+                  value: tu_chon
+                - label: Chỉ thoại
+                  value: thoai
+                - label: Luôn video
+                  value: video
+        nguoi_5:
+          name: Gọi người riêng cho nút này (tuỳ chọn)
+          description: Để trống = gọi người đầu tiên trong danh sách chung.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loa_5:
+          name: Loa của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_5:
+          name: Mic của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_5:
+          name: Camera của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_5:
+          name: Âm lượng loa của nút (%)
+          description: 0 = dùng âm lượng mặc định chung.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_mic_5:
+          name: Độ to mic gửi đi của nút (%)
+          description: Độ to phần mềm, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa_5:
+          name: Độ to tiếng bên kia ra loa của nút (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+    nut_6:
+      name: ⑦ Nút 6
+      icon: mdi:gesture-tap-button
+      collapsed: true
+      input:
+        nut_6:
+          name: Nút (thực thể, chọn nhiều nếu cùng một chỗ)
+          description: Để trống = bỏ qua nút này. Mỗi lần thực thể đổi trạng thái là một lần nhấn.
+          default: []
+          selector:
+            entity:
+              multiple: true
+        ten_6:
+          name: Tên chỗ đặt nút
+          description: Ví dụ «Phòng khách». Dùng trong nhật ký.
+          default: ""
+          selector:
+            text: {}
+        hanh_dong_6:
+          name: Khi nhấn thì
+          default: thong_minh
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Thông minh (đến thì nghe, đang nói thì cúp, rảnh thì gọi)
+                  value: thong_minh
+                - label: Gọi đi
+                  value: goi
+                - label: Nghe máy
+                  value: nghe_may
+                - label: Cúp máy
+                  value: cup_may
+        kieu_6:
+          name: Thoại hay video
+          default: tu_chon
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera thì gọi video)
+                  value: tu_chon
+                - label: Chỉ thoại
+                  value: thoai
+                - label: Luôn video
+                  value: video
+        nguoi_6:
+          name: Gọi người riêng cho nút này (tuỳ chọn)
+          description: Để trống = gọi người đầu tiên trong danh sách chung.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        loa_6:
+          name: Loa của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        mic_6:
+          name: Mic của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        camera_6:
+          name: Camera của nút (thứ tự ưu tiên)
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        am_luong_6:
+          name: Âm lượng loa của nút (%)
+          description: 0 = dùng âm lượng mặc định chung.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_mic_6:
+          name: Độ to mic gửi đi của nút (%)
+          description: Độ to phần mềm, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa_6:
+          name: Độ to tiếng bên kia ra loa của nút (%)
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+
+variables:
+  version: 20261115
+  nguoi_nhan: !input nguoi_nhan
+  ma_nguoi: !input ma_nguoi
+  cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
+  loa_chung: !input loa_chung
+  mic_chung: !input mic_chung
+  camera_chung: !input camera_chung
+  am_luong_chung: !input am_luong_chung
+  nut_1: !input nut_1
+  ten_1: !input ten_1
+  hanh_dong_1: !input hanh_dong_1
+  kieu_1: !input kieu_1
+  nguoi_1: !input nguoi_1
+  loa_1: !input loa_1
+  mic_1: !input mic_1
+  camera_1: !input camera_1
+  am_luong_1: !input am_luong_1
+  do_to_mic_1: !input do_to_mic_1
+  do_to_loa_1: !input do_to_loa_1
+  nut_2: !input nut_2
+  ten_2: !input ten_2
+  hanh_dong_2: !input hanh_dong_2
+  kieu_2: !input kieu_2
+  nguoi_2: !input nguoi_2
+  loa_2: !input loa_2
+  mic_2: !input mic_2
+  camera_2: !input camera_2
+  am_luong_2: !input am_luong_2
+  do_to_mic_2: !input do_to_mic_2
+  do_to_loa_2: !input do_to_loa_2
+  nut_3: !input nut_3
+  ten_3: !input ten_3
+  hanh_dong_3: !input hanh_dong_3
+  kieu_3: !input kieu_3
+  nguoi_3: !input nguoi_3
+  loa_3: !input loa_3
+  mic_3: !input mic_3
+  camera_3: !input camera_3
+  am_luong_3: !input am_luong_3
+  do_to_mic_3: !input do_to_mic_3
+  do_to_loa_3: !input do_to_loa_3
+  nut_4: !input nut_4
+  ten_4: !input ten_4
+  hanh_dong_4: !input hanh_dong_4
+  kieu_4: !input kieu_4
+  nguoi_4: !input nguoi_4
+  loa_4: !input loa_4
+  mic_4: !input mic_4
+  camera_4: !input camera_4
+  am_luong_4: !input am_luong_4
+  do_to_mic_4: !input do_to_mic_4
+  do_to_loa_4: !input do_to_loa_4
+  nut_5: !input nut_5
+  ten_5: !input ten_5
+  hanh_dong_5: !input hanh_dong_5
+  kieu_5: !input kieu_5
+  nguoi_5: !input nguoi_5
+  loa_5: !input loa_5
+  mic_5: !input mic_5
+  camera_5: !input camera_5
+  am_luong_5: !input am_luong_5
+  do_to_mic_5: !input do_to_mic_5
+  do_to_loa_5: !input do_to_loa_5
+  nut_6: !input nut_6
+  ten_6: !input ten_6
+  hanh_dong_6: !input hanh_dong_6
+  kieu_6: !input kieu_6
+  nguoi_6: !input nguoi_6
+  loa_6: !input loa_6
+  mic_6: !input mic_6
+  camera_6: !input camera_6
+  am_luong_6: !input am_luong_6
+  do_to_mic_6: !input do_to_mic_6
+  do_to_loa_6: !input do_to_loa_6
+  cac_nut: >-
+    {{ {1: {'ten': ten_1, 'hd': hanh_dong_1, 'kieu': kieu_1, 'nguoi': nguoi_1, 'loa': loa_1, 'mic': mic_1, 'camera': camera_1, 'vol': am_luong_1, 'gm': do_to_mic_1, 'gl': do_to_loa_1},
+    2: {'ten': ten_2, 'hd': hanh_dong_2, 'kieu': kieu_2, 'nguoi': nguoi_2, 'loa': loa_2, 'mic': mic_2, 'camera': camera_2, 'vol': am_luong_2, 'gm': do_to_mic_2, 'gl': do_to_loa_2},
+    3: {'ten': ten_3, 'hd': hanh_dong_3, 'kieu': kieu_3, 'nguoi': nguoi_3, 'loa': loa_3, 'mic': mic_3, 'camera': camera_3, 'vol': am_luong_3, 'gm': do_to_mic_3, 'gl': do_to_loa_3},
+    4: {'ten': ten_4, 'hd': hanh_dong_4, 'kieu': kieu_4, 'nguoi': nguoi_4, 'loa': loa_4, 'mic': mic_4, 'camera': camera_4, 'vol': am_luong_4, 'gm': do_to_mic_4, 'gl': do_to_loa_4},
+    5: {'ten': ten_5, 'hd': hanh_dong_5, 'kieu': kieu_5, 'nguoi': nguoi_5, 'loa': loa_5, 'mic': mic_5, 'camera': camera_5, 'vol': am_luong_5, 'gm': do_to_mic_5, 'gl': do_to_loa_5},
+    6: {'ten': ten_6, 'hd': hanh_dong_6, 'kieu': kieu_6, 'nguoi': nguoi_6, 'loa': loa_6, 'mic': mic_6, 'camera': camera_6, 'vol': am_luong_6, 'gm': do_to_mic_6, 'gl': do_to_loa_6}} }}
+  so_nut: "{{ (trigger.id | string).split('_')[1] | int(1) if trigger is defined and trigger.id else 1 }}"
+  nut_nay: "{{ cac_nut[so_nut | int(1)] }}"
+  # Danh sách thiết bị: của nút trước, thiết bị dự phòng chung sau, bỏ trùng.
+  loa_dung: "{{ (nut_nay.loa + loa_chung) | unique | list }}"
+  mic_dung: "{{ (nut_nay.mic + mic_chung) | unique | list }}"
+  camera_dung: "{{ (nut_nay.camera + camera_chung) | unique | list }}"
+  am_luong_dung: "{{ nut_nay.vol | int(0) if nut_nay.vol | int(0) > 0 else am_luong_chung | int(0) }}"
+  ds_nguoi: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in nguoi_nhan %}{% set t = state_attr(e, 'thread_id') | string %}{% if state_attr(e, 'type') | string == 'user' and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [t] %}{% endif %}{% endfor %}
+    {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [t] %}{% endif %}{% endfor %}
+    {{ ns.l }}
+  nguoi_goi: >-
+    {% if nut_nay.nguoi | string != '' %}{{ state_attr(nut_nay.nguoi, 'thread_id') | string }}{% elif ds_nguoi | count > 0 %}{{ ds_nguoi[0] }}{% else %}{% endif %}
+  kieu_goi: >-
+    {% if nut_nay.kieu == 'video' %}video{% elif nut_nay.kieu == 'thoai' %}user{% elif camera_dung | count > 0 %}video{% else %}user{% endif %}
+  trang_thai_goi: "{{ states(cam_bien_cuoc_goi) if cam_bien_cuoc_goi | string != '' else 'idle' }}"
+  trang_thai_chi_tiet: "{{ state_attr(cam_bien_cuoc_goi, 'status') if cam_bien_cuoc_goi | string != '' else '' }}"
+  # Việc thực sự làm: «thông minh» quyết định theo trạng thái cuộc gọi.
+  viec: >-
+    {% set hd = nut_nay.hd %}
+    {% if hd == 'thong_minh' %}
+      {% if trang_thai_goi == 'ringing' and trang_thai_chi_tiet == 'incoming' %}nghe_may
+      {% elif trang_thai_goi in ['ringing', 'active'] %}cup_may
+      {% else %}goi{% endif %}
+    {% else %}{{ hd }}{% endif %}
+  # Dữ liệu thiết bị gửi cho make_call / answer_call.
+  du_lieu_thiet_bi: >-
+    {% set d = {} %}
+    {% set parts = [] %}
+    {% if loa_dung | count > 0 %}{% set d = dict(d, speaker=loa_dung | join(',')) %}{% set parts = parts + ['speaker'] %}{% endif %}
+    {% if mic_dung | count > 0 %}{% set d = dict(d, mic=mic_dung | join(',')) %}{% set parts = parts + ['mic'] %}{% endif %}
+    {% if camera_dung | count > 0 and kieu_goi | trim == 'video' %}{% set d = dict(d, camera=camera_dung | join(',')) %}{% set parts = parts + ['camera'] %}{% endif %}
+    {% if am_luong_dung | int(0) > 0 and loa_dung | count > 0 %}{% set d = dict(d, volume=am_luong_dung | int) %}{% endif %}
+    {% if nut_nay.gm | int(0) > 0 %}{% set d = dict(d, mic_gain=nut_nay.gm | int) %}{% endif %}
+    {% if nut_nay.gl | int(0) > 0 %}{% set d = dict(d, speaker_gain=nut_nay.gl | int) %}{% endif %}
+    {% if parts | count > 0 %}{% set d = dict(d, connect_now=parts) %}{% endif %}
+    {{ d }}
+
+mode: single
+max_exceeded: silent
+
+triggers:
+  - trigger: state
+    entity_id: !input nut_1
+    id: nut_1
+  - trigger: state
+    entity_id: !input nut_2
+    id: nut_2
+  - trigger: state
+    entity_id: !input nut_3
+    id: nut_3
+  - trigger: state
+    entity_id: !input nut_4
+    id: nut_4
+  - trigger: state
+    entity_id: !input nut_5
+    id: nut_5
+  - trigger: state
+    entity_id: !input nut_6
+    id: nut_6
+
+conditions:
+  - alias: Đổi trạng thái thật (không phải mất/có lại kết nối)
+    condition: template
+    value_template: >-
+      {{ trigger.to_state is not none and trigger.to_state.state not in ['unavailable', 'unknown']
+         and (trigger.from_state is none or trigger.from_state.state not in ['unavailable']) }}
+
+actions:
+  - choose:
+      - alias: Nghe máy
+        conditions:
+          - condition: template
+            value_template: "{{ viec | trim == 'nghe_may' }}"
+        sequence:
+          - action: zalo_call.answer_call
+            data: "{{ du_lieu_thiet_bi }}"
+      - alias: Cúp máy
+        conditions:
+          - condition: template
+            value_template: "{{ viec | trim == 'cup_may' }}"
+        sequence:
+          - action: zalo_call.end_call
+            data: {}
+      - alias: Gọi đi
+        conditions:
+          - condition: template
+            value_template: "{{ viec | trim == 'goi' and nguoi_goi | trim != '' }}"
+        sequence:
+          - action: zalo_call.make_call
+            data: >-
+              {{ dict({'thread_id': nguoi_goi | trim, 'type': kieu_goi | trim, 'peer_name': nut_nay.ten or 'nút ' ~ so_nut}, **du_lieu_thiet_bi) }}

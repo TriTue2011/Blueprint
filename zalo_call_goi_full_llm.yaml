@@ -1,0 +1,327 @@
+blueprint:
+  name: Voice - Gọi Zalo, chọn camera, loa, mic và âm lượng
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_goi_full_llm.yaml
+  description: |-
+    # Công cụ gọi Zalo cho Voice Assistant: chọn đúng camera, loa, mic và âm lượng
+
+    Cho trợ lý (Assist / LLM) **gọi điện Zalo** và **chọn thiết bị trong nhà** ngay trong câu nói, ví dụ *«gọi Đại ca bằng camera phòng khách, loa bếp, âm lượng 40»*.
+    Sau khi gọi, trợ lý **trả lời kèm danh sách thiết bị đã dùng và thiết bị còn có thể chọn**, nên bạn nói tiếp được: *«đổi sang loa phòng ngủ»*.
+
+    - **Người gọi** chọn từ danh sách (thực thể `notify.zalo_call_...`) hoặc gõ mã Zalo; trợ lý chọn theo **tên**.
+    - **Camera, loa, mic** là danh sách bạn cho phép (thứ tự = **ưu tiên dự phòng**: thiết bị đầu không dùng được thì lấy thiết bị kế). Trợ lý nói tên (một phần tên cũng được) hoặc bỏ trống để dùng mặc định.
+    - **Âm lượng** loa (0 - 100 %), trả lại mức cũ khi cúp. Bỏ trống = mặc định của blueprint (0 = giữ nguyên âm lượng loa).
+    - Muốn chỉ **xem danh sách thiết bị** mà không gọi: nói *«liệt kê thiết bị gọi Zalo»*.
+
+    ## Cài đặt
+    - Tích hợp **Zalo Calling** bản `2026.11.14` trở lên.
+    - Nhớ **expose script cho Assist** sau khi lưu; giữ tên script mặc định.
+    - Sau khi tạo script, nhấn dấu 3 chấm, chọn «Edit in YAML», xoá dòng `description` để khôi phục mô tả mặc định cho trợ lý.
+
+    **Phiên bản: v.2026.11.15**
+  domain: script
+  homeassistant:
+    min_version: 2026.3.0
+  input:
+    nguoi:
+      name: ① Người có thể gọi
+      icon: mdi:account-voice
+      input:
+        recipients:
+          name: Người nhận (chọn nhiều)
+          description: Thực thể notify.zalo_call_... Chỉ người (1-1) gọi điện được; nhóm bị bỏ qua. Trợ lý chọn theo tên hiển thị.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Trợ lý gọi được bằng chính mã này.
+          default: []
+          selector:
+            text:
+              multiple: true
+    thiet_bi:
+      name: ② Thiết bị trong nhà trợ lý được chọn
+      icon: mdi:speaker-wireless
+      input:
+        danh_sach_camera:
+          name: Camera
+          description: Thứ tự ưu tiên. Thiết bị đầu tiên là mặc định, các thiết bị sau là dự phòng khi thiết bị trước không dùng được. Để trống = không gửi hình.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+        danh_sach_loa:
+          name: Loa
+          description: Thứ tự ưu tiên (thiết bị đầu là mặc định, các thiết bị sau dự phòng).
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+        danh_sach_mic:
+          name: Mic
+          description: Camera hoặc vệ tinh Assist (loa R1...) có mic. Thứ tự ưu tiên như trên.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+        am_luong_mac_dinh:
+          name: Âm lượng mặc định của loa (%)
+          description: Dùng khi trợ lý không nói âm lượng. 0 = giữ nguyên âm lượng loa.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        chi_trong_danh_sach:
+          name: Chỉ cho chọn thiết bị trong danh sách
+          description: "Bật (khuyên dùng): trợ lý nói tên không có trong danh sách thì không gọi và đọc lại danh sách. Tắt: coi tên đó là mã thiết bị (entity_id) và dùng luôn."
+          default: true
+          selector:
+            boolean: {}
+        goi_video_khi_co_camera:
+          name: Có camera thì gọi VIDEO
+          description: Khi trợ lý không nói gọi thoại hay video mà có camera được chọn thì gọi video. Tắt = chỉ gọi thoại trừ khi trợ lý nói «video».
+          default: true
+          selector:
+            boolean: {}
+    do_to_phan_mem:
+      name: ③ Độ to phần mềm (tuỳ chọn)
+      icon: mdi:volume-plus
+      collapsed: true
+      input:
+        do_to_mic:
+          name: Độ to mic gửi đi (%)
+          description: 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+        do_to_loa:
+          name: Độ to tiếng bên kia ra loa (%)
+          description: 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              unit_of_measurement: "%"
+              mode: slider
+mode: queued
+max: 10
+max_exceeded: silent
+description: >-
+  Gọi điện Zalo cho một người trong danh sách và chọn camera, loa, mic, âm lượng trong nhà. Trả lời kèm danh sách thiết bị đã dùng và thiết bị còn có thể chọn.
+  Dùng liet_ke_thiet_bi=true để chỉ xem danh sách.
+fields:
+  ten_nguoi:
+    name: Tên người cần gọi
+    description: Tên hiển thị của người trong danh bạ Zalo (một phần tên cũng được) hoặc mã Zalo. Bỏ trống khi chỉ muốn liệt kê thiết bị.
+    selector:
+      text:
+  loai_cuoc_goi:
+    name: Gọi thoại hay video
+    description: Chỉ điền khi người dùng nói rõ. «audio» = thoại, «video» = video. Bỏ trống = tự chọn theo có camera hay không.
+    selector:
+      select:
+        options:
+          - audio
+          - video
+  camera:
+    name: Camera
+    description: Tên camera (một phần tên cũng được) trong danh sách cho phép. Bỏ trống = camera mặc định. Điền «khong» để không gửi hình.
+    selector:
+      text:
+  loa:
+    name: Loa
+    description: Tên loa trong danh sách cho phép. Bỏ trống = loa mặc định.
+    selector:
+      text:
+  mic:
+    name: Mic
+    description: Tên mic trong danh sách cho phép. Bỏ trống = mic mặc định.
+    selector:
+      text:
+  am_luong:
+    name: Âm lượng loa (%)
+    description: 0 đến 100. Bỏ trống = mặc định.
+    selector:
+      number:
+        min: 0
+        max: 100
+  liet_ke_thiet_bi:
+    name: Chỉ liệt kê thiết bị
+    description: true = không gọi, chỉ trả về danh sách người và thiết bị có thể chọn.
+    selector:
+      boolean:
+variables:
+  version: 20261115
+  recipients_chon: !input recipients
+  ma_nguoi: !input ma_nguoi
+  ds_camera: !input danh_sach_camera
+  ds_loa: !input danh_sach_loa
+  ds_mic: !input danh_sach_mic
+  am_luong_mac_dinh: !input am_luong_mac_dinh
+  chi_trong_danh_sach: !input chi_trong_danh_sach
+  goi_video_khi_co_camera: !input goi_video_khi_co_camera
+  do_to_mic: !input do_to_mic
+  do_to_loa: !input do_to_loa
+sequence:
+  - variables:
+      yc_nguoi: "{{ ten_nguoi | default('', true) | string | trim }}"
+      yc_loai: "{{ loai_cuoc_goi | default('', true) | string | trim | lower }}"
+      yc_camera: "{{ camera | default('', true) | string | trim }}"
+      yc_loa: "{{ loa | default('', true) | string | trim }}"
+      yc_mic: "{{ mic | default('', true) | string | trim }}"
+      yc_am_luong: "{{ am_luong if am_luong is defined and am_luong not in [none, ''] else none }}"
+      chi_liet_ke: "{{ liet_ke_thiet_bi | default(false, true) | bool(false) }}"
+      # Danh sách người gọi được: {ten, thread_id}; chỉ người (user), nhóm không gọi điện được.
+      ds_nguoi: >-
+        {% set ns = namespace(l=[], ids=[]) %}
+        {% for e in recipients_chon %}{% set t = state_attr(e, 'thread_id') | string %}{% if state_attr(e, 'type') | string == 'user' and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'ten': state_attr(e, 'friendly_name') or e, 'thread_id': t}] %}{% endif %}{% endfor %}
+        {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'ten': t, 'thread_id': t}] %}{% endif %}{% endfor %}
+        {{ ns.l }}
+      # Chọn theo tên: khớp đúng mã, rồi đúng tên, rồi chứa một phần tên (không phân biệt hoa thường).
+      nguoi_chon: >-
+        {% set q = yc_nguoi | lower %}
+        {% set ns = namespace(r=none) %}
+        {% if q != '' %}
+          {% for p in ds_nguoi if ns.r is none and (p.thread_id == yc_nguoi or p.ten | lower == q) %}{% set ns.r = p %}{% endfor %}
+          {% for p in ds_nguoi if ns.r is none and q in (p.ten | lower) %}{% set ns.r = p %}{% endfor %}
+        {% endif %}
+        {{ ns.r }}
+      # Với mỗi loại thiết bị: nếu trợ lý nói tên thì chỉ lấy thiết bị khớp tên; không nói thì lấy cả danh sách theo thứ tự ưu tiên.
+      # Thiết bị đang «unavailable/unknown» bị đẩy xuống cuối để dự phòng lên trước.
+      thiet_bi_chon: >-
+        {% set ns = namespace(out={}, loi=[]) %}
+        {% for kind, items, req in [('camera', ds_camera, yc_camera), ('loa', ds_loa, yc_loa), ('mic', ds_mic, yc_mic)] %}
+          {% set q = req | lower %}
+          {% set ok = namespace(l=[]) %}
+          {% if q in ['', 'mac_dinh'] %}
+            {% set ok.l = items %}
+          {% elif kind == 'camera' and q in ['khong', 'none', 'no'] %}
+            {% set ok.l = [] %}
+          {% else %}
+            {% for e in items if e | lower == q %}{% set ok.l = ok.l + [e] %}{% endfor %}
+            {% if ok.l | count == 0 %}{% for e in items if q in ((state_attr(e, 'friendly_name') or e) | lower) or q in (e | lower) %}{% set ok.l = ok.l + [e] %}{% endfor %}{% endif %}
+            {% if ok.l | count == 0 and not chi_trong_danh_sach and q.split('.') | count == 2 %}{% set ok.l = [req | lower] %}{% endif %}
+            {% if ok.l | count == 0 %}{% set ns.loi = ns.loi + [kind ~ ' «' ~ req ~ '»'] %}{% endif %}
+          {% endif %}
+          {% set dung_duoc = ok.l | reject('is_state', 'unavailable') | reject('is_state', 'unknown') | list %}
+          {% set hong = ok.l | select('is_state', 'unavailable') | list + ok.l | select('is_state', 'unknown') | list %}
+          {% set ns.out = ns.out | combine({kind: dung_duoc + hong}) %}
+        {% endfor %}
+        {{ {'camera': ns.out.camera, 'loa': ns.out.loa, 'mic': ns.out.mic, 'khong_khop': ns.loi} }}
+      loa_chon: "{{ thiet_bi_chon.loa }}"
+      mic_chon: "{{ thiet_bi_chon.mic }}"
+      camera_chon: "{{ thiet_bi_chon.camera }}"
+      khong_khop: "{{ thiet_bi_chon.khong_khop }}"
+      am_luong_dung: >-
+        {% set v = yc_am_luong if yc_am_luong is not none else am_luong_mac_dinh %}
+        {{ [[v | int(0), 0] | max, 100] | min }}
+      kieu_goi: >-
+        {% if yc_loai == 'video' %}video
+        {% elif yc_loai in ['audio', 'voice', 'thoai'] %}user
+        {% elif goi_video_khi_co_camera and camera_chon | count > 0 %}video
+        {% else %}user{% endif %}
+      ten_hien_thi: "{{ (nguoi_chon.ten if nguoi_chon is not none else yc_nguoi) }}"
+      # Câu liệt kê thiết bị (có tên thân thiện) để trợ lý đọc cho người dùng.
+      ten_cam: >-
+        {% for e in ds_camera %}{{ state_attr(e, 'friendly_name') or e }}{{ ', ' if not loop.last }}{% endfor %}
+      ten_loa: >-
+        {% for e in ds_loa %}{{ state_attr(e, 'friendly_name') or e }}{{ ', ' if not loop.last }}{% endfor %}
+      ten_mic: >-
+        {% for e in ds_mic %}{{ state_attr(e, 'friendly_name') or e }}{{ ', ' if not loop.last }}{% endfor %}
+      ten_nguoi_ds: >-
+        {% for p in ds_nguoi %}{{ p.ten }}{{ ', ' if not loop.last }}{% endfor %}
+      liet_ke: >-
+        Người gọi được: {{ ten_nguoi_ds or '(chưa chọn ai)' }}. Camera: {{ ten_cam or '(không có)' }}. Loa: {{ ten_loa or '(không có)' }}. Mic: {{ ten_mic or '(không có)' }}.
+        Thiết bị đầu tiên của mỗi loại là mặc định, các thiết bị sau là dự phòng.
+      ten_da_dung: >-
+        {% set f = namespace(l=[]) %}
+        {% for kind, ten in [('camera', camera_chon), ('loa', loa_chon), ('mic', mic_chon)] %}
+          {% set e = ten[0] if ten | count > 0 else none %}
+          {% set f.l = f.l + [kind ~ ': ' ~ ((state_attr(e, 'friendly_name') or e) if e else 'không dùng')] %}
+        {% endfor %}
+        {{ f.l | join('; ') }}
+
+  - alias: Chỉ liệt kê thiết bị
+    if:
+      - condition: template
+        value_template: "{{ chi_liet_ke or yc_nguoi == '' }}"
+    then:
+      - variables:
+          response:
+            devices: "{{ liet_ke }}"
+            ket_qua: >-
+              {% if chi_liet_ke %}Đã liệt kê, chưa gọi ai.{% else %}Chưa biết gọi ai: hãy nói tên người cần gọi.{% endif %}
+      - stop: Chỉ liệt kê thiết bị Zalo
+        response_variable: response
+
+  - alias: Không tìm thấy người cần gọi
+    if:
+      - condition: template
+        value_template: "{{ nguoi_chon is none }}"
+    then:
+      - variables:
+          response:
+            error: "Không có người tên «{{ yc_nguoi }}» trong danh sách gọi Zalo."
+            devices: "{{ liet_ke }}"
+      - stop: Không tìm thấy người cần gọi
+        response_variable: response
+
+  - alias: Tên thiết bị không khớp danh sách cho phép
+    if:
+      - condition: template
+        value_template: "{{ khong_khop | count > 0 }}"
+    then:
+      - variables:
+          response:
+            error: "Không có thiết bị khớp: {{ khong_khop | join(', ') }}. Chưa gọi."
+            devices: "{{ liet_ke }}"
+      - stop: Tên thiết bị không khớp
+        response_variable: response
+
+  - alias: Gọi
+    action: zalo_call.make_call
+    response_variable: ket_qua_goi
+    data: >-
+      {% set d = {'thread_id': nguoi_chon.thread_id, 'type': kieu_goi | trim, 'peer_name': ten_hien_thi} %}
+      {% set parts = [] %}
+      {% if loa_chon | count > 0 %}{% set d = dict(d, speaker=loa_chon | join(',')) %}{% set parts = parts + ['speaker'] %}{% endif %}
+      {% if mic_chon | count > 0 %}{% set d = dict(d, mic=mic_chon | join(',')) %}{% set parts = parts + ['mic'] %}{% endif %}
+      {% if camera_chon | count > 0 and kieu_goi | trim == 'video' %}{% set d = dict(d, camera=camera_chon | join(',')) %}{% set parts = parts + ['camera'] %}{% endif %}
+      {% if am_luong_dung | int(0) > 0 and loa_chon | count > 0 %}{% set d = dict(d, volume=am_luong_dung | int) %}{% endif %}
+      {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
+      {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
+      {% if parts | count > 0 %}{% set d = dict(d, connect_now=parts) %}{% endif %}
+      {{ d }}
+
+  - variables:
+      response:
+        ket_qua: >-
+          Đang gọi {{ 'video' if kieu_goi | trim == 'video' else 'thoại' }} cho {{ ten_hien_thi }}.
+          Thiết bị đã dùng ({{ ten_da_dung }}), âm lượng {{ am_luong_dung if am_luong_dung | int(0) > 0 else 'giữ nguyên' }}.
+        devices: "{{ liet_ke }}"
+  - stop: Đã gọi
+    response_variable: response

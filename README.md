@@ -769,6 +769,26 @@ Các mẫu có gọi điện (gọi đi, cảnh báo, nút bấm, nghe máy, nh�
 
 ---
 
+## 🗣️ Voice gọi Zalo: chọn camera, loa, mic và âm lượng
+
+Script cho **Voice Assistant**: nói *«gọi Đại ca bằng camera phòng khách, loa bếp, âm lượng 40»* là trợ lý gọi đúng thiết bị đó. Người gọi chọn theo **tên**; camera, loa, mic lấy từ **danh sách bạn cho phép** (thứ tự = **ưu tiên dự phòng**: thiết bị đầu không dùng được thì lấy thiết bị kế; chỉ nói một phần tên cũng được). Trợ lý **trả lời kèm thiết bị đã dùng và thiết bị còn có thể chọn**, nên nói tiếp được «đổi sang loa phòng ngủ». Nói *«liệt kê thiết bị gọi Zalo»* để chỉ xem danh sách. Tên không có trong danh sách thì không gọi và đọc lại danh sách.
+
+**Cần:** Zalo Call từ bản 2026.11.14.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_full_llm.yaml)
+
+---
+
+## 📍 Zalo Call: nhấn nút ở đâu, dùng thiết bị ở đó
+
+Khai tối đa **6 nút** (phòng khách, bếp, phòng ngủ...). Nút nào được nhấn thì cuộc gọi dùng **loa, mic, camera và âm lượng của nút đó**; mỗi nút chọn **thoại hay video**, **người gọi riêng** và việc làm (*Thông minh*: đến thì nghe, đang nói thì cúp, rảnh thì gọi; hoặc Gọi đi / Nghe máy / Cúp máy). **Thiết bị dự phòng chung** được nối vào cuối danh sách của mỗi nút, nên thiết bị của nút không dùng được thì lấy thiết bị kế. Nút là thực thể bất kỳ có đổi trạng thái khi nhấn; chuyển sang «không khả dụng» không tính là nhấn.
+
+**Cần:** Zalo Call từ bản 2026.11.14.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_theo_thiet_bi.yaml)
+
+---
+
 ## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất) - đã có bản hợp nhất «Nút bấm nhiều việc» ở trên
 
 Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (thực thể + trạng thái cần xử lý + hành động), khi nhấn nút chọn việc có **yêu cầu gần nhất** (ví dụ báo thức kêu, rồi có cuộc gọi đến thì nhấn = nghe máy; hết cuộc gọi mà báo thức còn kêu thì nhấn = tắt báo thức). Không việc nào cần thì chạy hành động mặc định (ví dụ gọi đi). Hợp với nút giữa loa R1 (từ bản 0.17.0 loa không còn hành động gắn sẵn).
