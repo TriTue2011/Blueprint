@@ -1,0 +1,475 @@
+blueprint:
+  name: Zalo Call - Tự động gọi khi có sự kiện hoặc thiết bị thay đổi
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_goi_khi_su_kien.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: |
+    **Gọi điện (hoặc đọc cảnh báo rồi cúp) khi có BẤT KỲ sự kiện nào**: thiết bị đổi trạng thái hoặc thuộc tính, cảm biến vượt ngưỡng, đến giờ, sự kiện của Home Assistant, webhook, thẻ NFC...
+    Bạn tự chọn **điều kiện kích hoạt** ở ô «Khi nào gọi» (đủ mọi loại trigger của HA, chọn từ danh sách) và **điều kiện kèm theo** ở ô «Chỉ gọi khi» (đủ mọi loại điều kiện).
+    Người nhận chọn từ danh sách; có thể gọi lần lượt tới khi có người nghe máy, nối thiết bị trong nhà, đặt độ to mic/loa, giọng đọc, chống báo lặp, khung giờ, chỉ gọi khi vắng nhà.
+
+    Trong câu tự viết dùng được `{ten}` (tên thiết bị gây ra sự kiện), `{khu_vuc}` và `{gio}`.
+
+    **Phiên bản: v.2026.11.14**
+  input:
+    khi_nao:
+      name: ① Khi nào cảnh báo
+      icon: mdi:alarm-light-outline
+      description: Chọn cảm biến và loại cảnh báo.
+      input:
+        kich_hoat:
+          name: Khi nào gọi (trigger)
+          description: >-
+            Thêm một hoặc nhiều điều kiện kích hoạt: thiết bị đổi trạng thái (có thể chọn «từ → sang» và «giữ ít nhất N giây»), thuộc tính đổi, số vượt ngưỡng,
+            đến giờ, sự kiện của Home Assistant, webhook, vùng, thẻ... Có thể thêm nhiều trigger; trigger nào xảy ra cũng gọi.
+          selector:
+            trigger: {}
+        dieu_kien_them:
+          name: Chỉ gọi khi (điều kiện kèm theo, tuỳ chọn)
+          description: >-
+            Mọi điều kiện ở đây đều phải đúng thì mới gọi (trạng thái thiết bị, khung giờ, ngày trong tuần, mặt trời, số, người trong nhà...). Để trống = luôn gọi khi trigger xảy ra.
+          default: []
+          selector:
+            condition: {}
+        kieu_goi:
+          name: Kiểu cuộc gọi
+          description: >-
+            Đọc cảnh báo: gọi, đọc câu rồi cúp. Gọi thường: gọi để người nhà nói chuyện (nối thiết bị trong nhà ở mục «Thiết bị trong nhà»).
+          default: doc_canh_bao
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Đọc cảnh báo rồi cúp
+                  value: doc_canh_bao
+                - label: Gọi thường (người nhà nói chuyện)
+                  value: goi_thuong
+        loai_canh_bao:
+          name: Loại cảnh báo (câu nói có sẵn)
+          description: Chọn câu có sẵn. Máy tự thêm khu vực và giờ vào câu. Chọn «Tự viết» để dùng câu của bạn ở ô bên dưới.
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Có người lạ
+                  value: nguoi_la
+                - label: Có chuyển động
+                  value: chuyen_dong
+                - label: Có khói hoặc cháy
+                  value: chay_khoi
+                - label: Rò nước
+                  value: ro_nuoc
+                - label: Rò rỉ khí gas
+                  value: gas
+                - label: Cửa vừa mở
+                  value: cua_mo
+                - label: Mất điện
+                  value: mat_dien
+                - label: Có người ngã
+                  value: nguoi_nga
+                - label: Tự viết
+                  value: tu_viet
+          default: nguoi_la
+        cau_tu_viet:
+          name: Câu tự viết (chỉ dùng khi chọn «Tự viết»)
+          description: "Có thể dùng {ten} (tên cảm biến), {khu_vuc} (khu vực) và {gio} (giờ phút)."
+          selector:
+            text:
+              multiline: true
+          default: ""
+    goi_ai:
+      name: ② Gọi ai
+      icon: mdi:phone-ring-outline
+      description: Chọn người nhận từ danh sách.
+      input:
+        nguoi_nhan:
+          name: Người nhận
+          description: Thực thể `notify.zalo_...` của Zalo Call. Thứ tự chọn là thứ tự gọi.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: zalo_call
+                  domain: notify
+          default: []
+        ma_nguoi:
+          name: Thêm người theo mã Zalo (threadID)
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          selector:
+            text:
+              multiple: true
+          default: []
+        ma_nhom:
+          name: Thêm nhóm theo mã Zalo (threadID)
+          description: Mỗi dòng một mã nhóm, chỉ gồm chữ số. Chỉ dùng khi gửi tin nhắn (nhóm không gọi điện được).
+          selector:
+            text:
+              multiple: true
+          default: []
+        goi_lan_luot:
+          name: Gọi lần lượt cho tới khi có người nghe máy
+          description: Tắt thì chỉ gọi người đầu tiên.
+          selector:
+            boolean: {}
+          default: true
+        cho_nghe_may:
+          name: Chờ mỗi người bao lâu (giây) rồi gọi người kế
+          selector:
+            number:
+              min: 10
+              max: 120
+              step: 5
+              unit_of_measurement: giây
+          default: 30
+        cam_bien_cuoc_goi:
+          name: Cảm biến «Trạng thái cuộc gọi» của Zalo Call
+          description: Cần khi gọi lần lượt, để biết người nhận đã nghe máy chưa.
+          selector:
+            entity:
+              filter:
+                - integration: zalo_call
+                  domain: sensor
+          default: ""
+        gui_tin:
+          name: Gửi tin nhắn chữ kèm cho mọi người nhận (kể cả nhóm)
+          selector:
+            boolean: {}
+          default: true
+    cuoc_goi:
+      name: ③ Cuộc gọi và thiết bị trong nhà
+      icon: mdi:video-wireless-outline
+      description: Chọn thoại hay video và thiết bị nối sau khi đọc cảnh báo. Thiết bị để trống thì lấy theo quy tắc của người nhận.
+      collapsed: true
+      input:
+        loai_cuoc_goi:
+          name: Gọi thoại hay gọi video
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có camera sẽ dùng thì gọi video, không thì gọi thoại)
+                  value: auto
+                - label: Gọi thoại
+                  value: user
+                - label: Gọi video
+                  value: video
+          default: auto
+        sau_khi_doc:
+          name: Đọc cảnh báo xong thì
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự chọn (có thiết bị để nối thì nối, không thì cúp)
+                  value: mac_dinh
+                - label: Cúp máy (hợp báo mất điện, rò nước)
+                  value: hangup
+                - label: Nối thiết bị nhà (hợp báo người ngã, trộm, cháy)
+                  value: connect
+                - label: Giữ máy (người nhận tự cúp)
+                  value: wait
+          default: mac_dinh
+        noi_gom:
+          name: Nối những thứ nào (khi «Nối thiết bị nhà»)
+          description: Tích 1 = dùng 1, tích 2 = dùng 2, tích 3 = dùng cả 3. Không tích gì = nối tất cả thiết bị đã chọn. Tích Camera = cuộc gọi video.
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic - gửi tiếng trong nhà cho người nhận
+                  value: mic
+                - label: Loa - phát tiếng người nhận ra loa
+                  value: speaker
+                - label: Camera - gửi hình trong nhà
+                  value: camera
+          default: []
+        loa:
+          name: Loa trong nhà (chọn nhiều = dự phòng theo thứ tự)
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: media_player
+          default: []
+        mic:
+          name: Mic trong nhà (chọn nhiều = dự phòng theo thứ tự)
+          description: Camera hoặc vệ tinh Assist có mic (ví dụ loa R1).
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - camera
+                    - assist_satellite
+          default: []
+        camera:
+          name: Camera trong nhà (chọn nhiều = dự phòng theo thứ tự)
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: camera
+          default: []
+        do_to_mic:
+          name: 🎙️ Độ to mic gửi sang bên kia (phần mềm, %)
+          description: >-
+            Độ to PHẦN MỀM của tiếng mic gửi đi, độc lập với cài đặt của loa R1. 100 % = 0 dB (giữ nguyên), 200 % = +6 dB, 50 % = −6 dB.
+            0 = theo mặc định đặt trong Zalo Call (WebUI hoặc dịch vụ set_default_devices).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              mode: slider
+              unit_of_measurement: "%"
+        do_to_loa:
+          name: 🔊 Độ to tiếng bên kia ra loa (phần mềm, %)
+          description: >-
+            Độ to PHẦN MỀM của tiếng bên kia phát ra loa. 100 % = 0 dB, 0 = theo mặc định của Zalo Call.
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 5
+              mode: slider
+              unit_of_measurement: "%"
+        giong_tts:
+          name: 🗣️ Engine đọc (TTS)
+          description: >-
+            Chọn thực thể tts để đọc lời lên cuộc gọi. Để trống = theo trợ lý giọng nói / TTS mặc định của Zalo Call.
+          default: ""
+          selector:
+            entity:
+              domain: tts
+        ngon_ngu_doc:
+          name: 🌐 Ngôn ngữ đọc
+          description: >-
+            Mã ngôn ngữ cho TTS, ví dụ vi, en. Để trống = mặc định của engine.
+          default: ""
+          selector:
+            text: {}
+    dieu_kien:
+      name: ④ Điều kiện để không báo thừa
+      icon: mdi:filter-outline
+      collapsed: true
+      input:
+        chong_lap_phut:
+          name: Chống báo lặp (phút)
+          description: Sau một lần báo, trong ngần này phút không báo nữa. 0 = không chống lặp.
+          selector:
+            number:
+              min: 0
+              max: 240
+              step: 1
+              unit_of_measurement: phút
+          default: 5
+        chi_khi_vang_nha:
+          name: Chỉ báo khi những người này đều không ở nhà
+          description: Để trống = báo bất kể có ai ở nhà không.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: person
+          default: []
+        gioi_han_gio:
+          name: Chỉ báo trong khung giờ
+          selector:
+            boolean: {}
+          default: false
+        tu_gio:
+          name: Từ giờ
+          selector:
+            time: {}
+          default: "22:00:00"
+        den_gio:
+          name: Đến giờ
+          selector:
+            time: {}
+          default: "06:00:00"
+
+mode: single
+max_exceeded: silent
+
+variables:
+  do_to_mic: !input do_to_mic
+  do_to_loa: !input do_to_loa
+  giong_tts: !input giong_tts
+  ngon_ngu_doc: !input ngon_ngu_doc
+  zc_audio: >-
+    {% set o = {} %}
+    {% if do_to_mic | int(0) > 0 %}{% set o = dict(o, mic_gain=do_to_mic | int) %}{% endif %}
+    {% if do_to_loa | int(0) > 0 %}{% set o = dict(o, speaker_gain=do_to_loa | int) %}{% endif %}
+    {{ o }}
+  zc_tts: >-
+    {% set o = {} %}
+    {% if giong_tts | string | trim != '' %}{% set o = dict(o, tts_engine=giong_tts | string | trim) %}{% endif %}
+    {% if ngon_ngu_doc | string | trim != '' %}{% set o = dict(o, language=ngon_ngu_doc | string | trim) %}{% endif %}
+    {{ o }}
+  version: 20261113
+  nguoi_nhan: !input nguoi_nhan
+  ma_nguoi: !input ma_nguoi
+  ma_nhom: !input ma_nhom
+  ds_nhan: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in nguoi_nhan %}{% set t = state_attr(e, 'thread_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': state_attr(e, 'type') | string}] %}{% endif %}{% endfor %}
+    {% for m in ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'user'}] %}{% endif %}{% endfor %}
+    {% for m in ma_nhom %}{% set t = m | string | trim %}{% if t is match('^[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'thread_id': t, 'type': 'group'}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
+  goi_lan_luot: !input goi_lan_luot
+  cho_nghe_may: !input cho_nghe_may
+  cam_bien_cuoc_goi: !input cam_bien_cuoc_goi
+  gui_tin: !input gui_tin
+  loai_canh_bao: !input loai_canh_bao
+  cau_tu_viet: !input cau_tu_viet
+  loai_cuoc_goi: !input loai_cuoc_goi
+  kieu_goi: !input kieu_goi
+  sau_khi_doc: !input sau_khi_doc
+  noi_gom: !input noi_gom
+  loa_goc: !input loa
+  loa: >-
+    {{ (loa_goc if loa_goc is not string else ([loa_goc] if loa_goc else [])) | join(',') }}
+  mic_goc: !input mic
+  mic: >-
+    {{ (mic_goc if mic_goc is not string else ([mic_goc] if mic_goc else [])) | join(',') }}
+  camera_goc: !input camera
+  camera: >-
+    {{ (camera_goc if camera_goc is not string else ([camera_goc] if camera_goc else [])) | join(',') }}
+  chong_lap_phut: !input chong_lap_phut
+  chi_khi_vang_nha: !input chi_khi_vang_nha
+  gioi_han_gio: !input gioi_han_gio
+  tu_gio: !input tu_gio
+  den_gio: !input den_gio
+  mau_cau:
+    nguoi_la: Phát hiện có người lạ
+    chuyen_dong: Phát hiện có chuyển động
+    chay_khoi: Cảnh báo có khói hoặc cháy
+    ro_nuoc: Cảnh báo rò nước
+    gas: Cảnh báo rò rỉ khí gas
+    cua_mo: Cảnh báo cửa vừa mở
+    mat_dien: Cảnh báo mất điện
+    nguoi_nga: Cảnh báo có người ngã
+  su_kien_tu: >-
+    {{ trigger.entity_id | default('', true) if trigger is defined else '' }}
+  ten_cam_bien: >-
+    {% if trigger is defined and trigger.to_state is defined and trigger.to_state is not none %}{{ trigger.to_state.name }}
+    {% elif trigger is defined and trigger.event is defined and trigger.event is not none %}{{ trigger.event.event_type }}
+    {% elif trigger is defined and trigger.description is defined %}{{ trigger.description }}
+    {% else %}sự kiện{% endif %}
+  khu_vuc: "{{ (area_name(su_kien_tu) or '') if su_kien_tu else '' }}"
+  gio_bao: "{{ now().strftime('%H:%M') }}"
+  noi_dung: >-
+    {% if loai_canh_bao == 'tu_viet' and cau_tu_viet | trim != '' %}
+      {{ cau_tu_viet | replace('{ten}', ten_cam_bien) | replace('{khu_vuc}', khu_vuc) | replace('{gio}', gio_bao) }}
+    {% else %}
+      {{ mau_cau.get(loai_canh_bao, 'Cảnh báo') }}{% if khu_vuc %} ở {{ khu_vuc }}{% endif %} ({{ ten_cam_bien }}), lúc {{ gio_bao }}.
+    {% endif %}
+
+triggers: !input kich_hoat
+
+conditions:
+  - alias: Điều kiện kèm theo do bạn chọn
+    condition: and
+    conditions: !input dieu_kien_them
+  - condition: template
+    alias: Chống báo lặp
+    value_template: >-
+      {{ chong_lap_phut | int(0) == 0 or this.attributes.last_triggered is none
+         or (now() - this.attributes.last_triggered).total_seconds() > chong_lap_phut | int(0) * 60 }}
+  - condition: template
+    alias: Chỉ báo khi những người đã chọn đều vắng nhà
+    value_template: >-
+      {{ chi_khi_vang_nha | count == 0 or chi_khi_vang_nha | select('is_state', 'home') | list | count == 0 }}
+  - condition: template
+    alias: Khung giờ
+    value_template: >-
+      {% if not gioi_han_gio %}true{% else %}
+        {% set t = now().strftime('%H:%M:%S') %}
+        {% if tu_gio <= den_gio %}{{ tu_gio <= t <= den_gio }}{% else %}{{ t >= tu_gio or t <= den_gio }}{% endif %}
+      {% endif %}
+
+actions:
+  - alias: Nhắn tin cho mọi người nhận
+    if:
+      - condition: template
+        value_template: "{{ gui_tin and ds_nhan | count > 0 }}"
+    then:
+      - repeat:
+          for_each: "{{ ds_nhan }}"
+          sequence:
+            - action: zalo_call.send_message
+              data: >-
+                {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
+                    'message': noi_dung | trim, 'emoji': 'alert'} }}
+  - alias: Gọi điện cho từng người nhận (chỉ người, nhóm không gọi được)
+    repeat:
+      for_each: "{{ ds_nhan }}"
+      sequence:
+        - if:
+            - condition: template
+              value_template: "{{ repeat.item.type == 'user' }}"
+          then:
+            - choose:
+                - alias: Gọi thường (người nhà nói chuyện)
+                  conditions:
+                    - condition: template
+                      value_template: "{{ kieu_goi == 'goi_thuong' }}"
+                  sequence:
+                    - action: zalo_call.make_call
+                      response_variable: ket_qua
+                      data: >-
+                        {% set d = {'thread_id': repeat.item.thread_id} %}
+                        {% if loai_cuoc_goi != 'auto' %}{% set d = dict(d, type=loai_cuoc_goi) %}{% endif %}
+                        {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+                        {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+                        {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+                        {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
+                        {% set d = d | combine(zc_audio) | combine(zc_tts) %}
+                        {{ d }}
+              default:
+                  - action: zalo_call.alert_call
+                    response_variable: ket_qua
+                    data: >-
+                      {% set d = {'thread_id': repeat.item.thread_id, 'message': noi_dung} %}
+                      {% if loai_cuoc_goi != 'auto' %}{% set d = dict(d, type=loai_cuoc_goi) %}{% endif %}
+                      {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+                      {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+                      {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+                      {% if sau_khi_doc != 'mac_dinh' %}{% set d = dict(d, after=sau_khi_doc) %}{% endif %}
+                      {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
+                      {% set d = d | combine(zc_audio) | combine(zc_tts) %}
+                      {{ d }}
+            - if:
+                - condition: template
+                  value_template: "{{ not goi_lan_luot }}"
+              then:
+                - stop: Đã gọi người đầu tiên
+            - if:
+                - condition: template
+                  value_template: "{{ cam_bien_cuoc_goi | default('', true) != '' }}"
+              then:
+                - wait_template: "{{ not is_state(cam_bien_cuoc_goi, 'idle') }}"
+                  timeout: 10
+                  continue_on_timeout: true
+                - wait_template: "{{ not is_state(cam_bien_cuoc_goi, 'ringing') }}"
+                  timeout:
+                    seconds: "{{ cho_nghe_may | int(30) }}"
+                  continue_on_timeout: true
+                - if:
+                    - condition: template
+                      value_template: "{{ is_state(cam_bien_cuoc_goi, 'active') }}"
+                  then:
+                    - stop: Đã có người nghe máy
+                  else:
+                    - if:
+                        - condition: template
+                          value_template: "{{ is_state(cam_bien_cuoc_goi, 'ringing') }}"
+                      then:
+                        - action: zalo_call.end_call
+                          data: {}
+                        - delay: 2

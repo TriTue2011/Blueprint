@@ -743,7 +743,33 @@ Các mẫu có gọi điện (gọi đi, cảnh báo, nút bấm, nghe máy, nh�
 
 ---
 
-## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất)
+## 📞 Zalo Call tự động gọi khi có sự kiện hoặc thiết bị thay đổi
+
+**Gọi điện (đọc cảnh báo rồi cúp, hoặc gọi thường để người nhà nói chuyện) khi BẤT KỲ sự kiện nào xảy ra**: thiết bị đổi trạng thái hoặc thuộc tính (chọn «từ → sang», «giữ ít nhất N giây»), số vượt ngưỡng, đến giờ, sự kiện Home Assistant, webhook, thẻ NFC... Điều kiện kích hoạt chọn ở ô **trigger** và điều kiện kèm theo ở ô **condition** của Home Assistant (đủ mọi loại, chọn từ danh sách). Người nhận chọn từ danh sách; gọi lần lượt tới khi có người nghe máy; nối thiết bị trong nhà; độ to mic/loa, giọng đọc; chống báo lặp; khung giờ; chỉ gọi khi vắng nhà. Trong câu tự viết dùng `{ten}`, `{khu_vuc}`, `{gio}`. Bản «cảm biến kích hoạt» vẫn dùng được cho trường hợp đơn giản (chỉ cảm biến bật/tắt).
+
+**Cần:** Zalo Call từ bản 2026.11.14.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_khi_su_kien.yaml)
+
+---
+
+## 🎛️ Nút bấm nhiều việc: mỗi cử chỉ nhiều việc theo điều kiện
+
+**Bản hợp nhất** của «Một nút nhiều việc» và «Loa R1 nút giữa mọi cử chỉ» (nên dùng bản này cho automation mới). Dùng cho **nút bất kỳ** (Zigbee, Matter, ESPHome, nút ảo) và **nút giữa loa R1**.
+
+- **Bốn cử chỉ** (nhấn đơn, đúp, ba lần, giữ); mỗi cử chỉ tối đa **6 việc**.
+- **Mỗi việc đi kèm điều kiện**: thực thể + trạng thái (+ thuộc tính) cho biết việc đang cần, cộng **điều kiện mẫu** tuỳ chọn, nên các việc không lẫn nhau.
+- **Ưu tiên sự kiện gần nhất**: nhiều việc cùng đang cần thì làm việc có thực thể vừa đổi trạng thái mới nhất.
+- **Giới hạn thời gian, mặc định 30 giây**: chỉ xét sự kiện trong N giây gần nhất; sự kiện cũ hơn không còn tranh việc. Việc chỉ có điều kiện mẫu (không chọn thực thể) không bị giới hạn và xếp sau các việc có sự kiện.
+- **Hành động mặc định** khi không việc nào cần, hoặc chế độ **«Một việc»** cho từng cử chỉ: nút luôn làm đúng một việc, không xét sự kiện.
+
+**Nút bất kỳ:** thêm trigger vào ô «Khi nhấn nút» và đặt **ID** là `don`, `doi`, `ba` hoặc `giu`. **Loa R1:** giữ trigger mặc định (sự kiện `r1_speaker_phim`) và chọn loa.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fnut_bam_nhieu_viec.yaml)
+
+---
+
+## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất) - đã có bản hợp nhất «Nút bấm nhiều việc» ở trên
 
 Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (thực thể + trạng thái cần xử lý + hành động), khi nhấn nút chọn việc có **yêu cầu gần nhất** (ví dụ báo thức kêu, rồi có cuộc gọi đến thì nhấn = nghe máy; hết cuộc gọi mà báo thức còn kêu thì nhấn = tắt báo thức). Không việc nào cần thì chạy hành động mặc định (ví dụ gọi đi). Hợp với nút giữa loa R1 (từ bản 0.17.0 loa không còn hành động gắn sẵn).
 
