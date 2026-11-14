@@ -5,7 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: "**Phiên bản: v.2026.11.12.1**"
+  description: "**Phiên bản: v.2026.11.14.1**"
   input:
     ai_noi_chuyen:
       name: ① Ai được nói chuyện với trợ lý (nhiều người, nhiều nhóm, cả người lạ)
@@ -21,6 +21,12 @@ blueprint:
                 - integration: zalo_call
                   domain: notify
           default: []
+        nhan_tep:
+          name: Nhận cả ảnh, video và tệp (không chỉ tin chữ)
+          description: Bật thì ảnh, video, tệp người ta gửi cũng được chuyển cho trợ lý kèm tên, loại, dung lượng và liên kết tải (để trợ lý biết và trả lời). Album nhiều ảnh chỉ tính MỘT lần (ảnh đầu). Tắt thì chỉ xử lý tin chữ như trước. Liên kết tải chỉ truyền cho trợ lý bạn chọn ở mục AI.
+          selector:
+            boolean: {}
+          default: true
         ma_nguoi:
           name: Thêm người theo mã Zalo (threadID) - dành cho người lạ
           description: Người KHÔNG có trong danh bạ thì dán mã vào đây, mỗi dòng một mã, chỉ gồm chữ số. Xem mã ở app Zalo Call (mục "Người lạ nhắn tin" hoặc dưới tên trong khung chat).
@@ -116,6 +122,7 @@ variables:
   group_trigger: !input group_trigger
   mention_sender: !input mention_sender
   send_error: !input send_error
+  nhan_tep: !input nhan_tep
   ev: "{{ trigger.event.data }}"
   is_voice: "{{ trigger.event.event_type == 'zalo_call_voice_text' }}"
   thread_id: "{{ ev.thread_id | default('', true) | string }}"
@@ -123,6 +130,14 @@ variables:
   sender_name: "{{ ev.sender_name | default('', true) | string | trim }}"
   is_group: "{{ not is_voice and (ev.thread_type | default(0, true)) in [1, '1', 'group'] }}"
   text: "{{ ((ev.text if is_voice else ev.content) | default('', true)) | string | trim }}"
+  kind: "{{ 'text' if is_voice else (ev.kind | default('text', true)) }}"
+  la_tep: "{{ not is_voice and kind in ['photo', 'video', 'file'] }}"
+  album_total: "{{ ev.album_total | default(0, true) | int(0) }}"
+  album_index: "{{ ev.album_index | default(0, true) | int(0) }}"
+  ten_loai: "{{ {'photo': 'ảnh', 'video': 'video', 'file': 'tệp'}.get(kind, 'tệp') }}"
+  mo_ta_tep: >-
+    {% if la_tep %}[Người dùng gửi {{ ten_loai }}{% if album_total > 1 %} (album {{ album_total }} ảnh){% endif %}{% if ev.file_name | default('', true) | string | trim != '' and ev.file_name != text %} "{{ ev.file_name }}"{% endif %}{% if ev.file_size | default(0, true) | int(0) > 0 %}, {{ (ev.file_size | int / 1024) | round(0) | int }} KB{% endif %}{% if ev.duration_ms | default(0, true) | int(0) > 0 %}, {{ (ev.duration_ms | int / 1000) | round(1) }} giây{% endif %}{% if ev.file_url | default('', true) | string != '' %}, liên kết tải: {{ ev.file_url }}{% endif %}]{% endif %}
+  noi_dung_ai: "{{ ((mo_ta_tep ~ ' ') if la_tep else '') ~ text }}"
 
 triggers:
   - trigger: event
@@ -136,12 +151,15 @@ conditions:
   - alias: Không xử lý tin do chính mình gửi
     condition: template
     value_template: "{{ not (ev.is_self | default(false)) }}"
-  - alias: Chỉ tin chữ (hoặc tin thoại đã đổi thành chữ)
+  - alias: Loại tin được nhận (chữ, tin thoại đã đổi thành chữ; thêm ảnh/video/tệp nếu bật «Nhận cả ảnh, video và tệp»)
     condition: template
-    value_template: "{{ is_voice or (ev.kind | default('text', true)) == 'text' }}"
-  - alias: Tin có nội dung
+    value_template: "{{ is_voice or kind == 'text' or (nhan_tep and la_tep) }}"
+  - alias: Album nhiều ảnh chỉ xử lý MỘT lần (ảnh đầu), khỏi trả lời lặp
     condition: template
-    value_template: "{{ text | length > 0 }}"
+    value_template: "{{ not (la_tep and album_total > 1 and album_index != 0) }}"
+  - alias: Tin có nội dung (chữ, hoặc là ảnh/video/tệp được nhận)
+    condition: template
+    value_template: "{{ text | length > 0 or (nhan_tep and la_tep) }}"
   - alias: Người/nhóm nằm trong danh sách được phép
     condition: template
     value_template: "{{ thread_id | string in ds_duoc_phep }}"
@@ -162,7 +180,7 @@ actions:
       text: >-
         {% if extra_prompt | trim | length > 0 %}{{ extra_prompt | trim }}
 
-        {% endif %}{% if is_group and sender_name | length > 0 %}{{ sender_name }}: {% endif %}{{ text }}
+        {% endif %}{% if is_group and sender_name | length > 0 %}{{ sender_name }}: {% endif %}{{ noi_dung_ai }}
     response_variable: result
     continue_on_error: true
   - alias: Lấy câu trả lời

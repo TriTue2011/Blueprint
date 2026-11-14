@@ -17,6 +17,12 @@ blueprint:
           selector:
             boolean: {}
           default: true
+        bat_thong_bao:
+          name: Báo ở chuông thông báo khi quy tắc được đặt
+          description: Bật thì mỗi lần quy tắc được áp dụng sẽ có một thông báo ở chuông của Home Assistant (nhiều quy tắc thì nhiều thông báo). Mặc định TẮT.
+          selector:
+            boolean: {}
+          default: false
         pham_vi:
           name: Áp dụng cho
           selector:
@@ -156,6 +162,26 @@ blueprint:
               min: 0
               max: 100
               step: 1
+              unit_of_measurement: "%"
+          default: 0
+        do_to_mic:
+          name: Độ to tiếng nhà gửi cho người gọi - mic (% , 0 = giữ nguyên)
+          description: Khuếch đại bằng phần mềm tiếng mic gửi cho người gọi. 100% = nguyên gốc, tăng được tới 300%. Hợp với mic R1 nhỏ tiếng. Chỉnh thêm ngay trong cuộc gọi bằng nút − / + trên WebUI.
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 10
+              unit_of_measurement: "%"
+          default: 0
+        do_to_loa:
+          name: Độ to tiếng người gọi ra loa (% , 0 = giữ nguyên)
+          description: Khuếch đại bằng phần mềm tiếng người gọi phát ra loa. Dùng được cả với loa R1 (R1 không nghe lệnh chỉnh âm lượng của Home Assistant).
+          selector:
+            number:
+              min: 0
+              max: 300
+              step: 10
               unit_of_measurement: "%"
           default: 0
         ai_chon_thiet_bi:
@@ -322,6 +348,7 @@ mode: restart
 variables:
   version: 20261113
   bat_quy_tac: !input bat_quy_tac
+  bat_thong_bao: !input bat_thong_bao
   pham_vi: !input pham_vi
   nguoi_cu_the: !input nguoi_cu_the
   them_theo_ma: !input them_theo_ma
@@ -369,6 +396,8 @@ variables:
   camera: >-
     {{ (camera_goc if camera_goc is not string else ([camera_goc] if camera_goc else [])) | join(',') }}
   am_luong: !input am_luong
+  do_to_mic: !input do_to_mic
+  do_to_loa: !input do_to_loa
   chong_vong: !input chong_vong
   xu_ly_xin_video: !input xu_ly_xin_video
   bat_cong_tac_chuyen_video: !input bat_cong_tac_chuyen_video
@@ -442,6 +471,8 @@ actions:
                 {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
                 {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
                 {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
+                {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
+                {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
                 {{ d }}
   - alias: Bật công tắc tổng cho phép đồng ý chuyển sang video
     if:
@@ -451,20 +482,24 @@ actions:
       - action: zalo_call.set_default_devices
         data:
           video_consent: true
-  - alias: Báo cho bạn biết quy tắc đã được đặt (xem ở chuông thông báo)
-    action: persistent_notification.create
-    data:
-      notification_id: "zalo_call_quy_tac_{{ this.entity_id }}"
-      title: "Zalo Call: {{ 'ĐÃ ĐẶT' if bat_quy_tac else 'ĐÃ XOÁ' }} quy tắc cuộc gọi đến"
-      message: |-
-        {% set ten = {'thread': 'người/nhóm: ' ~ (ds_thread.ids | join(', ')), 'contacts': 'MỌI NGƯỜI trong danh bạ', 'strangers': 'mọi người lạ', 'groups': 'mọi nhóm', 'tag': 'mọi người mang thẻ: ' ~ (the_tag | trim)}[pham_vi] %}
-        Áp dụng cho: {{ ten }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
-        {% if bat_quy_tac %}
-        Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}
-        Báo ra loa: {{ loa_bao if (bat_bao_loa and loa_bao) else 'không' }}
-        AI nói chuyện: {{ 'có' if cho_ai_noi else 'không' }}
-        Loa: {{ loa or 'mặc định' }} | Mic: {{ mic or 'mặc định' }} | Camera: {{ camera or 'mặc định' }}
-        Nối ngay khi nghe máy: {{ noi_ngay | join(', ') or 'không' }}
-        Nối khi người nhà nói: {{ noi_khi_chuyen | join(', ') or 'không' }}
-        Xin chuyển video: {{ {'ask': 'không tự đồng ý', 'accept': 'tự đồng ý, không gửi hình', 'accept_camera': 'tự đồng ý và gửi camera'}[xu_ly_xin_video] }}
-        {% endif %}
+  - alias: Báo cho bạn biết quy tắc đã được đặt (chỉ khi bật ô «Báo ở chuông thông báo»)
+    if:
+      - condition: template
+        value_template: "{{ bat_thong_bao }}"
+    then:
+      - action: persistent_notification.create
+        data:
+          notification_id: "zalo_call_quy_tac_{{ this.entity_id }}"
+          title: "Zalo Call: {{ 'ĐÃ ĐẶT' if bat_quy_tac else 'ĐÃ XOÁ' }} quy tắc cuộc gọi đến"
+          message: |-
+            {% set ten = {'thread': 'người/nhóm: ' ~ (ds_thread.ids | join(', ')), 'contacts': 'MỌI NGƯỜI trong danh bạ', 'strangers': 'mọi người lạ', 'groups': 'mọi nhóm', 'tag': 'mọi người mang thẻ: ' ~ (the_tag | trim)}[pham_vi] %}
+            Áp dụng cho: {{ ten }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
+            {% if bat_quy_tac %}
+            Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}
+            Báo ra loa: {{ loa_bao if (bat_bao_loa and loa_bao) else 'không' }}
+            AI nói chuyện: {{ 'có' if cho_ai_noi else 'không' }}
+            Loa: {{ loa or 'mặc định' }} | Mic: {{ mic or 'mặc định' }} | Camera: {{ camera or 'mặc định' }}
+            Nối ngay khi nghe máy: {{ noi_ngay | join(', ') or 'không' }}
+            Nối khi người nhà nói: {{ noi_khi_chuyen | join(', ') or 'không' }}
+            Xin chuyển video: {{ {'ask': 'không tự đồng ý', 'accept': 'tự đồng ý, không gửi hình', 'accept_camera': 'tự đồng ý và gửi camera'}[xu_ly_xin_video] }}
+            {% endif %}
