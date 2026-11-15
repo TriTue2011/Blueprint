@@ -663,6 +663,21 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 
 ---
 
+## ✈️ Telegram Call: quy tắc cho cuộc gọi đến và một nút bấm
+
+Giống hai blueprint Zalo Call cùng tên, dùng tích hợp **Telegram Call** (tài khoản Telegram thật, không phải bot).
+
+- **Quy tắc cho cuộc gọi đến**: **mỗi cuộc gọi Telegram đến kích hoạt automation** (có trace theo từng cuộc), báo ra loa, rồi sau số giây đã đặt thì **tự nghe máy** bằng loa/mic đã chọn nếu người gọi chưa cúp. Chỉ người bạn liệt kê (ID Telegram) được tự nghe; bật «mọi người» là lựa chọn riêng. Tắt hoặc xoá automation là hết quy tắc.
+  [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_call_incoming_rule.yaml)
+- **Một nút bấm**: có cuộc gọi đến thì nghe máy, đang nói thì cúp, rảnh thì gọi đi cho người đã chọn.
+  [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_call_nut_bam.yaml)
+
+**Gửi thông báo qua Telegram Call trong các blueprint có Telegram Bot:** `alarm_person_camera` (1–4), `calendar_weather_notification`, `ai_creat_image_weather_3` có thêm ô **«Telegram Calling»** ngay trong mục Telegram: bật và điền ID người/nhóm nhận là ảnh, video, tin nhắn đi qua tài khoản Telegram thật, bật được cùng lúc với bot. Mặc định TẮT nên automation đang chạy không đổi.
+
+**Cần:** Telegram Call từ bản 2026.11.16.
+
+---
+
 ## 💬 Zalo Call Messenger tuỳ biến
 
 Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộng nhưng chỉ chọn từ danh sách**: thiết bị theo dõi, chế độ (mọi thay đổi, bật, tắt, vượt ngưỡng, báo cáo hằng ngày), câu có sẵn, kiểu chữ (emoji, đậm, màu, cỡ chữ), người nhận.

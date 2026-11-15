@@ -1,0 +1,138 @@
+blueprint:
+  name: Telegram Call - Một nút bấm nghe máy, cúp máy hoặc gọi đi
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/telegram_call_nut_bam.yaml
+  homeassistant:
+    min_version: 2026.3.0
+  domain: automation
+  description: |
+    **Phiên bản: v.2026.11.16** — giống «Zalo Call - Một nút bấm nghe máy, cúp máy hoặc gọi đi».
+
+    Một cử chỉ của nút, tuỳ lúc mà làm việc khác nhau: có cuộc gọi Telegram ĐẾN đang đổ chuông thì **nghe máy**; đang trong cuộc gọi (hoặc đang gọi đi chưa ai nghe)
+    thì **cúp**; không có cuộc gọi nào thì **gọi đi** cho người đã chọn. Dùng loa/mic đã chọn (bỏ trống = mặc định của tích hợp).
+  input:
+    nut:
+      name: ① Nút bấm
+      icon: mdi:gesture-tap-button
+      input:
+        nut_bam:
+          name: Nút bấm
+          description: Chọn trigger của nút (ví dụ «Nhấn đơn nút giữa» của loa R1).
+          selector:
+            trigger: {}
+        cam_bien:
+          name: Cảm biến «Trạng thái cuộc gọi» của Telegram Call
+          selector:
+            entity:
+              filter:
+                - integration: telegram_call
+                  domain: sensor
+    hanh_dong:
+      name: ② Việc của nút
+      icon: mdi:phone-settings-outline
+      input:
+        nghe_may:
+          name: Có cuộc gọi đến thì nghe máy
+          selector:
+            boolean: {}
+          default: true
+        cup_may:
+          name: Đang trong cuộc gọi hoặc đang gọi đi thì cúp máy
+          selector:
+            boolean: {}
+          default: true
+        goi_di:
+          name: Rảnh thì gọi đi cho người bên dưới
+          selector:
+            boolean: {}
+          default: true
+        nguoi_nhan:
+          name: Người sẽ gọi (ID số, @username hoặc +số điện thoại)
+          selector:
+            text: {}
+          default: ""
+        goi_video:
+          name: Gọi video
+          description: Gateway Telegram hỗ trợ video nhưng tích hợp này chỉ gửi/nhận tiếng; để TẮT.
+          selector:
+            boolean: {}
+          default: false
+    thiet_bi:
+      name: ③ Thiết bị trong nhà dùng khi nghe/gọi (tuỳ chọn)
+      icon: mdi:speaker-wireless
+      collapsed: true
+      input:
+        loa:
+          name: Loa phát tiếng người bên kia
+          selector:
+            entity:
+              filter:
+                - domain: media_player
+          default: ""
+        mic:
+          name: Mic gửi tiếng trong nhà
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - assist_satellite
+                    - camera
+          default: ""
+        am_luong:
+          name: Âm lượng loa lúc đang gọi (%)
+          description: 0 = giữ nguyên.
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+          default: 0
+
+mode: single
+max_exceeded: silent
+
+variables:
+  cam_bien: !input cam_bien
+  nghe_may: !input nghe_may
+  cup_may: !input cup_may
+  goi_di: !input goi_di
+  nguoi_nhan: !input nguoi_nhan
+  goi_video: !input goi_video
+  loa: !input loa
+  mic: !input mic
+  am_luong: !input am_luong
+  dev: >-
+    {% set d = {} %}
+    {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+    {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+    {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
+    {{ d }}
+
+triggers: !input nut_bam
+
+actions:
+  - choose:
+      - alias: Có cuộc gọi đến đang đổ chuông - nghe máy
+        conditions:
+          - condition: template
+            value_template: "{{ nghe_may and is_state(cam_bien, 'incoming') }}"
+        sequence:
+          - action: telegram_call.answer_call
+            data: "{{ dict(dev, call_id=state_attr(cam_bien, 'call_id') | string) }}"
+      - alias: Đang trong cuộc gọi - cúp máy
+        conditions:
+          - condition: template
+            value_template: "{{ cup_may and not is_state(cam_bien, 'idle') }}"
+        sequence:
+          - action: telegram_call.hangup_call
+            data:
+              call_id: "{{ state_attr(cam_bien, 'call_id') | string }}"
+      - alias: Rảnh - gọi đi
+        conditions:
+          - condition: template
+            value_template: "{{ goi_di and is_state(cam_bien, 'idle') and nguoi_nhan | trim != '' }}"
+        sequence:
+          - action: telegram_call.make_call
+            data: "{{ dict(dev, peer=nguoi_nhan | trim, video=goi_video) }}"

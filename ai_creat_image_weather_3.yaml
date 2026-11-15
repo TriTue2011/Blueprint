@@ -449,6 +449,23 @@ blueprint:
           selector:
             text: {}
 
+        include_telegram_call:
+          name: ✅ Telegram Calling (Optional)
+          description: |
+            👉 Bật nếu muốn gửi thông báo qua tích hợp **Telegram Call** (tài khoản Telegram thật, không cần bot ở trên). Bật được cùng lúc với Telegram Bot.
+          default: false
+          selector:
+            boolean: {}
+
+        telegram_call_target:
+          name: 🧑‍💻 Telegram Calling - người/nhóm nhận
+          description: |
+            👉 ID số của người hoặc nhóm nhận (nhóm/kênh có dấu trừ phía trước). Lấy bằng dịch vụ `telegram_call.find_chat` hoặc `get_contacts`.
+            ✅ Chỉ dùng khi bật «Telegram Calling» ở trên; bỏ trống thì không gửi.
+          default: ""
+          selector:
+            text: {}
+
         telegram_thread_id:
           name: 🧵 Thread ID (tuỳ chọn)
           default: ""
@@ -1538,7 +1555,10 @@ actions:
 
   # ── BƯỚC 5: GỬI ẢNH ──────────────────────────────────────────────────────
   - variables:
-      _tg:             !input include_telegram_notify
+      _tgbot:           !input include_telegram_notify
+      include_telegram_call: !input include_telegram_call
+      telegram_call_target: !input telegram_call_target
+      _tg:              "{{ _tgbot or include_telegram_call }}"
       _tg_cfg:         !input telegram_config_entry
       _tg_target:      !input telegram_target
       _tg_thread:      !input telegram_thread_id
@@ -1608,13 +1628,35 @@ actions:
           - condition: template
             value_template: "{{ _tg }}"
         sequence:
-          - continue_on_error: true
-            action: telegram_bot.send_photo
-            data: >
-              {% set d = {'config_entry_id': _tg_cfg, 'file': final_image_path} %}
-              {% if _tg_target != '' %}{% set d = dict(d, chat_id=_tg_target | int) %}{% endif %}
-              {% if _tg_thread != '' %}{% set d = dict(d, message_thread_id=_tg_thread | int) %}{% endif %}
-              {{ d }}
+          - alias: "Telegram Bot — send_photo (chỉ khi bật Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ _tgbot }}"
+            then:
+              - continue_on_error: true
+                action: telegram_bot.send_photo
+                data: >
+                  {% set d = {'config_entry_id': _tg_cfg, 'file': final_image_path} %}
+                  {% if _tg_target != '' %}{% set d = dict(d, chat_id=_tg_target | int) %}{% endif %}
+                  {% if _tg_thread != '' %}{% set d = dict(d, message_thread_id=_tg_thread | int) %}{% endif %}
+                  {{ d }}
+
+          - alias: "Telegram Calling — send_photo (cùng dữ liệu với Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+            then:
+              - variables:
+                  _tg_target: "{{ telegram_call_target | string | trim }}"
+                  _tg_thread: ""
+                  _tg_cfg: ""
+              - continue_on_error: true
+                action: telegram_call.send_photo
+                data: >
+                  {% set d = {'config_entry_id': _tg_cfg, 'file': final_image_path} %}
+                  {% if _tg_target != '' %}{% set d = dict(d, chat_id=_tg_target | int) %}{% endif %}
+                  {% if _tg_thread != '' %}{% set d = dict(d, message_thread_id=_tg_thread | int) %}{% endif %}
+                  {{ d }}
 
   - choose:
       - conditions:

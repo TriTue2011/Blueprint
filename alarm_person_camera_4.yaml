@@ -759,6 +759,23 @@ blueprint:
           selector:
             text: {}
 
+        include_telegram_call:
+          name: ✅ Telegram Calling (Optional)
+          description: |
+            👉 Bật nếu muốn gửi thông báo qua tích hợp **Telegram Call** (tài khoản Telegram thật, không cần bot ở trên). Bật được cùng lúc với Telegram Bot.
+          default: false
+          selector:
+            boolean: {}
+
+        telegram_call_target:
+          name: 🧑‍💻 Telegram Calling - người/nhóm nhận
+          description: |
+            👉 ID số của người hoặc nhóm nhận (nhóm/kênh có dấu trừ phía trước). Lấy bằng dịch vụ `telegram_call.find_chat` hoặc `get_contacts`.
+            ✅ Chỉ dùng khi bật «Telegram Calling» ở trên; bỏ trống thì không gửi.
+          default: ""
+          selector:
+            text: {}
+
         telegram_thread_id:
           name: 🧵 Thread ID (Optional)
           description: |
@@ -2062,7 +2079,10 @@ variables:
   filtered_devices: "{{ notify_device }}"
 
   # --- Telegram ---
-  include_telegram_notify: !input include_telegram_notify
+  include_telegram_bot: !input include_telegram_notify
+  include_telegram_call: !input include_telegram_call
+  telegram_call_target: !input telegram_call_target
+  include_telegram_notify: "{{ include_telegram_bot or include_telegram_call }}"          # «có gửi Telegram nào không» (bot hoặc Telegram Call)
   telegram_config_entry: !input telegram_config_entry
   telegram_target: !input telegram_target
   telegram_thread_id: !input telegram_thread_id
@@ -2590,15 +2610,39 @@ actions:
           - condition: template
             value_template: "{{ include_telegram_notify and som_gui_anh and not som_nhieu_anh }}"
         sequence:
-          - continue_on_error: true
-            action: telegram_bot.send_photo
-            data: >
-              {% set d = {'config_entry_id': telegram_config_entry,
-                          'file': duong_dan_anh[0],
-                          'caption': telegram_initial_caption} %}
-              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-              {{ d }}
+          - alias: "Telegram Bot — send_photo (chỉ khi bật Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_bot }}"
+            then:
+              - continue_on_error: true
+                action: telegram_bot.send_photo
+                data: >
+                  {% set d = {'config_entry_id': telegram_config_entry,
+                              'file': duong_dan_anh[0],
+                              'caption': telegram_initial_caption} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
+
+          - alias: "Telegram Calling — send_photo (cùng dữ liệu với Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+            then:
+              - variables:
+                  telegram_target: "{{ telegram_call_target | string | trim }}"
+                  telegram_thread_id: ""
+                  telegram_config_entry: ""
+              - continue_on_error: true
+                action: telegram_call.send_photo
+                data: >
+                  {% set d = {'config_entry_id': telegram_config_entry,
+                              'file': duong_dan_anh[0],
+                              'caption': telegram_initial_caption} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
 
       - alias: "Telegram sớm — chùm ảnh"
         conditions:
@@ -2608,36 +2652,90 @@ actions:
           # send_media_group bắt buộc từ 2 tới 10 ảnh. Một ảnh là cả lời gọi bị
           # từ chối, nên nhánh trên đã tách riêng. Cắt ở 10 tại đây chứ không
           # để Telegram đánh trượt cả lô.
-          - continue_on_error: true
-            action: telegram_bot.send_media_group
-            data: >
-              {% set ns = namespace(m=[]) %}
-              {%- for p in duong_dan_anh[:10] -%}
-                {% if loop.first %}
-                  {% set ns.m = ns.m + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
-                {% else %}
-                  {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
-                {% endif %}
-              {%- endfor -%}
-              {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
-              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-              {{ d }}
+          - alias: "Telegram Bot — send_media_group (chỉ khi bật Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_bot }}"
+            then:
+              - continue_on_error: true
+                action: telegram_bot.send_media_group
+                data: >
+                  {% set ns = namespace(m=[]) %}
+                  {%- for p in duong_dan_anh[:10] -%}
+                    {% if loop.first %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
+                    {% else %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
+                    {% endif %}
+                  {%- endfor -%}
+                  {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
+
+          - alias: "Telegram Calling — send_media_group (cùng dữ liệu với Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+            then:
+              - variables:
+                  telegram_target: "{{ telegram_call_target | string | trim }}"
+                  telegram_thread_id: ""
+                  telegram_config_entry: ""
+              - continue_on_error: true
+                action: telegram_call.send_media_group
+                data: >
+                  {% set ns = namespace(m=[]) %}
+                  {%- for p in duong_dan_anh[:10] -%}
+                    {% if loop.first %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p,'caption':telegram_initial_caption}] %}
+                    {% else %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
+                    {% endif %}
+                  {%- endfor -%}
+                  {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
 
   # --- Telegram: video ---
   - if:
       - condition: template
         value_template: "{{ include_telegram_notify and som_gui_video }}"
     then:
-      - continue_on_error: true
-        action: telegram_bot.send_video
-        data: >
-          {% set d = {'config_entry_id': telegram_config_entry,
-                      'file': duong_dan_video,
-                      'caption': telegram_initial_caption} %}
-          {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-          {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-          {{ d }}
+      - alias: "Telegram Bot — send_video (chỉ khi bật Telegram Bot)"
+        if:
+          - condition: template
+            value_template: "{{ include_telegram_bot }}"
+        then:
+          - continue_on_error: true
+            action: telegram_bot.send_video
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'file': duong_dan_video,
+                          'caption': telegram_initial_caption} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+      - alias: "Telegram Calling — send_video (cùng dữ liệu với Telegram Bot)"
+        if:
+          - condition: template
+            value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+        then:
+          - variables:
+              telegram_target: "{{ telegram_call_target | string | trim }}"
+              telegram_thread_id: ""
+              telegram_config_entry: ""
+          - continue_on_error: true
+            action: telegram_call.send_video
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'file': duong_dan_video,
+                          'caption': telegram_initial_caption} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
 
   # --- Zalo Bot (Pyscript): chỉ ảnh, nền tảng này không nhận video ---
   - if:
@@ -3244,15 +3342,39 @@ actions:
           - condition: template
             value_template: "{{ include_telegram_notify }}"
         then:
-          - continue_on_error: true
-            action: telegram_bot.send_message
-            data: >
-              {% set d = {'config_entry_id': telegram_config_entry,
-                          'message': tin_loi_ai,
-                          'parse_mode': 'plain_text'} %}
-              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-              {{ d }}
+          - alias: "Telegram Bot — send_message (chỉ khi bật Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_bot }}"
+            then:
+              - continue_on_error: true
+                action: telegram_bot.send_message
+                data: >
+                  {% set d = {'config_entry_id': telegram_config_entry,
+                              'message': tin_loi_ai,
+                              'parse_mode': 'plain_text'} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
+
+          - alias: "Telegram Calling — send_message (cùng dữ liệu với Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+            then:
+              - variables:
+                  telegram_target: "{{ telegram_call_target | string | trim }}"
+                  telegram_thread_id: ""
+                  telegram_config_entry: ""
+              - continue_on_error: true
+                action: telegram_call.send_message
+                data: >
+                  {% set d = {'config_entry_id': telegram_config_entry,
+                              'message': tin_loi_ai,
+                              'parse_mode': 'plain_text'} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
 
       - alias: "Nhắn lỗi qua Zalo cá nhân"
         choose:
@@ -3663,55 +3785,137 @@ actions:
           - condition: template
             value_template: "{{ include_telegram_notify and muon_gui_anh and not muon_nhieu_anh }}"
         sequence:
-          - continue_on_error: true
-            action: telegram_bot.send_photo
-            data: >
-              {% set d = {'config_entry_id': telegram_config_entry,
-                          'file': anh_chon,
-                          'caption': pb_tg.anh if pb_tg.anh | length > 0
-                                     else telegram_initial_caption} %}
-              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-              {{ d }}
+          - alias: "Telegram Bot — send_photo (chỉ khi bật Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_bot }}"
+            then:
+              - continue_on_error: true
+                action: telegram_bot.send_photo
+                data: >
+                  {% set d = {'config_entry_id': telegram_config_entry,
+                              'file': anh_chon,
+                              'caption': pb_tg.anh if pb_tg.anh | length > 0
+                                         else telegram_initial_caption} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
+
+          - alias: "Telegram Calling — send_photo (cùng dữ liệu với Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+            then:
+              - variables:
+                  telegram_target: "{{ telegram_call_target | string | trim }}"
+                  telegram_thread_id: ""
+                  telegram_config_entry: ""
+              - continue_on_error: true
+                action: telegram_call.send_photo
+                data: >
+                  {% set d = {'config_entry_id': telegram_config_entry,
+                              'file': anh_chon,
+                              'caption': pb_tg.anh if pb_tg.anh | length > 0
+                                         else telegram_initial_caption} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
 
       - alias: "Telegram muộn — chùm ảnh"
         conditions:
           - condition: template
             value_template: "{{ include_telegram_notify and muon_nhieu_anh }}"
         sequence:
-          - continue_on_error: true
-            action: telegram_bot.send_media_group
-            data: >
-              {% set ns = namespace(m=[]) %}
-              {%- for p in duong_dan_anh[:10] -%}
-                {% if loop.first %}
-                  {% set ns.m = ns.m + [{'media_type':'photo','file':p,
-                                       'caption': pb_tg.anh if pb_tg.anh | length > 0
-                                                  else telegram_initial_caption}] %}
-                {% else %}
-                  {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
-                {% endif %}
-              {%- endfor -%}
-              {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
-              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-              {{ d }}
+          - alias: "Telegram Bot — send_media_group (chỉ khi bật Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_bot }}"
+            then:
+              - continue_on_error: true
+                action: telegram_bot.send_media_group
+                data: >
+                  {% set ns = namespace(m=[]) %}
+                  {%- for p in duong_dan_anh[:10] -%}
+                    {% if loop.first %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p,
+                                           'caption': pb_tg.anh if pb_tg.anh | length > 0
+                                                      else telegram_initial_caption}] %}
+                    {% else %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
+                    {% endif %}
+                  {%- endfor -%}
+                  {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
+
+          - alias: "Telegram Calling — send_media_group (cùng dữ liệu với Telegram Bot)"
+            if:
+              - condition: template
+                value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+            then:
+              - variables:
+                  telegram_target: "{{ telegram_call_target | string | trim }}"
+                  telegram_thread_id: ""
+                  telegram_config_entry: ""
+              - continue_on_error: true
+                action: telegram_call.send_media_group
+                data: >
+                  {% set ns = namespace(m=[]) %}
+                  {%- for p in duong_dan_anh[:10] -%}
+                    {% if loop.first %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p,
+                                           'caption': pb_tg.anh if pb_tg.anh | length > 0
+                                                      else telegram_initial_caption}] %}
+                    {% else %}
+                      {% set ns.m = ns.m + [{'media_type':'photo','file':p}] %}
+                    {% endif %}
+                  {%- endfor -%}
+                  {% set d = {'config_entry_id': telegram_config_entry, 'media': ns.m} %}
+                  {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                  {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                  {{ d }}
 
   # --- Telegram: video muộn ---
   - if:
       - condition: template
         value_template: "{{ include_telegram_notify and muon_gui_video }}"
     then:
-      - continue_on_error: true
-        action: telegram_bot.send_video
-        data: >
-          {% set d = {'config_entry_id': telegram_config_entry,
-                      'file': duong_dan_video,
-                      'caption': pb_tg.video if pb_tg.video | length > 0
-                                     else telegram_initial_caption} %}
-          {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-          {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-          {{ d }}
+      - alias: "Telegram Bot — send_video (chỉ khi bật Telegram Bot)"
+        if:
+          - condition: template
+            value_template: "{{ include_telegram_bot }}"
+        then:
+          - continue_on_error: true
+            action: telegram_bot.send_video
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'file': duong_dan_video,
+                          'caption': pb_tg.video if pb_tg.video | length > 0
+                                         else telegram_initial_caption} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
+
+      - alias: "Telegram Calling — send_video (cùng dữ liệu với Telegram Bot)"
+        if:
+          - condition: template
+            value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+        then:
+          - variables:
+              telegram_target: "{{ telegram_call_target | string | trim }}"
+              telegram_thread_id: ""
+              telegram_config_entry: ""
+          - continue_on_error: true
+            action: telegram_call.send_video
+            data: >
+              {% set d = {'config_entry_id': telegram_config_entry,
+                          'file': duong_dan_video,
+                          'caption': pb_tg.video if pb_tg.video | length > 0
+                                         else telegram_initial_caption} %}
+              {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+              {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+              {{ d }}
 
   # --- Telegram: tin chữ riêng ---
   - if:
@@ -3721,15 +3925,39 @@ actions:
       - repeat:
           for_each: "{{ pb_tg.rieng }}"
           sequence:
-            - continue_on_error: true
-              action: telegram_bot.send_message
-              data: >
-                {% set d = {'config_entry_id': telegram_config_entry,
-                            'message': repeat.item,
-                            'parse_mode': 'plain_text'} %}
-                {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
-                {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
-                {{ d }}
+            - alias: "Telegram Bot — send_message (chỉ khi bật Telegram Bot)"
+              if:
+                - condition: template
+                  value_template: "{{ include_telegram_bot }}"
+              then:
+                - continue_on_error: true
+                  action: telegram_bot.send_message
+                  data: >
+                    {% set d = {'config_entry_id': telegram_config_entry,
+                                'message': repeat.item,
+                                'parse_mode': 'plain_text'} %}
+                    {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                    {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                    {{ d }}
+
+            - alias: "Telegram Calling — send_message (cùng dữ liệu với Telegram Bot)"
+              if:
+                - condition: template
+                  value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+              then:
+                - variables:
+                    telegram_target: "{{ telegram_call_target | string | trim }}"
+                    telegram_thread_id: ""
+                    telegram_config_entry: ""
+                - continue_on_error: true
+                  action: telegram_call.send_message
+                  data: >
+                    {% set d = {'config_entry_id': telegram_config_entry,
+                                'message': repeat.item,
+                                'parse_mode': 'plain_text'} %}
+                    {% if telegram_target != "" %}{% set d = dict(d, chat_id=telegram_target | int) %}{% endif %}
+                    {% if telegram_thread_id != "" %}{% set d = dict(d, message_thread_id=telegram_thread_id | int) %}{% endif %}
+                    {{ d }}
 
   # --- Zalo Bot (Pyscript): ảnh muộn rồi tới chữ ---
   - if:
