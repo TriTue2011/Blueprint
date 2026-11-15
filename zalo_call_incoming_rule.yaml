@@ -5,7 +5,7 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: "**Phiên bản: v.2026.11.13**"
+  description: "**Phiên bản: v.2026.11.15** — mỗi cuộc gọi đến kích hoạt automation này và chính nó áp quy tắc cho cuộc gọi đó (nhiều quy tắc khác nhau không còn đè nhau, tắt automation là hết quy tắc)."
   input:
     ap_dung:
       name: ① Áp dụng cho ai
@@ -13,13 +13,13 @@ blueprint:
       input:
         bat_quy_tac:
           name: Bật quy tắc
-          description: Tắt rồi chạy lại để xoá quy tắc này.
+          description: Tắt thì automation này không áp quy tắc cho cuộc gọi nào (tắt hẳn automation cũng vậy).
           selector:
             boolean: {}
           default: true
         bat_thong_bao:
-          name: Báo ở chuông thông báo khi quy tắc được đặt
-          description: Bật thì mỗi lần quy tắc được áp dụng sẽ có một thông báo ở chuông của Home Assistant (nhiều quy tắc thì nhiều thông báo). Mặc định TẮT.
+          name: Báo ở chuông thông báo khi quy tắc được áp
+          description: Bật thì mỗi cuộc gọi được áp quy tắc sẽ có một thông báo ở chuông của Home Assistant. Mặc định TẮT.
           selector:
             boolean: {}
           default: false
@@ -343,10 +343,11 @@ blueprint:
           selector:
             boolean:
 
-mode: restart
+mode: parallel
+max: 10
 
 variables:
-  version: 20261113
+  version: 20261115
   bat_quy_tac: !input bat_quy_tac
   bat_thong_bao: !input bat_thong_bao
   pham_vi: !input pham_vi
@@ -401,105 +402,135 @@ variables:
   chong_vong: !input chong_vong
   xu_ly_xin_video: !input xu_ly_xin_video
   bat_cong_tac_chuyen_video: !input bat_cong_tac_chuyen_video
+  ds_thread: >-
+    {% set ns = namespace(l=[], sai=[]) %}
+    {% for e in nguoi_cu_the %}{% set ns.l = ns.l + [state_attr(e, 'thread_id') | string] %}{% endfor %}
+    {% for ma in them_theo_ma %}
+      {% set m = ma | string | trim %}
+      {% if m is match('^[0-9]+$') %}{% set ns.l = ns.l + [m] %}{% else %}{% set ns.sai = ns.sai + [m] %}{% endif %}
+    {% endfor %}
+    {{ {'ids': ns.l | unique | list, 'sai': ns.sai} }}
+  muc_tieu: "{{ ds_thread.ids if pham_vi == 'thread' else [''] }}"
 
 triggers:
+  # ① MỖI CUỘC GỌI kích hoạt automation này (có lượt chạy/trace theo từng cuộc) và chính nó áp quy tắc cho cuộc đó. Không lưu quy tắc: tắt hay xoá
+  # automation là hết quy tắc; nhiều automation khác nhau cùng một người vẫn chạy đủ (quy tắc cụ thể hơn thắng, xem zalo_call.apply_call_rule).
+  - trigger: event
+    event_type: zalo_call_call_state
+    event_data:
+      state: incoming
+    id: cuoc_goi
+  - trigger: event
+    event_type: zalo_call_call_state
+    event_data:
+      state: ringing
+    id: cuoc_goi
+  # ② Lúc HA khởi động / tải lại automation: chỉ dọn quy tắc cũ do bản blueprint trước ghi vào kho và đặt phần trả lời TIN NHẮN.
   - trigger: homeassistant
     event: start
+    id: khoi_dong
   - trigger: event
     event_type: automation_reloaded
+    id: khoi_dong
 
 actions:
-  - alias: Gom mã Zalo của những người được chọn
-    variables:
-      ds_thread: >-
-        {% set ns = namespace(l=[], sai=[]) %}
-        {% for e in nguoi_cu_the %}{% set ns.l = ns.l + [state_attr(e, 'thread_id') | string] %}{% endfor %}
-        {% for ma in them_theo_ma %}
-          {% set m = ma | string | trim %}
-          {% if m is match('^[0-9]+$') %}{% set ns.l = ns.l + [m] %}{% else %}{% set ns.sai = ns.sai + [m] %}{% endif %}
-        {% endfor %}
-        {{ {'ids': ns.l | unique | list, 'sai': ns.sai} }}
-      muc_tieu: "{{ ds_thread.ids if pham_vi == 'thread' else [''] }}"
-  - alias: Ghi cảnh báo nếu có mã không hợp lệ
-    if:
-      - condition: template
-        value_template: "{{ pham_vi == 'thread' and ds_thread.sai | count > 0 }}"
-    then:
-      - action: system_log.write
-        data:
-          level: warning
-          logger: zalo_call.blueprint
-          message: "Quy tắc cuộc gọi đến: mã Zalo không hợp lệ (chỉ gồm chữ số): {{ ds_thread.sai | join(', ') }}"
-  - repeat:
-      for_each: "{{ muc_tieu }}"
-      sequence:
-        - choose:
-            - alias: Xoá quy tắc
-              conditions:
-                - condition: template
-                  value_template: "{{ not bat_quy_tac }}"
+  - choose:
+      - alias: Có cuộc gọi - áp quy tắc cho ĐÚNG cuộc gọi này
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'cuoc_goi' }}"
+        sequence:
+          - alias: Chỉ khi quy tắc đang bật và cuộc gọi thuộc đối tượng của quy tắc
+            condition: template
+            value_template: >-
+              {% set d = trigger.event.data %}
+              {{ bat_quy_tac and (
+                   (pham_vi == 'thread' and (d.thread_id | string) in ds_thread.ids)
+                or (pham_vi == 'contacts' and d.contact_status == 'friend')
+                or (pham_vi == 'strangers' and d.contact_status == 'stranger')
+                or (pham_vi == 'groups' and d.call_type == 'group')
+                or (pham_vi == 'tag' and (the_tag | trim) != '' and (the_tag | trim) in (d.tags | default([], true))) ) }}
+          - alias: Áp quy tắc cho cuộc gọi
+            action: zalo_call.apply_call_rule
+            data: >-
+              {% set d = {'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
+                          'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
+                          'call_types': loai_cuoc_goi, 'ai': cho_ai_noi, 'trusted': nguoi_tin_cay,
+                          'announce': bat_bao_loa and loa_bao | default('', true) != '',
+                          'connect': noi_khi_chuyen, 'connect_now': noi_ngay,
+                          'echo_guard': chong_vong, 'video_request': xu_ly_xin_video, 'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0)} %}
+              {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
+              {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
+              {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
+              {% if bat_bao_loa and loa_bao %}{% set d = dict(d, announce_to=loa_bao) %}{% endif %}
+              {% if cau_bao | trim != '' %}{% set d = dict(d, announce_text=cau_bao | trim) %}{% endif %}
+              {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+              {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+              {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+              {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
+              {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
+              {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
+              {{ d }}
+          - alias: Báo ở chuông thông báo (chỉ khi bật ô «Báo ở chuông thông báo»)
+            if:
+              - condition: template
+                value_template: "{{ bat_thong_bao }}"
+            then:
+              - action: persistent_notification.create
+                data:
+                  notification_id: "zalo_call_quy_tac_{{ this.entity_id }}_{{ trigger.event.data.call_id }}"
+                  title: "Zalo Call: ĐÃ ÁP quy tắc cho cuộc gọi"
+                  message: |-
+                    Cuộc gọi {{ trigger.event.data.call_id }} từ {{ trigger.event.data.peer or trigger.event.data.thread_id }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
+                    Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}
+                    Báo ra loa: {{ loa_bao if (bat_bao_loa and loa_bao) else 'không' }}
+                    AI nói chuyện: {{ 'có' if cho_ai_noi else 'không' }}
+                    Loa: {{ loa or 'mặc định' }} | Mic: {{ mic or 'mặc định' }} | Camera: {{ camera or 'mặc định' }}
+                    Nối ngay khi nghe máy: {{ noi_ngay | join(', ') or 'không' }}
+                    Nối khi người nhà nói: {{ noi_khi_chuyen | join(', ') or 'không' }}
+      - alias: Khởi động / tải lại - dọn quy tắc cũ và đặt phần trả lời tin nhắn
+        conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'khoi_dong' }}"
+        sequence:
+          - alias: Ghi cảnh báo nếu có mã không hợp lệ
+            if:
+              - condition: template
+                value_template: "{{ pham_vi == 'thread' and ds_thread.sai | count > 0 }}"
+            then:
+              - action: system_log.write
+                data:
+                  level: warning
+                  logger: zalo_call.blueprint
+                  message: "Quy tắc cuộc gọi đến: mã Zalo không hợp lệ (chỉ gồm chữ số): {{ ds_thread.sai | join(', ') }}"
+          - repeat:
+              for_each: "{{ muc_tieu }}"
               sequence:
-                - action: zalo_call.remove_rule
+                - alias: Xoá quy tắc cũ trong kho của mục tiêu (bản blueprint trước ghi quy tắc cuộc gọi vào kho và nó sống mãi dù tắt automation)
+                  action: zalo_call.remove_rule
                   data: >-
                     {% set d = {'scope': pham_vi} %}
                     {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
                     {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
                     {{ d }}
-          default:
-            - alias: Xoá quy tắc cũ của mục tiêu (đặt lại từ đầu, không giữ trường cũ nào)
-              action: zalo_call.remove_rule
-              data: >-
-                {% set d = {'scope': pham_vi} %}
-                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
-                {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
-                {{ d }}
-            - action: zalo_call.set_rule
-              data: >-
-                {% set d = {'scope': pham_vi, 'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
-                            'call_types': loai_cuoc_goi, 'ai': cho_ai_noi, 'trusted': nguoi_tin_cay,
-                            'reply_ai': ai_tra_loi_tin and cho_ai_noi, 'announce': bat_bao_loa and loa_bao | default('', true) != '',
-                            'connect': noi_khi_chuyen, 'connect_now': noi_ngay,
-                            'echo_guard': chong_vong, 'video_request': xu_ly_xin_video, 'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0)} %}
-                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
-                {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
-                {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
-                {% if cho_ai_noi and tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
-                {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
-                {% if bat_bao_loa and loa_bao %}{% set d = dict(d, announce_to=loa_bao) %}{% endif %}
-                {% if cau_bao | trim != '' %}{% set d = dict(d, announce_text=cau_bao | trim) %}{% endif %}
-                {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-                {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
-                {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
-                {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
-                {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
-                {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
-                {{ d }}
-  - alias: Bật công tắc tổng cho phép đồng ý chuyển sang video
-    if:
-      - condition: template
-        value_template: "{{ bat_quy_tac and bat_cong_tac_chuyen_video and xu_ly_xin_video != 'ask' }}"
-    then:
-      - action: zalo_call.set_default_devices
-        data:
-          video_consent: true
-  - alias: Báo cho bạn biết quy tắc đã được đặt (chỉ khi bật ô «Báo ở chuông thông báo»)
-    if:
-      - condition: template
-        value_template: "{{ bat_thong_bao }}"
-    then:
-      - action: persistent_notification.create
-        data:
-          notification_id: "zalo_call_quy_tac_{{ this.entity_id }}"
-          title: "Zalo Call: {{ 'ĐÃ ĐẶT' if bat_quy_tac else 'ĐÃ XOÁ' }} quy tắc cuộc gọi đến"
-          message: |-
-            {% set ten = {'thread': 'người/nhóm: ' ~ (ds_thread.ids | join(', ')), 'contacts': 'MỌI NGƯỜI trong danh bạ', 'strangers': 'mọi người lạ', 'groups': 'mọi nhóm', 'tag': 'mọi người mang thẻ: ' ~ (the_tag | trim)}[pham_vi] %}
-            Áp dụng cho: {{ ten }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
-            {% if bat_quy_tac %}
-            Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}
-            Báo ra loa: {{ loa_bao if (bat_bao_loa and loa_bao) else 'không' }}
-            AI nói chuyện: {{ 'có' if cho_ai_noi else 'không' }}
-            Loa: {{ loa or 'mặc định' }} | Mic: {{ mic or 'mặc định' }} | Camera: {{ camera or 'mặc định' }}
-            Nối ngay khi nghe máy: {{ noi_ngay | join(', ') or 'không' }}
-            Nối khi người nhà nói: {{ noi_khi_chuyen | join(', ') or 'không' }}
-            Xin chuyển video: {{ {'ask': 'không tự đồng ý', 'accept': 'tự đồng ý, không gửi hình', 'accept_camera': 'tự đồng ý và gửi camera'}[xu_ly_xin_video] }}
-            {% endif %}
+                - alias: Phần trả lời tin nhắn bằng AI (tin nhắn chưa đi qua automation nên vẫn lưu trong kho)
+                  if:
+                    - condition: template
+                      value_template: "{{ bat_quy_tac and ai_tra_loi_tin and cho_ai_noi }}"
+                  then:
+                    - action: zalo_call.set_rule
+                      data: >-
+                        {% set d = {'scope': pham_vi, 'reply_ai': true, 'trusted': nguoi_tin_cay} %}
+                        {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                        {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
+                        {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
+                        {% if tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
+                        {{ d }}
+          - alias: Bật công tắc tổng cho phép đồng ý chuyển sang video
+            if:
+              - condition: template
+                value_template: "{{ bat_quy_tac and bat_cong_tac_chuyen_video and xu_ly_xin_video != 'ask' }}"
+            then:
+              - action: zalo_call.set_default_devices
+                data:
+                  video_consent: true
