@@ -1,1408 +1,163 @@
 blueprint:
-  name: Nút bấm nhiều việc - mỗi cử chỉ nhiều việc theo điều kiện (ưu tiên sự kiện gần nhất)
+  name: Nút bấm (loa R1, Zigbee, công tắc, mọi loại) - MỘT automation, thêm bao nhiêu việc cũng được
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/nut_bam_nhieu_viec.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
   description: |
-    **Một nút bấm, làm đúng việc đang cần** - hợp nhất «Một nút nhiều việc» và «Loa R1 nút giữa mọi cử chỉ». Dùng cho nút bất kỳ (Zigbee, Matter, ESPHome, nút ảo...) và cho nút giữa loa R1.
+    **Phiên bản: v.2026.11.17** — thay cho các blueprint nút riêng của loa R1 (nhận cuộc gọi, gọi đi, nút giữa nhiều cử chỉ): MỘT automation cho mọi nút.
 
-    - **Bốn cử chỉ**: nhấn đơn, nhấn đúp, nhấn ba lần, giữ. Mỗi cử chỉ có tối đa 6 «việc».
-    - **Mỗi việc đi kèm điều kiện** nên không bị lẫn: một **thực thể + trạng thái** (và thuộc tính nếu cần) cho biết việc đang cần, cộng một **điều kiện mẫu** tuỳ chọn.
-    - **Ưu tiên sự kiện gần nhất**: nhiều việc cùng đang cần thì làm việc có thực thể vừa đổi trạng thái MỚI NHẤT.
-    - **Chỉ xét sự kiện trong N giây gần nhất** (mặc định 30 giây): sự kiện đã quá cũ thì nút không làm việc đó nữa (tránh nhấn nhầm vào chuyện đã xong từ lâu).
-    - **Hành động mặc định** khi không việc nào đang cần; hoặc chọn chế độ **«Một việc»** để nút luôn làm đúng một việc, không xét sự kiện.
+    **Nút:** ô «Nút bấm» nhận MỌI loại trigger (cử chỉ loa R1, nút Zigbee/Z-Wave/Matter, sự kiện `event`, `button`, công tắc, thiết bị bất kỳ…). Đặt **ID** cho từng trigger
+    (ví dụ `don`, `doi`, `giu`) để biết đó là cử chỉ nào.
 
-    **Nút bất kỳ:** thêm trigger vào ô «Khi nhấn nút» và đặt **ID của trigger** là `don`, `doi`, `ba` hoặc `giu` (không đặt ID = nhấn đơn). **Loa R1:** giữ trigger mặc định (sự kiện `r1_speaker_phim`) và chọn loa ở ô «Loa R1»; cử chỉ lấy từ chính sự kiện.
+    **Việc:** bấm «Thêm» để thêm một việc, **thêm bao nhiêu cũng được** (kể cả 100): không có danh sách làm sẵn. Mỗi việc gồm: tên, *nhấn kiểu nào* (ID trigger, trống = mọi kiểu),
+    *cảm biến + trạng thái nghĩa là «đang cần việc này»* (ví dụ cảm biến cuộc gọi = `incoming`), và các hành động (lời gọi dịch vụ) sẽ chạy.
 
-    <details>
-    <summary><b>Ví dụ nhấn đơn trên loa R1:</b> - Nhấn để mở rộng</summary>
+    **Chọn việc theo cảm biến gần nhất:** mỗi lần bấm, các việc khớp kiểu nhấn VÀ có cảm biến đang ở trạng thái cần được so với nhau; việc có cảm biến **vừa đổi trạng thái gần đây nhất** thắng
+    (ví dụ vừa có cuộc gọi Telegram đến thì nhấn sẽ nghe cuộc Telegram, dù cuộc Zalo cũng đang đổ chuông từ trước). Có thể đổi sang «việc đứng trước» hoặc «chạy hết các việc khớp».
+    Việc KHÔNG chọn cảm biến là việc dự phòng: chỉ chạy khi không việc nào có cảm biến khớp.
 
-      - Việc 1: cảm biến «Trạng thái cuộc gọi» của Zalo Call, trạng thái `ringing`, thuộc tính `status` = `incoming` → *Nghe máy* (`zalo_call.answer_call`).
-      - Việc 2: cùng cảm biến, trạng thái `active` → *Cúp máy* (`zalo_call.end_call`).
-      - Việc 3: thực thể báo thức của loa, trạng thái `on` → *Tắt báo thức*.
-      - Mặc định: *Gọi đi* (`zalo_call.make_call`).
-      Báo thức kêu 19:00 rồi 19:02 có cuộc gọi đến, nhấn nút sẽ **nghe máy** (sự kiện gần nhất); không ai nhấn trong 30 giây thì cuộc gọi cũ không còn tranh việc nữa.
-
-    </details>
-
-    **Phiên bản: v.2026.11.14**
+    **Lưu ý về hành động:** ô hành động trong mỗi việc chạy các lời gọi dịch vụ (action) với dữ liệu đã nhập. Nếu cần giá trị lấy từ mẫu (`{{ }}`), dùng ô «Việc dự phòng»
+    hoặc đặt giá trị cụ thể (mã người, entity_id…).
   input:
     nut:
       name: ① Nút bấm
       icon: mdi:gesture-tap-button
       input:
         nut_bam:
-          name: Khi nhấn nút (trigger)
-          description: >-
-            Mặc định là sự kiện nút giữa loa R1 (`r1_speaker_phim`). Nút khác: xoá trigger này rồi thêm trigger của nút (sự kiện, trạng thái, thiết bị...) và đặt ID là `don`, `doi`, `ba` hoặc `giu`.
-          default:
-            - trigger: event
-              event_type: r1_speaker_phim
-              event_data: {}
+          name: Nút bấm (mọi loại trigger)
+          description: "Thêm trigger của từng nút/cử chỉ và đặt **ID** (ví dụ `don`, `doi`). Loa R1: trigger «Thiết bị» của loa R1, kiểu nhấn đơn/đôi."
           selector:
             trigger: {}
-        thiet_bi_r1:
-          name: Loa R1 (chỉ khi dùng sự kiện r1_speaker_phim)
-          description: Chọn loa R1 để chỉ nhận nút của đúng loa này. Để trống = nhận từ mọi loa R1.
-          default: ""
-          selector:
-            device:
-              integration: r1_speaker
-    gioi_han:
-      name: ② Thời gian và độ ưu tiên
-      icon: mdi:timer-sand
+    viec_chung:
+      name: ② Các việc (thêm khi cần)
+      icon: mdi:format-list-checks
       input:
-        cua_so_giay:
-          name: Chỉ xét sự kiện trong vòng (giây)
-          description: >-
-            Việc có thực thể đổi trạng thái cách đây LÂU HƠN số giây này thì không được xét. Gợi ý 30 giây. Các việc không chọn thực thể (chỉ dùng điều kiện mẫu) không bị giới hạn thời gian và luôn xếp sau các việc có sự kiện.
-          default: 30
+        viec:
+          name: Việc
+          description: |
+            Bấm «Thêm». Mỗi việc: **Tên**; **Khi nhấn kiểu** = ID trigger (trống = mọi kiểu); **Cảm biến** + **Trạng thái cần việc** (trống = bất kỳ trạng thái nào trừ unavailable/unknown);
+            **Thuộc tính** + **Giá trị** (tuỳ chọn); **Hành động** = các lời gọi dịch vụ chạy khi việc được chọn.
           selector:
-            number:
-              min: 5
-              max: 600
-              step: 5
-              unit_of_measurement: giây
-              mode: box
+            object:
+              multiple: true
+              label_field: ten
+              description_field: cam_bien
+              fields:
+                ten:
+                  label: Tên việc
+                  selector:
+                    text: {}
+                khi_nhan:
+                  label: Khi nhấn kiểu (ID trigger, trống = mọi kiểu)
+                  selector:
+                    text:
+                      multiple: true
+                cam_bien:
+                  label: Cảm biến theo dõi (trống = việc dự phòng)
+                  selector:
+                    entity: {}
+                trang_thai:
+                  label: Trạng thái nghĩa là «đang cần việc này»
+                  selector:
+                    text:
+                      multiple: true
+                thuoc_tinh:
+                  label: Thuộc tính cần khớp (tuỳ chọn)
+                  selector:
+                    text: {}
+                gia_tri:
+                  label: Giá trị của thuộc tính (tuỳ chọn)
+                  selector:
+                    text: {}
+                hanh_dong:
+                  label: Hành động khi việc được chọn
+                  selector:
+                    action: {}
+          default: []
+        cach_chon:
+          name: Khi nhiều việc cùng khớp
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Chạy việc có cảm biến vừa đổi trạng thái gần đây nhất
+                  value: moi_nhat
+                - label: Chạy việc đứng đầu danh sách
+                  value: dau_tien
+                - label: Chạy tất cả các việc khớp (theo thứ tự)
+                  value: tat_ca
+          default: moi_nhat
+        viec_du_phong:
+          name: Việc dự phòng (khi không việc nào ở trên khớp)
+          description: "Hành động đầy đủ của HA (có thể dùng mẫu, điều kiện, delay)."
+          selector:
+            action: {}
+          default: []
 
-    cu_chi_don:
-      name: ③ Nhấn đơn
-      icon: mdi:gesture-tap
-      collapsed: false
-      input:
-        che_do_don:
-          name: Chế độ
-          description: >-
-            «Theo sự kiện»: chọn việc đang cần nhất trong các việc bên dưới (ưu tiên sự kiện xảy ra gần nhất, trong khoảng thời gian đã đặt); không việc nào cần thì làm «hành động mặc định».
-            «Một việc»: bỏ qua mọi sự kiện, luôn làm đúng «hành động mặc định» (nút chỉ có một nhiệm vụ).
-          default: theo_su_kien
-          selector:
-            select:
-              mode: dropdown
-              options:
-                - label: Theo sự kiện (nhiều việc, có ưu tiên)
-                  value: theo_su_kien
-                - label: Một việc (luôn làm hành động mặc định)
-                  value: mot_viec
-        mac_dinh_don:
-          name: Hành động mặc định
-          description: Làm khi không việc nào đang cần (hoặc khi chế độ là «Một việc»). Để trống = không làm gì.
-          default: []
-          selector:
-            action: {}
-        thuc_the_don_1:
-          name: Việc 1 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_don_1:
-          name: Việc 1 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_don_1:
-          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_don_1:
-          name: Việc 1 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_don_1:
-          name: Việc 1 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_don_1:
-          name: Việc 1 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_don_2:
-          name: Việc 2 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_don_2:
-          name: Việc 2 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_don_2:
-          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_don_2:
-          name: Việc 2 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_don_2:
-          name: Việc 2 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_don_2:
-          name: Việc 2 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_don_3:
-          name: Việc 3 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_don_3:
-          name: Việc 3 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_don_3:
-          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_don_3:
-          name: Việc 3 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_don_3:
-          name: Việc 3 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_don_3:
-          name: Việc 3 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_don_4:
-          name: Việc 4 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_don_4:
-          name: Việc 4 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_don_4:
-          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_don_4:
-          name: Việc 4 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_don_4:
-          name: Việc 4 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_don_4:
-          name: Việc 4 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_don_5:
-          name: Việc 5 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_don_5:
-          name: Việc 5 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_don_5:
-          name: Việc 5 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_don_5:
-          name: Việc 5 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_don_5:
-          name: Việc 5 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_don_5:
-          name: Việc 5 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_don_6:
-          name: Việc 6 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_don_6:
-          name: Việc 6 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_don_6:
-          name: Việc 6 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_don_6:
-          name: Việc 6 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_don_6:
-          name: Việc 6 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_don_6:
-          name: Việc 6 - hành động
-          default: []
-          selector:
-            action: {}
-    cu_chi_doi:
-      name: ④ Nhấn đúp
-      icon: mdi:gesture-double-tap
-      collapsed: true
-      input:
-        che_do_doi:
-          name: Chế độ
-          description: >-
-            «Theo sự kiện»: chọn việc đang cần nhất trong các việc bên dưới (ưu tiên sự kiện xảy ra gần nhất, trong khoảng thời gian đã đặt); không việc nào cần thì làm «hành động mặc định».
-            «Một việc»: bỏ qua mọi sự kiện, luôn làm đúng «hành động mặc định» (nút chỉ có một nhiệm vụ).
-          default: theo_su_kien
-          selector:
-            select:
-              mode: dropdown
-              options:
-                - label: Theo sự kiện (nhiều việc, có ưu tiên)
-                  value: theo_su_kien
-                - label: Một việc (luôn làm hành động mặc định)
-                  value: mot_viec
-        mac_dinh_doi:
-          name: Hành động mặc định
-          description: Làm khi không việc nào đang cần (hoặc khi chế độ là «Một việc»). Để trống = không làm gì.
-          default: []
-          selector:
-            action: {}
-        thuc_the_doi_1:
-          name: Việc 1 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_doi_1:
-          name: Việc 1 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_doi_1:
-          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_doi_1:
-          name: Việc 1 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_doi_1:
-          name: Việc 1 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_doi_1:
-          name: Việc 1 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_doi_2:
-          name: Việc 2 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_doi_2:
-          name: Việc 2 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_doi_2:
-          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_doi_2:
-          name: Việc 2 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_doi_2:
-          name: Việc 2 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_doi_2:
-          name: Việc 2 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_doi_3:
-          name: Việc 3 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_doi_3:
-          name: Việc 3 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_doi_3:
-          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_doi_3:
-          name: Việc 3 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_doi_3:
-          name: Việc 3 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_doi_3:
-          name: Việc 3 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_doi_4:
-          name: Việc 4 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_doi_4:
-          name: Việc 4 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_doi_4:
-          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_doi_4:
-          name: Việc 4 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_doi_4:
-          name: Việc 4 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_doi_4:
-          name: Việc 4 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_doi_5:
-          name: Việc 5 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_doi_5:
-          name: Việc 5 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_doi_5:
-          name: Việc 5 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_doi_5:
-          name: Việc 5 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_doi_5:
-          name: Việc 5 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_doi_5:
-          name: Việc 5 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_doi_6:
-          name: Việc 6 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_doi_6:
-          name: Việc 6 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_doi_6:
-          name: Việc 6 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_doi_6:
-          name: Việc 6 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_doi_6:
-          name: Việc 6 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_doi_6:
-          name: Việc 6 - hành động
-          default: []
-          selector:
-            action: {}
-    cu_chi_ba:
-      name: ⑤ Nhấn ba lần
-      icon: mdi:gesture-tap-button
-      collapsed: true
-      input:
-        che_do_ba:
-          name: Chế độ
-          description: >-
-            «Theo sự kiện»: chọn việc đang cần nhất trong các việc bên dưới (ưu tiên sự kiện xảy ra gần nhất, trong khoảng thời gian đã đặt); không việc nào cần thì làm «hành động mặc định».
-            «Một việc»: bỏ qua mọi sự kiện, luôn làm đúng «hành động mặc định» (nút chỉ có một nhiệm vụ).
-          default: theo_su_kien
-          selector:
-            select:
-              mode: dropdown
-              options:
-                - label: Theo sự kiện (nhiều việc, có ưu tiên)
-                  value: theo_su_kien
-                - label: Một việc (luôn làm hành động mặc định)
-                  value: mot_viec
-        mac_dinh_ba:
-          name: Hành động mặc định
-          description: Làm khi không việc nào đang cần (hoặc khi chế độ là «Một việc»). Để trống = không làm gì.
-          default: []
-          selector:
-            action: {}
-        thuc_the_ba_1:
-          name: Việc 1 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_ba_1:
-          name: Việc 1 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_ba_1:
-          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_ba_1:
-          name: Việc 1 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_ba_1:
-          name: Việc 1 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_ba_1:
-          name: Việc 1 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_ba_2:
-          name: Việc 2 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_ba_2:
-          name: Việc 2 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_ba_2:
-          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_ba_2:
-          name: Việc 2 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_ba_2:
-          name: Việc 2 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_ba_2:
-          name: Việc 2 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_ba_3:
-          name: Việc 3 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_ba_3:
-          name: Việc 3 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_ba_3:
-          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_ba_3:
-          name: Việc 3 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_ba_3:
-          name: Việc 3 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_ba_3:
-          name: Việc 3 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_ba_4:
-          name: Việc 4 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_ba_4:
-          name: Việc 4 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_ba_4:
-          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_ba_4:
-          name: Việc 4 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_ba_4:
-          name: Việc 4 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_ba_4:
-          name: Việc 4 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_ba_5:
-          name: Việc 5 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_ba_5:
-          name: Việc 5 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_ba_5:
-          name: Việc 5 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_ba_5:
-          name: Việc 5 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_ba_5:
-          name: Việc 5 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_ba_5:
-          name: Việc 5 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_ba_6:
-          name: Việc 6 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_ba_6:
-          name: Việc 6 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_ba_6:
-          name: Việc 6 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_ba_6:
-          name: Việc 6 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_ba_6:
-          name: Việc 6 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_ba_6:
-          name: Việc 6 - hành động
-          default: []
-          selector:
-            action: {}
-    cu_chi_giu:
-      name: ⑥ Giữ nút
-      icon: mdi:gesture-tap-hold
-      collapsed: true
-      input:
-        che_do_giu:
-          name: Chế độ
-          description: >-
-            «Theo sự kiện»: chọn việc đang cần nhất trong các việc bên dưới (ưu tiên sự kiện xảy ra gần nhất, trong khoảng thời gian đã đặt); không việc nào cần thì làm «hành động mặc định».
-            «Một việc»: bỏ qua mọi sự kiện, luôn làm đúng «hành động mặc định» (nút chỉ có một nhiệm vụ).
-          default: theo_su_kien
-          selector:
-            select:
-              mode: dropdown
-              options:
-                - label: Theo sự kiện (nhiều việc, có ưu tiên)
-                  value: theo_su_kien
-                - label: Một việc (luôn làm hành động mặc định)
-                  value: mot_viec
-        mac_dinh_giu:
-          name: Hành động mặc định
-          description: Làm khi không việc nào đang cần (hoặc khi chế độ là «Một việc»). Để trống = không làm gì.
-          default: []
-          selector:
-            action: {}
-        thuc_the_giu_1:
-          name: Việc 1 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_giu_1:
-          name: Việc 1 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_giu_1:
-          name: Việc 1 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_giu_1:
-          name: Việc 1 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_giu_1:
-          name: Việc 1 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_giu_1:
-          name: Việc 1 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_giu_2:
-          name: Việc 2 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_giu_2:
-          name: Việc 2 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_giu_2:
-          name: Việc 2 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_giu_2:
-          name: Việc 2 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_giu_2:
-          name: Việc 2 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_giu_2:
-          name: Việc 2 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_giu_3:
-          name: Việc 3 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_giu_3:
-          name: Việc 3 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_giu_3:
-          name: Việc 3 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_giu_3:
-          name: Việc 3 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_giu_3:
-          name: Việc 3 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_giu_3:
-          name: Việc 3 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_giu_4:
-          name: Việc 4 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_giu_4:
-          name: Việc 4 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_giu_4:
-          name: Việc 4 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_giu_4:
-          name: Việc 4 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_giu_4:
-          name: Việc 4 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_giu_4:
-          name: Việc 4 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_giu_5:
-          name: Việc 5 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_giu_5:
-          name: Việc 5 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_giu_5:
-          name: Việc 5 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_giu_5:
-          name: Việc 5 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_giu_5:
-          name: Việc 5 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_giu_5:
-          name: Việc 5 - hành động
-          default: []
-          selector:
-            action: {}
-        thuc_the_giu_6:
-          name: Việc 6 - thực thể cho biết «đang cần»
-          description: >-
-            Thực thể mà thay đổi của nó là «sự kiện» của việc này (báo thức, cảm biến cuộc gọi, hẹn giờ, chuông cửa, cảm biến...). Việc có sự kiện mới hơn được ưu tiên. Để trống nếu việc này chỉ dựa vào điều kiện mẫu bên dưới.
-          default: ""
-          selector:
-            entity: {}
-        trang_thai_giu_6:
-          name: Việc 6 - trạng thái nghĩa là đang cần
-          description: Một hoặc nhiều trạng thái (ví dụ ringing, on, active). Để trống = bỏ qua việc này (trừ khi có điều kiện mẫu và không chọn thực thể).
-          default: []
-          selector:
-            text:
-              multiple: true
-        thuoc_tinh_giu_6:
-          name: Việc 6 - thuộc tính cần khớp (tuỳ chọn)
-          description: Tên thuộc tính của thực thể (ví dụ status). Để trống = chỉ xét trạng thái.
-          default: ""
-          selector:
-            text: {}
-        gia_tri_giu_6:
-          name: Việc 6 - giá trị thuộc tính cần khớp
-          default: ""
-          selector:
-            text: {}
-        dieu_kien_giu_6:
-          name: Việc 6 - điều kiện thêm (mẫu, tuỳ chọn)
-          description: >-
-            Biểu thức phải ĐÚNG thì việc này mới được xét, ví dụ `{{ is_state('person.tri', 'home') and now().hour < 22 }}`. Để trống = không thêm điều kiện.
-          default: ""
-          selector:
-            template: {}
-        hanh_dong_giu_6:
-          name: Việc 6 - hành động
-          default: []
-          selector:
-            action: {}
-variables:
-  version: 20261114
-  thiet_bi_r1: !input thiet_bi_r1
-  cua_so_giay: !input cua_so_giay
-  che_do_don: !input che_do_don
-  che_do_doi: !input che_do_doi
-  che_do_ba: !input che_do_ba
-  che_do_giu: !input che_do_giu
-  cu_chi_tho: >-
-    {{ trigger.event.data.type if trigger.platform == 'event' and trigger.event.data.type is defined else (trigger.id | default('', true)) }}
-  cu_chi: >-
-    {% set m = {'don': 'don', 'single': 'don', '1': 'don', 'doi': 'doi', 'double': 'doi', '2': 'doi', 'ba': 'ba', 'triple': 'ba', '3': 'ba', 'giu': 'giu', 'hold': 'giu', 'long': 'giu'} %}
-    {{ m.get(cu_chi_tho | string | lower, 'don') }}
-  thuc_the_don_1: !input thuc_the_don_1
-  trang_thai_don_1: !input trang_thai_don_1
-  thuoc_tinh_don_1: !input thuoc_tinh_don_1
-  gia_tri_don_1: !input gia_tri_don_1
-  dieu_kien_don_1: !input dieu_kien_don_1
-  thuc_the_don_2: !input thuc_the_don_2
-  trang_thai_don_2: !input trang_thai_don_2
-  thuoc_tinh_don_2: !input thuoc_tinh_don_2
-  gia_tri_don_2: !input gia_tri_don_2
-  dieu_kien_don_2: !input dieu_kien_don_2
-  thuc_the_don_3: !input thuc_the_don_3
-  trang_thai_don_3: !input trang_thai_don_3
-  thuoc_tinh_don_3: !input thuoc_tinh_don_3
-  gia_tri_don_3: !input gia_tri_don_3
-  dieu_kien_don_3: !input dieu_kien_don_3
-  thuc_the_don_4: !input thuc_the_don_4
-  trang_thai_don_4: !input trang_thai_don_4
-  thuoc_tinh_don_4: !input thuoc_tinh_don_4
-  gia_tri_don_4: !input gia_tri_don_4
-  dieu_kien_don_4: !input dieu_kien_don_4
-  thuc_the_don_5: !input thuc_the_don_5
-  trang_thai_don_5: !input trang_thai_don_5
-  thuoc_tinh_don_5: !input thuoc_tinh_don_5
-  gia_tri_don_5: !input gia_tri_don_5
-  dieu_kien_don_5: !input dieu_kien_don_5
-  thuc_the_don_6: !input thuc_the_don_6
-  trang_thai_don_6: !input trang_thai_don_6
-  thuoc_tinh_don_6: !input thuoc_tinh_don_6
-  gia_tri_don_6: !input gia_tri_don_6
-  dieu_kien_don_6: !input dieu_kien_don_6
-  chon_don: >-
-    {% set ns = namespace(l=[]) %}
-    {% set dk_ok = (dieu_kien_don_1 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_don_1 | string | trim) != '' %}{% if thuc_the_don_1 != '' and trang_thai_don_1 | count > 0 %}{% set s = states[thuc_the_don_1] %}{% if s is not none and dk_ok and s.state in trang_thai_don_1 and (thuoc_tinh_don_1 == '' or (state_attr(thuc_the_don_1, thuoc_tinh_don_1) | string) == (gia_tri_don_1 | string)) %}{% set tm = s.last_updated if thuoc_tinh_don_1 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 1, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_don_1 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 1, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_don_2 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_don_2 | string | trim) != '' %}{% if thuc_the_don_2 != '' and trang_thai_don_2 | count > 0 %}{% set s = states[thuc_the_don_2] %}{% if s is not none and dk_ok and s.state in trang_thai_don_2 and (thuoc_tinh_don_2 == '' or (state_attr(thuc_the_don_2, thuoc_tinh_don_2) | string) == (gia_tri_don_2 | string)) %}{% set tm = s.last_updated if thuoc_tinh_don_2 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 2, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_don_2 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 2, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_don_3 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_don_3 | string | trim) != '' %}{% if thuc_the_don_3 != '' and trang_thai_don_3 | count > 0 %}{% set s = states[thuc_the_don_3] %}{% if s is not none and dk_ok and s.state in trang_thai_don_3 and (thuoc_tinh_don_3 == '' or (state_attr(thuc_the_don_3, thuoc_tinh_don_3) | string) == (gia_tri_don_3 | string)) %}{% set tm = s.last_updated if thuoc_tinh_don_3 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 3, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_don_3 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 3, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_don_4 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_don_4 | string | trim) != '' %}{% if thuc_the_don_4 != '' and trang_thai_don_4 | count > 0 %}{% set s = states[thuc_the_don_4] %}{% if s is not none and dk_ok and s.state in trang_thai_don_4 and (thuoc_tinh_don_4 == '' or (state_attr(thuc_the_don_4, thuoc_tinh_don_4) | string) == (gia_tri_don_4 | string)) %}{% set tm = s.last_updated if thuoc_tinh_don_4 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 4, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_don_4 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 4, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_don_5 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_don_5 | string | trim) != '' %}{% if thuc_the_don_5 != '' and trang_thai_don_5 | count > 0 %}{% set s = states[thuc_the_don_5] %}{% if s is not none and dk_ok and s.state in trang_thai_don_5 and (thuoc_tinh_don_5 == '' or (state_attr(thuc_the_don_5, thuoc_tinh_don_5) | string) == (gia_tri_don_5 | string)) %}{% set tm = s.last_updated if thuoc_tinh_don_5 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 5, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_don_5 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 5, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_don_6 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_don_6 | string | trim) != '' %}{% if thuc_the_don_6 != '' and trang_thai_don_6 | count > 0 %}{% set s = states[thuc_the_don_6] %}{% if s is not none and dk_ok and s.state in trang_thai_don_6 and (thuoc_tinh_don_6 == '' or (state_attr(thuc_the_don_6, thuoc_tinh_don_6) | string) == (gia_tri_don_6 | string)) %}{% set tm = s.last_updated if thuoc_tinh_don_6 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 6, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_don_6 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 6, 't': 0}] %}{% endif %}
-    {% set ns2 = namespace(i=0, t=-1) %}{% for v in ns.l %}{% if v.t > ns2.t %}{% set ns2.i = v.i %}{% set ns2.t = v.t %}{% endif %}{% endfor %}{{ ns2.i }}
-  thuc_the_doi_1: !input thuc_the_doi_1
-  trang_thai_doi_1: !input trang_thai_doi_1
-  thuoc_tinh_doi_1: !input thuoc_tinh_doi_1
-  gia_tri_doi_1: !input gia_tri_doi_1
-  dieu_kien_doi_1: !input dieu_kien_doi_1
-  thuc_the_doi_2: !input thuc_the_doi_2
-  trang_thai_doi_2: !input trang_thai_doi_2
-  thuoc_tinh_doi_2: !input thuoc_tinh_doi_2
-  gia_tri_doi_2: !input gia_tri_doi_2
-  dieu_kien_doi_2: !input dieu_kien_doi_2
-  thuc_the_doi_3: !input thuc_the_doi_3
-  trang_thai_doi_3: !input trang_thai_doi_3
-  thuoc_tinh_doi_3: !input thuoc_tinh_doi_3
-  gia_tri_doi_3: !input gia_tri_doi_3
-  dieu_kien_doi_3: !input dieu_kien_doi_3
-  thuc_the_doi_4: !input thuc_the_doi_4
-  trang_thai_doi_4: !input trang_thai_doi_4
-  thuoc_tinh_doi_4: !input thuoc_tinh_doi_4
-  gia_tri_doi_4: !input gia_tri_doi_4
-  dieu_kien_doi_4: !input dieu_kien_doi_4
-  thuc_the_doi_5: !input thuc_the_doi_5
-  trang_thai_doi_5: !input trang_thai_doi_5
-  thuoc_tinh_doi_5: !input thuoc_tinh_doi_5
-  gia_tri_doi_5: !input gia_tri_doi_5
-  dieu_kien_doi_5: !input dieu_kien_doi_5
-  thuc_the_doi_6: !input thuc_the_doi_6
-  trang_thai_doi_6: !input trang_thai_doi_6
-  thuoc_tinh_doi_6: !input thuoc_tinh_doi_6
-  gia_tri_doi_6: !input gia_tri_doi_6
-  dieu_kien_doi_6: !input dieu_kien_doi_6
-  chon_doi: >-
-    {% set ns = namespace(l=[]) %}
-    {% set dk_ok = (dieu_kien_doi_1 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_doi_1 | string | trim) != '' %}{% if thuc_the_doi_1 != '' and trang_thai_doi_1 | count > 0 %}{% set s = states[thuc_the_doi_1] %}{% if s is not none and dk_ok and s.state in trang_thai_doi_1 and (thuoc_tinh_doi_1 == '' or (state_attr(thuc_the_doi_1, thuoc_tinh_doi_1) | string) == (gia_tri_doi_1 | string)) %}{% set tm = s.last_updated if thuoc_tinh_doi_1 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 1, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_doi_1 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 1, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_doi_2 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_doi_2 | string | trim) != '' %}{% if thuc_the_doi_2 != '' and trang_thai_doi_2 | count > 0 %}{% set s = states[thuc_the_doi_2] %}{% if s is not none and dk_ok and s.state in trang_thai_doi_2 and (thuoc_tinh_doi_2 == '' or (state_attr(thuc_the_doi_2, thuoc_tinh_doi_2) | string) == (gia_tri_doi_2 | string)) %}{% set tm = s.last_updated if thuoc_tinh_doi_2 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 2, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_doi_2 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 2, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_doi_3 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_doi_3 | string | trim) != '' %}{% if thuc_the_doi_3 != '' and trang_thai_doi_3 | count > 0 %}{% set s = states[thuc_the_doi_3] %}{% if s is not none and dk_ok and s.state in trang_thai_doi_3 and (thuoc_tinh_doi_3 == '' or (state_attr(thuc_the_doi_3, thuoc_tinh_doi_3) | string) == (gia_tri_doi_3 | string)) %}{% set tm = s.last_updated if thuoc_tinh_doi_3 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 3, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_doi_3 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 3, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_doi_4 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_doi_4 | string | trim) != '' %}{% if thuc_the_doi_4 != '' and trang_thai_doi_4 | count > 0 %}{% set s = states[thuc_the_doi_4] %}{% if s is not none and dk_ok and s.state in trang_thai_doi_4 and (thuoc_tinh_doi_4 == '' or (state_attr(thuc_the_doi_4, thuoc_tinh_doi_4) | string) == (gia_tri_doi_4 | string)) %}{% set tm = s.last_updated if thuoc_tinh_doi_4 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 4, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_doi_4 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 4, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_doi_5 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_doi_5 | string | trim) != '' %}{% if thuc_the_doi_5 != '' and trang_thai_doi_5 | count > 0 %}{% set s = states[thuc_the_doi_5] %}{% if s is not none and dk_ok and s.state in trang_thai_doi_5 and (thuoc_tinh_doi_5 == '' or (state_attr(thuc_the_doi_5, thuoc_tinh_doi_5) | string) == (gia_tri_doi_5 | string)) %}{% set tm = s.last_updated if thuoc_tinh_doi_5 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 5, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_doi_5 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 5, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_doi_6 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_doi_6 | string | trim) != '' %}{% if thuc_the_doi_6 != '' and trang_thai_doi_6 | count > 0 %}{% set s = states[thuc_the_doi_6] %}{% if s is not none and dk_ok and s.state in trang_thai_doi_6 and (thuoc_tinh_doi_6 == '' or (state_attr(thuc_the_doi_6, thuoc_tinh_doi_6) | string) == (gia_tri_doi_6 | string)) %}{% set tm = s.last_updated if thuoc_tinh_doi_6 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 6, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_doi_6 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 6, 't': 0}] %}{% endif %}
-    {% set ns2 = namespace(i=0, t=-1) %}{% for v in ns.l %}{% if v.t > ns2.t %}{% set ns2.i = v.i %}{% set ns2.t = v.t %}{% endif %}{% endfor %}{{ ns2.i }}
-  thuc_the_ba_1: !input thuc_the_ba_1
-  trang_thai_ba_1: !input trang_thai_ba_1
-  thuoc_tinh_ba_1: !input thuoc_tinh_ba_1
-  gia_tri_ba_1: !input gia_tri_ba_1
-  dieu_kien_ba_1: !input dieu_kien_ba_1
-  thuc_the_ba_2: !input thuc_the_ba_2
-  trang_thai_ba_2: !input trang_thai_ba_2
-  thuoc_tinh_ba_2: !input thuoc_tinh_ba_2
-  gia_tri_ba_2: !input gia_tri_ba_2
-  dieu_kien_ba_2: !input dieu_kien_ba_2
-  thuc_the_ba_3: !input thuc_the_ba_3
-  trang_thai_ba_3: !input trang_thai_ba_3
-  thuoc_tinh_ba_3: !input thuoc_tinh_ba_3
-  gia_tri_ba_3: !input gia_tri_ba_3
-  dieu_kien_ba_3: !input dieu_kien_ba_3
-  thuc_the_ba_4: !input thuc_the_ba_4
-  trang_thai_ba_4: !input trang_thai_ba_4
-  thuoc_tinh_ba_4: !input thuoc_tinh_ba_4
-  gia_tri_ba_4: !input gia_tri_ba_4
-  dieu_kien_ba_4: !input dieu_kien_ba_4
-  thuc_the_ba_5: !input thuc_the_ba_5
-  trang_thai_ba_5: !input trang_thai_ba_5
-  thuoc_tinh_ba_5: !input thuoc_tinh_ba_5
-  gia_tri_ba_5: !input gia_tri_ba_5
-  dieu_kien_ba_5: !input dieu_kien_ba_5
-  thuc_the_ba_6: !input thuc_the_ba_6
-  trang_thai_ba_6: !input trang_thai_ba_6
-  thuoc_tinh_ba_6: !input thuoc_tinh_ba_6
-  gia_tri_ba_6: !input gia_tri_ba_6
-  dieu_kien_ba_6: !input dieu_kien_ba_6
-  chon_ba: >-
-    {% set ns = namespace(l=[]) %}
-    {% set dk_ok = (dieu_kien_ba_1 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_ba_1 | string | trim) != '' %}{% if thuc_the_ba_1 != '' and trang_thai_ba_1 | count > 0 %}{% set s = states[thuc_the_ba_1] %}{% if s is not none and dk_ok and s.state in trang_thai_ba_1 and (thuoc_tinh_ba_1 == '' or (state_attr(thuc_the_ba_1, thuoc_tinh_ba_1) | string) == (gia_tri_ba_1 | string)) %}{% set tm = s.last_updated if thuoc_tinh_ba_1 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 1, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_ba_1 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 1, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_ba_2 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_ba_2 | string | trim) != '' %}{% if thuc_the_ba_2 != '' and trang_thai_ba_2 | count > 0 %}{% set s = states[thuc_the_ba_2] %}{% if s is not none and dk_ok and s.state in trang_thai_ba_2 and (thuoc_tinh_ba_2 == '' or (state_attr(thuc_the_ba_2, thuoc_tinh_ba_2) | string) == (gia_tri_ba_2 | string)) %}{% set tm = s.last_updated if thuoc_tinh_ba_2 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 2, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_ba_2 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 2, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_ba_3 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_ba_3 | string | trim) != '' %}{% if thuc_the_ba_3 != '' and trang_thai_ba_3 | count > 0 %}{% set s = states[thuc_the_ba_3] %}{% if s is not none and dk_ok and s.state in trang_thai_ba_3 and (thuoc_tinh_ba_3 == '' or (state_attr(thuc_the_ba_3, thuoc_tinh_ba_3) | string) == (gia_tri_ba_3 | string)) %}{% set tm = s.last_updated if thuoc_tinh_ba_3 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 3, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_ba_3 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 3, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_ba_4 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_ba_4 | string | trim) != '' %}{% if thuc_the_ba_4 != '' and trang_thai_ba_4 | count > 0 %}{% set s = states[thuc_the_ba_4] %}{% if s is not none and dk_ok and s.state in trang_thai_ba_4 and (thuoc_tinh_ba_4 == '' or (state_attr(thuc_the_ba_4, thuoc_tinh_ba_4) | string) == (gia_tri_ba_4 | string)) %}{% set tm = s.last_updated if thuoc_tinh_ba_4 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 4, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_ba_4 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 4, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_ba_5 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_ba_5 | string | trim) != '' %}{% if thuc_the_ba_5 != '' and trang_thai_ba_5 | count > 0 %}{% set s = states[thuc_the_ba_5] %}{% if s is not none and dk_ok and s.state in trang_thai_ba_5 and (thuoc_tinh_ba_5 == '' or (state_attr(thuc_the_ba_5, thuoc_tinh_ba_5) | string) == (gia_tri_ba_5 | string)) %}{% set tm = s.last_updated if thuoc_tinh_ba_5 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 5, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_ba_5 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 5, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_ba_6 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_ba_6 | string | trim) != '' %}{% if thuc_the_ba_6 != '' and trang_thai_ba_6 | count > 0 %}{% set s = states[thuc_the_ba_6] %}{% if s is not none and dk_ok and s.state in trang_thai_ba_6 and (thuoc_tinh_ba_6 == '' or (state_attr(thuc_the_ba_6, thuoc_tinh_ba_6) | string) == (gia_tri_ba_6 | string)) %}{% set tm = s.last_updated if thuoc_tinh_ba_6 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 6, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_ba_6 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 6, 't': 0}] %}{% endif %}
-    {% set ns2 = namespace(i=0, t=-1) %}{% for v in ns.l %}{% if v.t > ns2.t %}{% set ns2.i = v.i %}{% set ns2.t = v.t %}{% endif %}{% endfor %}{{ ns2.i }}
-  thuc_the_giu_1: !input thuc_the_giu_1
-  trang_thai_giu_1: !input trang_thai_giu_1
-  thuoc_tinh_giu_1: !input thuoc_tinh_giu_1
-  gia_tri_giu_1: !input gia_tri_giu_1
-  dieu_kien_giu_1: !input dieu_kien_giu_1
-  thuc_the_giu_2: !input thuc_the_giu_2
-  trang_thai_giu_2: !input trang_thai_giu_2
-  thuoc_tinh_giu_2: !input thuoc_tinh_giu_2
-  gia_tri_giu_2: !input gia_tri_giu_2
-  dieu_kien_giu_2: !input dieu_kien_giu_2
-  thuc_the_giu_3: !input thuc_the_giu_3
-  trang_thai_giu_3: !input trang_thai_giu_3
-  thuoc_tinh_giu_3: !input thuoc_tinh_giu_3
-  gia_tri_giu_3: !input gia_tri_giu_3
-  dieu_kien_giu_3: !input dieu_kien_giu_3
-  thuc_the_giu_4: !input thuc_the_giu_4
-  trang_thai_giu_4: !input trang_thai_giu_4
-  thuoc_tinh_giu_4: !input thuoc_tinh_giu_4
-  gia_tri_giu_4: !input gia_tri_giu_4
-  dieu_kien_giu_4: !input dieu_kien_giu_4
-  thuc_the_giu_5: !input thuc_the_giu_5
-  trang_thai_giu_5: !input trang_thai_giu_5
-  thuoc_tinh_giu_5: !input thuoc_tinh_giu_5
-  gia_tri_giu_5: !input gia_tri_giu_5
-  dieu_kien_giu_5: !input dieu_kien_giu_5
-  thuc_the_giu_6: !input thuc_the_giu_6
-  trang_thai_giu_6: !input trang_thai_giu_6
-  thuoc_tinh_giu_6: !input thuoc_tinh_giu_6
-  gia_tri_giu_6: !input gia_tri_giu_6
-  dieu_kien_giu_6: !input dieu_kien_giu_6
-  chon_giu: >-
-    {% set ns = namespace(l=[]) %}
-    {% set dk_ok = (dieu_kien_giu_1 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_giu_1 | string | trim) != '' %}{% if thuc_the_giu_1 != '' and trang_thai_giu_1 | count > 0 %}{% set s = states[thuc_the_giu_1] %}{% if s is not none and dk_ok and s.state in trang_thai_giu_1 and (thuoc_tinh_giu_1 == '' or (state_attr(thuc_the_giu_1, thuoc_tinh_giu_1) | string) == (gia_tri_giu_1 | string)) %}{% set tm = s.last_updated if thuoc_tinh_giu_1 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 1, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_giu_1 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 1, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_giu_2 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_giu_2 | string | trim) != '' %}{% if thuc_the_giu_2 != '' and trang_thai_giu_2 | count > 0 %}{% set s = states[thuc_the_giu_2] %}{% if s is not none and dk_ok and s.state in trang_thai_giu_2 and (thuoc_tinh_giu_2 == '' or (state_attr(thuc_the_giu_2, thuoc_tinh_giu_2) | string) == (gia_tri_giu_2 | string)) %}{% set tm = s.last_updated if thuoc_tinh_giu_2 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 2, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_giu_2 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 2, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_giu_3 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_giu_3 | string | trim) != '' %}{% if thuc_the_giu_3 != '' and trang_thai_giu_3 | count > 0 %}{% set s = states[thuc_the_giu_3] %}{% if s is not none and dk_ok and s.state in trang_thai_giu_3 and (thuoc_tinh_giu_3 == '' or (state_attr(thuc_the_giu_3, thuoc_tinh_giu_3) | string) == (gia_tri_giu_3 | string)) %}{% set tm = s.last_updated if thuoc_tinh_giu_3 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 3, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_giu_3 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 3, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_giu_4 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_giu_4 | string | trim) != '' %}{% if thuc_the_giu_4 != '' and trang_thai_giu_4 | count > 0 %}{% set s = states[thuc_the_giu_4] %}{% if s is not none and dk_ok and s.state in trang_thai_giu_4 and (thuoc_tinh_giu_4 == '' or (state_attr(thuc_the_giu_4, thuoc_tinh_giu_4) | string) == (gia_tri_giu_4 | string)) %}{% set tm = s.last_updated if thuoc_tinh_giu_4 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 4, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_giu_4 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 4, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_giu_5 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_giu_5 | string | trim) != '' %}{% if thuc_the_giu_5 != '' and trang_thai_giu_5 | count > 0 %}{% set s = states[thuc_the_giu_5] %}{% if s is not none and dk_ok and s.state in trang_thai_giu_5 and (thuoc_tinh_giu_5 == '' or (state_attr(thuc_the_giu_5, thuoc_tinh_giu_5) | string) == (gia_tri_giu_5 | string)) %}{% set tm = s.last_updated if thuoc_tinh_giu_5 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 5, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_giu_5 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 5, 't': 0}] %}{% endif %}
-    {% set dk_ok = (dieu_kien_giu_6 | string | trim | lower) in ['', 'true', 'yes', 'on', '1'] %}{% set dk_co = (dieu_kien_giu_6 | string | trim) != '' %}{% if thuc_the_giu_6 != '' and trang_thai_giu_6 | count > 0 %}{% set s = states[thuc_the_giu_6] %}{% if s is not none and dk_ok and s.state in trang_thai_giu_6 and (thuoc_tinh_giu_6 == '' or (state_attr(thuc_the_giu_6, thuoc_tinh_giu_6) | string) == (gia_tri_giu_6 | string)) %}{% set tm = s.last_updated if thuoc_tinh_giu_6 != '' else s.last_changed %}{% if (now() - tm).total_seconds() <= cua_so_giay | float(30) %}{% set ns.l = ns.l + [{'i': 6, 't': tm.timestamp()}] %}{% endif %}{% endif %}{% elif thuc_the_giu_6 == '' and dk_co and dk_ok %}{% set ns.l = ns.l + [{'i': 6, 't': 0}] %}{% endif %}
-    {% set ns2 = namespace(i=0, t=-1) %}{% for v in ns.l %}{% if v.t > ns2.t %}{% set ns2.i = v.i %}{% set ns2.t = v.t %}{% endif %}{% endfor %}{{ ns2.i }}
 mode: single
 max_exceeded: silent
 
+variables:
+  viec: !input viec
+  cach_chon: !input cach_chon
+  kieu_nhan: "{{ trigger.id | string }}"
+  # Danh sách CHỈ SỐ của các việc sẽ chạy. Việc có cảm biến: khớp kiểu nhấn + trạng thái (+ thuộc tính). Mới nhất = cảm biến đổi trạng thái gần nhất (bằng nhau: việc đứng trước).
+  chon: >-
+    {% set ns = namespace(ung_vien=[], du_phong=[]) %}
+    {% for j in viec | default([], true) %}
+      {% set kn = j.khi_nhan | default([], true) %}
+      {% set kn = [kn] if kn is string else kn %}
+      {% if kn | count == 0 or kieu_nhan in (kn | map('string') | list) %}
+        {% set cb = (j.cam_bien | default('', true)) | string | trim %}
+        {% if cb == '' %}
+          {% set ns.du_phong = ns.du_phong + [loop.index0] %}
+        {% else %}
+          {% set st = expand(cb) | selectattr('entity_id', 'eq', cb) | first | default(none) %}
+          {% if st is not none and st.state not in ['unavailable', 'unknown'] %}
+            {% set tt = j.trang_thai | default([], true) %}
+            {% set tt = [tt] if tt is string else tt %}
+            {% set tt = tt | map('string') | list %}
+            {% set ok = (tt | count == 0) or (st.state in tt) %}
+            {% set ta = (j.thuoc_tinh | default('', true)) | string | trim %}
+            {% if ok and ta != '' %}{% set ok = (st.attributes.get(ta) | string) == ((j.gia_tri | default('', true)) | string) %}{% endif %}
+            {% if ok %}
+              {% set ns.ung_vien = ns.ung_vien + [{'i': loop.index0, 't': st.last_changed.timestamp()}] %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if ns.ung_vien | count == 0 %}{{ ns.du_phong | tojson }}
+    {% elif cach_chon == 'tat_ca' %}{{ ns.ung_vien | map(attribute='i') | list | tojson }}
+    {% elif cach_chon == 'dau_tien' %}{{ [ns.ung_vien | map(attribute='i') | min] | tojson }}
+    {% else %}
+      {% set ns2 = namespace(best=ns.ung_vien[0]) %}
+      {% for u in ns.ung_vien %}{% if u.t > ns2.best.t %}{% set ns2.best = u %}{% endif %}{% endfor %}
+      {{ [ns2.best.i] | tojson }}
+    {% endif %}
+
 triggers: !input nut_bam
 
-conditions:
-  - alias: Đúng loa R1 đã chọn (nếu có chọn)
-    condition: template
-    value_template: >-
-      {{ thiet_bi_r1 == '' or trigger.platform != 'event' or trigger.event.event_type != 'r1_speaker_phim'
-         or trigger.event.data.device_id == thiet_bi_r1 }}
-
 actions:
-  - choose:
-      - alias: Nhấn đơn
-        conditions:
-          - condition: template
-            value_template: "{{ cu_chi == 'don' }}"
-        sequence:
-          - choose:
-              - alias: Chế độ một việc
-                conditions:
-                  - condition: template
-                    value_template: "{{ che_do_don == 'mot_viec' }}"
-                sequence: !input mac_dinh_don
-              - alias: Việc 1
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_don | int(0) == 1 }}"
-                sequence: !input hanh_dong_don_1
-              - alias: Việc 2
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_don | int(0) == 2 }}"
-                sequence: !input hanh_dong_don_2
-              - alias: Việc 3
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_don | int(0) == 3 }}"
-                sequence: !input hanh_dong_don_3
-              - alias: Việc 4
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_don | int(0) == 4 }}"
-                sequence: !input hanh_dong_don_4
-              - alias: Việc 5
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_don | int(0) == 5 }}"
-                sequence: !input hanh_dong_don_5
-              - alias: Việc 6
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_don | int(0) == 6 }}"
-                sequence: !input hanh_dong_don_6
-            default: !input mac_dinh_don
-      - alias: Nhấn đúp
-        conditions:
-          - condition: template
-            value_template: "{{ cu_chi == 'doi' }}"
-        sequence:
-          - choose:
-              - alias: Chế độ một việc
-                conditions:
-                  - condition: template
-                    value_template: "{{ che_do_doi == 'mot_viec' }}"
-                sequence: !input mac_dinh_doi
-              - alias: Việc 1
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_doi | int(0) == 1 }}"
-                sequence: !input hanh_dong_doi_1
-              - alias: Việc 2
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_doi | int(0) == 2 }}"
-                sequence: !input hanh_dong_doi_2
-              - alias: Việc 3
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_doi | int(0) == 3 }}"
-                sequence: !input hanh_dong_doi_3
-              - alias: Việc 4
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_doi | int(0) == 4 }}"
-                sequence: !input hanh_dong_doi_4
-              - alias: Việc 5
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_doi | int(0) == 5 }}"
-                sequence: !input hanh_dong_doi_5
-              - alias: Việc 6
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_doi | int(0) == 6 }}"
-                sequence: !input hanh_dong_doi_6
-            default: !input mac_dinh_doi
-      - alias: Nhấn ba lần
-        conditions:
-          - condition: template
-            value_template: "{{ cu_chi == 'ba' }}"
-        sequence:
-          - choose:
-              - alias: Chế độ một việc
-                conditions:
-                  - condition: template
-                    value_template: "{{ che_do_ba == 'mot_viec' }}"
-                sequence: !input mac_dinh_ba
-              - alias: Việc 1
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_ba | int(0) == 1 }}"
-                sequence: !input hanh_dong_ba_1
-              - alias: Việc 2
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_ba | int(0) == 2 }}"
-                sequence: !input hanh_dong_ba_2
-              - alias: Việc 3
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_ba | int(0) == 3 }}"
-                sequence: !input hanh_dong_ba_3
-              - alias: Việc 4
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_ba | int(0) == 4 }}"
-                sequence: !input hanh_dong_ba_4
-              - alias: Việc 5
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_ba | int(0) == 5 }}"
-                sequence: !input hanh_dong_ba_5
-              - alias: Việc 6
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_ba | int(0) == 6 }}"
-                sequence: !input hanh_dong_ba_6
-            default: !input mac_dinh_ba
-      - alias: Giữ nút
-        conditions:
-          - condition: template
-            value_template: "{{ cu_chi == 'giu' }}"
-        sequence:
-          - choose:
-              - alias: Chế độ một việc
-                conditions:
-                  - condition: template
-                    value_template: "{{ che_do_giu == 'mot_viec' }}"
-                sequence: !input mac_dinh_giu
-              - alias: Việc 1
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_giu | int(0) == 1 }}"
-                sequence: !input hanh_dong_giu_1
-              - alias: Việc 2
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_giu | int(0) == 2 }}"
-                sequence: !input hanh_dong_giu_2
-              - alias: Việc 3
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_giu | int(0) == 3 }}"
-                sequence: !input hanh_dong_giu_3
-              - alias: Việc 4
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_giu | int(0) == 4 }}"
-                sequence: !input hanh_dong_giu_4
-              - alias: Việc 5
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_giu | int(0) == 5 }}"
-                sequence: !input hanh_dong_giu_5
-              - alias: Việc 6
-                conditions:
-                  - condition: template
-                    value_template: "{{ chon_giu | int(0) == 6 }}"
-                sequence: !input hanh_dong_giu_6
-            default: !input mac_dinh_giu
+  - alias: Chạy các việc đã chọn (theo cảm biến)
+    repeat:
+      for_each: "{{ chon }}"
+      sequence:
+        - variables:
+            viec_dang_chay: "{{ viec[repeat.item] }}"
+        - alias: "{{ 'Việc: ' ~ (viec_dang_chay.ten | default('không tên', true)) }}"
+          repeat:
+            for_each: "{{ viec_dang_chay.hanh_dong | default([], true) }}"
+            sequence:
+              - alias: Lời gọi dịch vụ của việc
+                continue_on_error: true
+                action: "{{ repeat.item.action | default(repeat.item.service, true) }}"
+                data: >-
+                  {{ (repeat.item.data | default({}, true)) | combine(repeat.item.target | default({}, true)) }}
+  - alias: Không việc nào khớp - chạy việc dự phòng
+    if:
+      - condition: template
+        value_template: "{{ chon | count == 0 }}"
+    then: !input viec_du_phong

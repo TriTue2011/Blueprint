@@ -804,6 +804,18 @@ Khai tối đa **6 nút** (phòng khách, bếp, phòng ngủ...). Nút nào đ�
 
 ---
 
+## 🔘 Nút bấm mọi loại: MỘT automation, thêm bao nhiêu việc cũng được
+
+Thay cho các blueprint nút riêng của loa R1 (nhận cuộc gọi, gọi đi, nút giữa nhiều cử chỉ, một nút nhiều việc): **một automation cho mọi nút**. Nút loại nào cũng được (loa R1, Zigbee/Z-Wave/Matter, sự kiện, công tắc…): thêm trigger của từng nút/cử chỉ và đặt **ID** (`don`, `doi`, `giu`…). Phần **Việc** bấm «Thêm» khi cần, **không giới hạn số lượng** (kể cả 100): mỗi việc gồm *nhấn kiểu nào* (ID), *cảm biến + trạng thái nghĩa là đang cần* (ví dụ cảm biến cuộc gọi = `incoming`) và các lời gọi dịch vụ chạy khi được chọn. Mỗi lần bấm, việc có cảm biến **vừa đổi trạng thái gần đây nhất** thắng (hoặc việc đứng đầu / chạy tất cả); việc không chọn cảm biến là việc dự phòng; ngoài ra có ô «Việc dự phòng» đầy đủ hành động của HA.
+
+Ví dụ nút R1: nhấn đơn + cuộc gọi Zalo/Telegram đang đổ chuông → nghe máy bằng loa và mic R1; nhấn đôi + không có cuộc gọi → gọi Zalo cho bạn.
+
+**Cần:** một nút có trigger. Các blueprint nút cũ vẫn dùng được nhưng nên chuyển sang bản này.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fnut_bam_nhieu_viec.yaml)
+
+---
+
 ## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất) - đã có bản hợp nhất «Nút bấm nhiều việc» ở trên
 
 Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (thực thể + trạng thái cần xử lý + hành động), khi nhấn nút chọn việc có **yêu cầu gần nhất** (ví dụ báo thức kêu, rồi có cuộc gọi đến thì nhấn = nghe máy; hết cuộc gọi mà báo thức còn kêu thì nhấn = tắt báo thức). Không việc nào cần thì chạy hành động mặc định (ví dụ gọi đi). Hợp với nút giữa loa R1 (từ bản 0.17.0 loa không còn hành động gắn sẵn).

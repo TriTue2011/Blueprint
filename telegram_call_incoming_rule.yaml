@@ -1,17 +1,19 @@
 blueprint:
-  name: Telegram Call - Quy tắc cho cuộc gọi đến (tự nghe máy, báo ra loa)
+  name: Telegram Call - Quy tắc cho cuộc gọi đến (tự nghe máy, báo ra loa, lời nhắn)
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/telegram_call_incoming_rule.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
   description: |
-    **Phiên bản: v.2026.11.16** — giống blueprint «Zalo Call - Quy tắc cho cuộc gọi đến».
+    **Phiên bản: v.2026.11.17** — cùng mô hình với blueprint «Zalo Call - Quy tắc cho cuộc gọi đến».
 
-    **Mỗi cuộc gọi Telegram đến kích hoạt automation này** (có lượt chạy/trace theo từng cuộc) và nó làm đúng việc đã chọn cho người gọi đó: báo ra loa, rồi
-    sau số giây đã đặt thì tự nghe máy bằng loa/mic đã chọn (nếu người gọi chưa cúp). Không lưu gì: tắt hay xoá automation là hết quy tắc.
-    Cần tích hợp **Telegram Call** từ bản 2026.11.16 (cuộc gọi đến kích hoạt trong ~1,5 giây; `answer_call` nhận thiết bị riêng).
-    Telegram không có video qua tích hợp này: cuộc gọi video đến vẫn nghe được bằng tiếng.
+    **Mỗi cuộc gọi Telegram đến kích hoạt automation này** (có lượt chạy/trace theo từng cuộc) và automation gọi `telegram_call.apply_call_rule` cho ĐÚNG cuộc gọi đó.
+    Không lưu gì: tắt hay xoá automation là hết quy tắc. Nhiều automation khác nhau cho cùng một người vẫn chạy đủ: quy tắc cụ thể hơn thắng
+    (người > thẻ > danh bạ > người lạ); cùng bậc thì mỗi quy tắc báo ra loa của riêng nó, còn nghe máy / thiết bị / lời nhắn theo quy tắc đầu tiên bật «Tự nghe máy».
+
+    **Riêng tư:** không có quy tắc = chỉ đổ chuông. Thiết bị nhà do hai ô «nối ngay» / «nối khi người nhà nói trực tiếp» quyết: không tích = KHÔNG nối (nghe máy mà mic im lặng, video thì gửi hình đen).
+    Cần tích hợp **Telegram Call** từ bản 2026.11.17. Telegram Call chưa có trợ lý AI trò chuyện trong cuộc gọi (khác Zalo): thay bằng **lời nhắn** đọc vào cuộc gọi.
   input:
     ap_dung:
       name: ① Áp dụng cho ai
@@ -23,29 +25,68 @@ blueprint:
           selector:
             boolean: {}
           default: true
-        cam_bien:
-          name: Cảm biến «Trạng thái cuộc gọi» của Telegram Call
-          description: Dùng để biết người gọi đã cúp chưa trước khi tự nghe máy.
+        pham_vi:
+          name: Phạm vi
+          description: |
+            Người cụ thể (chọn bên dưới) · mọi người mang MỘT thẻ (gắn bằng dịch vụ `telegram_call.set_contact_tags`) · mọi người trong danh bạ Telegram · người lạ (không có trong danh bạ).
+            Quy tắc theo người thay hẳn quy tắc theo thẻ/danh bạ, nên một automation «chặn» một người thắng automation «cho phép danh bạ».
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Người cụ thể (chọn bên dưới)
+                  value: thread
+                - label: Mọi người mang một thẻ
+                  value: tag
+                - label: Mọi người trong danh bạ Telegram
+                  value: contacts
+                - label: Người lạ (không có trong danh bạ)
+                  value: strangers
+          default: thread
+        nguoi_cu_the:
+          name: Người cụ thể (chọn từ danh sách)
+          description: Chọn các thực thể `notify` của Telegram Call (người đã chọn ở Cấu hình → «Người nhận»; người còn lại trong danh bạ vẫn chọn được, gõ để lọc).
           selector:
             entity:
+              multiple: true
               filter:
                 - integration: telegram_call
-                  domain: sensor
-        moi_nguoi:
-          name: Áp dụng cho MỌI người gọi
-          description: "Mặc định TẮT (riêng tư: chỉ người bạn liệt kê bên dưới). Bật thì không xét danh sách."
-          selector:
-            boolean: {}
-          default: false
-        nguoi_goi:
-          name: Người được áp quy tắc (ID Telegram, mỗi dòng một ID)
-          description: ID số của người gọi (xem ở dịch vụ `telegram_call.get_contacts`). Không cần cấu hình tích hợp, không nhầm khi trùng tên.
+                  domain: notify
+          default: []
+        them_theo_id:
+          name: Hoặc thêm theo ID Telegram (mỗi dòng một ID)
+          description: ID số của người gọi (xem dịch vụ `telegram_call.list_contacts`); dùng cho người lạ chưa có trong danh bạ.
           selector:
             text:
               multiple: true
           default: []
+        the_tag:
+          name: Thẻ (chỉ khi phạm vi là «thẻ»)
+          selector:
+            text: {}
+          default: ""
+        loai_cuoc_goi:
+          name: Áp cho loại cuộc gọi
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Thoại
+                  value: voice
+                - label: Video
+                  value: video
+          default:
+            - voice
+            - video
+        ten_goi:
+          name: Tên đọc ra loa (tuỳ chọn)
+          description: Trống = tên đã lưu trong danh bạ Telegram; người lạ thì đọc «người lạ».
+          selector:
+            text: {}
+          default: ""
     nghe_may:
-      name: ② Tự nghe máy
+      name: ② Tự nghe máy và thiết bị nhà
       icon: mdi:phone-check-outline
       input:
         tu_nghe_may:
@@ -55,7 +96,7 @@ blueprint:
           default: true
         nghe_sau:
           name: Nghe máy sau (giây)
-          description: Người gọi cúp trước khi hết giờ thì không nghe.
+          description: Người gọi cúp trước khi hết giờ thì không nghe. Nếu có báo ra loa thì chờ báo xong mới nghe.
           selector:
             number:
               min: 0
@@ -64,9 +105,41 @@ blueprint:
               unit_of_measurement: s
               mode: box
           default: 5
+        noi_ngay:
+          name: Nối NGAY khi nghe máy
+          description: Không tích gì = mic im lặng (cuộc video thì gửi hình đen), chưa nối loa.
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic nhà
+                  value: mic
+                - label: Loa nhà (nghe tiếng người gọi)
+                  value: speaker
+                - label: Camera (cuộc gọi video)
+                  value: camera
+          default: []
+        noi_khi_chuyen:
+          name: Nối khi người nhà bấm «nói trực tiếp»
+          description: Nút «Người nhà nói trực tiếp» trên thiết bị Telegram Call (hoặc dịch vụ `take_over_call`) nối các thiết bị này.
+          selector:
+            select:
+              multiple: true
+              mode: list
+              options:
+                - label: Mic nhà
+                  value: mic
+                - label: Loa nhà (nghe tiếng người gọi)
+                  value: speaker
+                - label: Camera (cuộc gọi video)
+                  value: camera
+          default:
+            - mic
+            - speaker
         loa:
           name: Loa phát tiếng người gọi
-          description: Loa R1 hoặc camera Imou/Dahua có cửa bộ đàm. Bỏ trống = thiết bị mặc định của tích hợp.
+          description: Loa R1 hoặc camera Imou/Dahua có cửa bộ đàm. Bỏ trống = loa mặc định của tích hợp.
           selector:
             entity:
               filter:
@@ -74,13 +147,20 @@ blueprint:
           default: ""
         mic:
           name: Mic gửi tiếng trong nhà cho người gọi
-          description: Vệ tinh Assist (loa R1) hoặc camera có mic. Bỏ trống = mặc định của tích hợp.
+          description: Vệ tinh Assist (loa R1) hoặc camera có mic. Bỏ trống = mic mặc định của tích hợp.
           selector:
             entity:
               filter:
                 - domain:
                     - assist_satellite
                     - camera
+          default: ""
+        camera:
+          name: Camera gửi hình (cuộc gọi video)
+          selector:
+            entity:
+              filter:
+                - domain: camera
           default: ""
         am_luong:
           name: Âm lượng loa lúc đang gọi (%)
@@ -93,6 +173,18 @@ blueprint:
               unit_of_measurement: "%"
               mode: slider
           default: 0
+        cau_chao:
+          name: Lời nhắn đọc vào cuộc gọi khi nghe máy (tuỳ chọn)
+          description: Giọng của pipeline đã chọn ở ③. Để trống = không đọc.
+          selector:
+            text:
+              multiline: true
+          default: ""
+        cup_sau_chao:
+          name: Đọc xong lời nhắn thì cúp máy
+          selector:
+            boolean: {}
+          default: false
     bao_loa:
       name: ③ Báo ra loa khi có cuộc gọi đến
       icon: mdi:bullhorn-outline
@@ -111,78 +203,136 @@ blueprint:
               filter:
                 - domain: media_player
           default: []
-        giong_tts:
-          name: Giọng đọc (thực thể TTS)
+        tro_ly_giong_noi:
+          name: Assist pipeline (lấy giọng đọc)
+          description: Tên hoặc id pipeline; giọng TTS của nó dùng cho câu báo và lời nhắn. Trống = pipeline ưu tiên.
           selector:
-            entity:
-              filter:
-                - domain: tts
+            text: {}
           default: ""
         cau_bao:
           name: Câu báo
-          description: "Dùng {{ ten }} cho ID người gọi."
+          description: "Dùng {ten} (tên người gọi) và {loai} (thoại/video). Trống = «Có cuộc gọi {loai} từ {ten}»."
           selector:
             text: {}
-          default: "Có cuộc gọi Telegram đến"
+          default: ""
+        lap_bao:
+          name: Báo lại sau (giây)
+          description: 0 = chỉ báo một lần; khác 0 thì đọc xong chờ chừng đó rồi đọc lại tới khi nghe máy hoặc cuộc gọi kết thúc.
+          selector:
+            number:
+              min: 0
+              max: 60
+              step: 1
+              unit_of_measurement: s
+              mode: box
+          default: 0
+        am_luong_bao:
+          name: Âm lượng khi báo (%)
+          description: 0 = giữ nguyên. Không ai nghe thì trả loa về mức cũ.
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+          default: 0
+    thong_bao:
+      name: ④ Thông báo
+      icon: mdi:bell-outline
+      collapsed: true
+      input:
+        bat_thong_bao:
+          name: Báo ở chuông thông báo khi quy tắc được áp
+          description: "Tiện cho việc thử: hiện «ĐÃ ÁP quy tắc cho cuộc gọi» kèm kết quả (queued / applied / late / duplicate)."
+          selector:
+            boolean: {}
+          default: false
 
 mode: parallel
 max: 5
 
 variables:
   bat_quy_tac: !input bat_quy_tac
-  cam_bien: !input cam_bien
-  moi_nguoi: !input moi_nguoi
-  nguoi_goi_ds: !input nguoi_goi
+  pham_vi: !input pham_vi
+  nguoi_cu_the: !input nguoi_cu_the
+  them_theo_id: !input them_theo_id
+  the_tag: !input the_tag
+  loai_cuoc_goi: !input loai_cuoc_goi
+  ten_goi: !input ten_goi
   tu_nghe_may: !input tu_nghe_may
   nghe_sau: !input nghe_sau
-  loa: !input loa
+  noi_ngay: !input noi_ngay
+  noi_khi_chuyen: !input noi_khi_chuyen
+  loa_goc: !input loa
+  loa: >-
+    {{ (loa_goc if loa_goc is not string else ([loa_goc] if loa_goc else [])) | join(',') }}
   mic: !input mic
+  camera: !input camera
   am_luong: !input am_luong
+  cau_chao: !input cau_chao
+  cup_sau_chao: !input cup_sau_chao
   bat_bao_loa: !input bat_bao_loa
-  loa_bao: !input loa_bao
-  giong_tts: !input giong_tts
+  loa_bao_goc: !input loa_bao
+  loa_bao: >-
+    {{ (loa_bao_goc if loa_bao_goc is not string else ([loa_bao_goc] if loa_bao_goc else [])) | join(',') }}
+  tro_ly_giong_noi: !input tro_ly_giong_noi
   cau_bao: !input cau_bao
-  # Chú ý: HA đọc kết quả mẫu thành số nếu trông như số, nên mọi phép so sánh bên dưới đều ép `| string` hai vế.
-  call_id: "{{ trigger.event.data.call_id }}"
-  nguoi_goi_id: "{{ trigger.event.data.user_id }}"
+  lap_bao: !input lap_bao
+  am_luong_bao: !input am_luong_bao
+  bat_thong_bao: !input bat_thong_bao
+  # Chú ý: HA đọc kết quả mẫu thành số nếu trông như số, nên mọi phép so sánh ID bên dưới ép `| string` hai vế.
+  ds_nguoi: >-
+    {% set ns = namespace(l=[]) %}
+    {% for e in nguoi_cu_the %}{% set ns.l = ns.l + [state_attr(e, 'user_id') | string] %}{% endfor %}
+    {% for ma in them_theo_id %}{% set m = ma | string | trim %}{% if m is match('^[0-9]+$') %}{% set ns.l = ns.l + [m] %}{% endif %}{% endfor %}
+    {{ ns.l | unique | list }}
 
 triggers:
-  # MỖI cuộc gọi đến kích hoạt automation này; thiết bị và thời gian do chính nó quyết.
+  # MỖI cuộc gọi đến kích hoạt automation này; chính nó áp quy tắc cho cuộc đó.
   - trigger: event
     event_type: telegram_call_call_state
     event_data:
       state: incoming
-conditions:
-  - alias: Quy tắc đang bật và người gọi thuộc đối tượng
+    id: cuoc_goi
+
+actions:
+  - alias: Chỉ khi quy tắc đang bật và cuộc gọi thuộc đối tượng của quy tắc
     condition: template
     value_template: >-
-      {{ bat_quy_tac and (moi_nguoi or ((nguoi_goi_id | string) in (nguoi_goi_ds | map('string') | map('trim') | list))) }}
-actions:
-  - alias: Báo ra loa
+      {% set d = trigger.event.data %}
+      {{ bat_quy_tac and (
+           (pham_vi == 'thread' and (d.user_id | string) in ds_nguoi)
+        or (pham_vi == 'contacts' and d.contact_status == 'friend')
+        or (pham_vi == 'strangers' and d.contact_status == 'stranger')
+        or (pham_vi == 'tag' and (the_tag | trim) != '' and ((the_tag | trim | lower) in (d.tags | default([], true)))) ) }}
+  - alias: Áp quy tắc cho cuộc gọi
+    action: telegram_call.apply_call_rule
+    response_variable: ket_qua
+    data: >-
+      {% set d = {'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
+                  'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5), 'call_types': loai_cuoc_goi,
+                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen,
+                  'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != ''} %}
+      {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
+      {% if tro_ly_giong_noi | trim != '' %}{% set d = dict(d, pipeline=tro_ly_giong_noi | trim) %}{% endif %}
+      {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
+      {% if bat_bao_loa and loa_bao != '' %}{% set d = dict(d, announce_to=loa_bao) %}{% endif %}
+      {% if cau_bao | trim != '' %}{% set d = dict(d, announce_text=cau_bao | trim) %}{% endif %}
+      {% if loa != '' %}{% set d = dict(d, speaker=loa) %}{% endif %}
+      {% if mic != '' %}{% set d = dict(d, mic=mic) %}{% endif %}
+      {% if camera != '' %}{% set d = dict(d, camera=camera) %}{% endif %}
+      {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
+      {{ d }}
+  - alias: Báo ở chuông thông báo (chỉ khi bật ô «Báo ở chuông thông báo»)
     if:
       - condition: template
-        value_template: "{{ bat_bao_loa and loa_bao | count > 0 and giong_tts != '' }}"
+        value_template: "{{ bat_thong_bao }}"
     then:
-      - continue_on_error: true
-        action: tts.speak
+      - action: persistent_notification.create
         data:
-          entity_id: "{{ giong_tts }}"
-          media_player_entity_id: "{{ loa_bao }}"
-          message: "{{ cau_bao | replace('{{ ten }}', nguoi_goi_id | string) }}"
-  - alias: Tự nghe máy sau số giây đã đặt, nếu người gọi chưa cúp
-    if:
-      - condition: template
-        value_template: "{{ tu_nghe_may }}"
-    then:
-      - delay:
-          seconds: "{{ nghe_sau | int(0) }}"
-      - alias: Cuộc gọi này vẫn đang đổ chuông
-        condition: template
-        value_template: "{{ is_state(cam_bien, 'incoming') and (state_attr(cam_bien, 'call_id') | string) == (call_id | string) }}"
-      - action: telegram_call.answer_call
-        data: >-
-          {% set d = {'call_id': call_id | string} %}
-          {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-          {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
-          {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
-          {{ d }}
+          notification_id: "telegram_call_quy_tac_{{ this.entity_id }}_{{ trigger.event.data.call_id }}"
+          title: "Telegram Call: ĐÃ ÁP quy tắc cho cuộc gọi"
+          message: |-
+            Cuộc gọi {{ trigger.event.data.call_id }} từ {{ trigger.event.data.name or trigger.event.data.user_id }} ({{ trigger.event.data.contact_status }}).
+            Phạm vi: {{ pham_vi }} · kết quả: {{ ket_qua.status if ket_qua is defined and ket_qua else '?' }} · tự nghe: {{ 'có sau ' ~ nghe_sau ~ ' giây' if tu_nghe_may else 'không' }}.
