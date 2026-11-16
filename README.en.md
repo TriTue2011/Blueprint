@@ -527,6 +527,14 @@ Summarize door events with AI, including person detection. Sends notifications t
 
 ---
 
+## 🔘 Any button: ONE automation, add as many jobs as you like
+
+Replaces the older button blueprints (answer/hang up/call, incoming-call button, per-device button, R1 middle-button gestures, "one button, many jobs" — all removed). Works with any trigger (R1 speaker, Zigbee/Z-Wave/Matter, events, switches); give each trigger an **ID** (`don`, `doi`…). Press "Add" for each job — **no limit** (100 tested): a job is *which press*, *which sensor + state means "needed now"* and the service calls to run. On each press the job whose sensor changed state **most recently** wins (or the first one, or all). Jobs without a sensor are fallbacks.
+
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fnut_bam_nhieu_viec.yaml)
+
+---
+
 ## 📩 Send to Telegram (Voice + Delete File)
 
 Send messages, images, or files to Telegram by voice. Can delete the file automatically after sending.
@@ -610,16 +618,6 @@ When a sensor triggers (person, smoke, water leak, open door, power loss...) **c
 
 ---
 
-## 🔘 Zalo Call one button to answer, hang up or call
-
-**One button, different jobs depending on the moment:** incoming call → answer, in a call → hang up, idle → call / alert call / message. Pick the button with the trigger picker (R1 speaker center key, Zigbee button, virtual button...).
-
-**Needs:** Zalo Call 2026.11.11.2 or newer; the Zalo Call «Call status» sensor.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
-
----
-
 ## 📲 Zalo Call incoming-call rules
 
 Decide what happens when **someone calls in**: **announce on a speaker**, **auto-answer**, let the **AI talk**, and **which home devices to connect** when a person takes over (tick Mic / Speaker / Camera; ticking Camera makes it a video call). Apply to one person, all contacts, strangers or all groups.
@@ -672,16 +670,6 @@ Call one person on **any event** (button, time, sensor): voice or video, what to
 
 ---
 
-## 🔔 Zalo Call button for incoming calls
-
-Give one button one job: **answer**, **reject**, **hang up**, **volume up/down**. Only acts at the right moment (ringing / in a call).
-
-**Needs:** Zalo Call 2026.11.11.4 or newer.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_cuoc_goi_den.yaml)
-
----
-
 ## 🎥 Zalo Call caller asks to switch to video
 
 The caller asks to switch from voice to video: **ask on your phone** (Accept / Decline), accept automatically, or accept and send a camera; can announce on a speaker. Never accepts by default.
@@ -691,26 +679,6 @@ The caller asks to switch from voice to video: **ask on your phone** (Accept / D
 **Needs:** Zalo Call 2026.11.11.4 or newer.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
-
----
-
-## 🧭 One button, many jobs (most recent request wins)
-
-One button does whatever is needed: define up to 6 “jobs” (entity + state meaning it needs handling + action); on press it picks the job with the **most recent request** (e.g. an alarm rings, then a call comes in: press = answer; the call ends while the alarm still rings: press = dismiss the alarm). No job needed: run the default action (e.g. place a call). Works with the R1 middle button (from 0.17.0 the speaker has no built-in button actions).
-
-**Needs:** a button with a trigger (R1 middle button, Zigbee button...).
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmot_nut_nhieu_viec.yaml)
-
----
-
-## 🎮 R1 speaker middle button, every gesture in one automation
-
-**One automation for the whole R1 middle button**: pick the speaker, then for **each gesture** (single, double, triple press, hold) define up to 4 “jobs” (entity + state that needs handling + action) and a default action. On press it runs the job with the **most recent request**, otherwise the default (e.g. single press = stop alarm / answer / hang up / call, depending on the moment). No need for several automations per button.
-
-**Needs:** the Phicomm R1 integration (middle button). Set that gesture's built-in action to “Do nothing (only fire the event)”, otherwise both run.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fr1_nut_giua_nhieu_cu_chi.yaml)
 
 ---
 

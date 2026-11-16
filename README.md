@@ -641,16 +641,6 @@ Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất �
 
 ---
 
-## 🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi
-
-**Cùng một nút bấm, việc khác nhau tuỳ lúc:** có cuộc gọi đến thì nghe máy, đang trong cuộc gọi thì cúp, rảnh thì gọi đi / gọi cảnh báo / nhắn tin. Nút chọn bằng bộ chọn trigger (nút giữa loa R1, nút Zigbee, nút ảo...).
-
-**Cần:** Zalo Call từ bản 2026.11.11.2; cảm biến «Trạng thái cuộc gọi» của Zalo Call.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_bam.yaml)
-
----
-
 ## 📲 Zalo Call quy tắc cho cuộc gọi đến
 
 Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra loa** cho cả nhà biết, **tự nghe máy**, cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp (tích Mic / Loa / Camera, tích Camera là cuộc gọi video). Áp cho một người, mọi người trong danh bạ, người lạ hoặc mọi nhóm.
@@ -663,14 +653,12 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 
 ---
 
-## ✈️ Telegram Call: quy tắc cho cuộc gọi đến và một nút bấm
+## ✈️ Telegram Call: quy tắc cho cuộc gọi đến
 
-Giống hai blueprint Zalo Call cùng tên, dùng tích hợp **Telegram Call** (tài khoản Telegram thật, không phải bot).
+Giống blueprint Zalo Call cùng tên, dùng tích hợp **Telegram Call** (tài khoản Telegram thật, không phải bot).
 
 - **Quy tắc cho cuộc gọi đến**: **mỗi cuộc gọi Telegram đến kích hoạt automation** (có trace theo từng cuộc), báo ra loa, rồi sau số giây đã đặt thì **tự nghe máy** bằng loa/mic đã chọn nếu người gọi chưa cúp. Chỉ người bạn liệt kê (ID Telegram) được tự nghe; bật «mọi người» là lựa chọn riêng. Tắt hoặc xoá automation là hết quy tắc.
   [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_call_incoming_rule.yaml)
-- **Một nút bấm**: có cuộc gọi đến thì nghe máy, đang nói thì cúp, rảnh thì gọi đi cho người đã chọn.
-  [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_call_nut_bam.yaml)
 
 **Gửi thông báo qua Telegram Call trong các blueprint có Telegram Bot:** `alarm_person_camera` (1–4), `calendar_weather_notification`, `ai_creat_image_weather_3` có thêm ô **«Telegram Calling»** ngay trong mục Telegram: bật và điền ID người/nhóm nhận là ảnh, video, tin nhắn đi qua tài khoản Telegram thật, bật được cùng lúc với bot. Mặc định TẮT nên automation đang chạy không đổi.
 
@@ -715,16 +703,6 @@ Gọi một người khi **bất kỳ sự kiện nào** (nút bấm, giờ, c�
 **Cần:** Zalo Call từ bản 2026.11.11.4.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
-
----
-
-## 🔔 Zalo Call nút cho cuộc gọi đến
-
-Gán một nút cho một việc: **nghe máy**, **từ chối**, **cúp**, **tăng/giảm âm lượng**. Chỉ chạy đúng lúc (đang đổ chuông / đang trong cuộc gọi).
-
-**Cần:** Zalo Call từ bản 2026.11.11.4.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_cuoc_goi_den.yaml)
 
 ---
 
@@ -794,45 +772,15 @@ Script cho **Voice Assistant**: nói *«gọi Đại ca bằng camera phòng kh�
 
 ---
 
-## 📍 Zalo Call: nhấn nút ở đâu, dùng thiết bị ở đó
-
-Khai tối đa **6 nút** (phòng khách, bếp, phòng ngủ...). Nút nào được nhấn thì cuộc gọi dùng **loa, mic, camera và âm lượng của nút đó**; mỗi nút chọn **thoại hay video**, **người gọi riêng** và việc làm (*Thông minh*: đến thì nghe, đang nói thì cúp, rảnh thì gọi; hoặc Gọi đi / Nghe máy / Cúp máy). **Thiết bị dự phòng chung** được nối vào cuối danh sách của mỗi nút, nên thiết bị của nút không dùng được thì lấy thiết bị kế. Nút là thực thể bất kỳ có đổi trạng thái khi nhấn; chuyển sang «không khả dụng» không tính là nhấn.
-
-**Cần:** Zalo Call từ bản 2026.11.14.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nut_theo_thiet_bi.yaml)
-
----
-
 ## 🔘 Nút bấm mọi loại: MỘT automation, thêm bao nhiêu việc cũng được
 
-Thay cho các blueprint nút riêng của loa R1 (nhận cuộc gọi, gọi đi, nút giữa nhiều cử chỉ, một nút nhiều việc): **một automation cho mọi nút**. Nút loại nào cũng được (loa R1, Zigbee/Z-Wave/Matter, sự kiện, công tắc…): thêm trigger của từng nút/cử chỉ và đặt **ID** (`don`, `doi`, `giu`…). Phần **Việc** bấm «Thêm» khi cần, **không giới hạn số lượng** (kể cả 100): mỗi việc gồm *nhấn kiểu nào* (ID), *cảm biến + trạng thái nghĩa là đang cần* (ví dụ cảm biến cuộc gọi = `incoming`) và các lời gọi dịch vụ chạy khi được chọn. Mỗi lần bấm, việc có cảm biến **vừa đổi trạng thái gần đây nhất** thắng (hoặc việc đứng đầu / chạy tất cả); việc không chọn cảm biến là việc dự phòng; ngoài ra có ô «Việc dự phòng» đầy đủ hành động của HA.
+Thay cho các blueprint nút cũ (nghe máy/cúp/gọi đi, nút cho cuộc gọi đến, nhấn nút ở đâu dùng thiết bị ở đó, nút giữa R1 nhiều cử chỉ, một nút nhiều việc — **đã xoá**): **một automation cho mọi nút**. Nút loại nào cũng được (loa R1, Zigbee/Z-Wave/Matter, sự kiện, công tắc…): thêm trigger của từng nút/cử chỉ và đặt **ID** (`don`, `doi`, `giu`…). Phần **Việc** bấm «Thêm» khi cần, **không giới hạn số lượng** (kể cả 100): mỗi việc gồm *nhấn kiểu nào* (ID), *cảm biến + trạng thái nghĩa là đang cần* (ví dụ cảm biến cuộc gọi = `incoming`) và các lời gọi dịch vụ chạy khi được chọn. Mỗi lần bấm, việc có cảm biến **vừa đổi trạng thái gần đây nhất** thắng (hoặc việc đứng đầu / chạy tất cả); việc không chọn cảm biến là việc dự phòng; ngoài ra có ô «Việc dự phòng» đầy đủ hành động của HA.
 
 Ví dụ nút R1: nhấn đơn + cuộc gọi Zalo/Telegram đang đổ chuông → nghe máy bằng loa và mic R1; nhấn đôi + không có cuộc gọi → gọi Zalo cho bạn.
 
-**Cần:** một nút có trigger. Các blueprint nút cũ vẫn dùng được nhưng nên chuyển sang bản này.
+**Cần:** một nút có trigger. Automation đã tạo từ blueprint nút cũ vẫn chạy trên máy bạn, nhưng nên tạo lại bằng blueprint này.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fnut_bam_nhieu_viec.yaml)
-
----
-
-## 🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất) - đã có bản hợp nhất «Nút bấm nhiều việc» ở trên
-
-Một nút bấm làm đúng việc đang cần: khai tối đa 6 «việc» (thực thể + trạng thái cần xử lý + hành động), khi nhấn nút chọn việc có **yêu cầu gần nhất** (ví dụ báo thức kêu, rồi có cuộc gọi đến thì nhấn = nghe máy; hết cuộc gọi mà báo thức còn kêu thì nhấn = tắt báo thức). Không việc nào cần thì chạy hành động mặc định (ví dụ gọi đi). Hợp với nút giữa loa R1 (từ bản 0.17.0 loa không còn hành động gắn sẵn).
-
-**Cần:** một nút có trigger (nút giữa R1, nút Zigbee...).
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fmot_nut_nhieu_viec.yaml)
-
----
-
-## 🎮 Loa R1 nút giữa mọi cử chỉ trong một automation
-
-**Một automation cho cả nút giữa loa R1**: chọn loa, rồi với **từng cử chỉ** (nhấn đơn, đúp, ba lần, giữ) khai tối đa 4 «việc» (thực thể + trạng thái cần xử lý + hành động) và một hành động mặc định. Nhấn thì làm việc có **yêu cầu gần nhất**, không việc nào thì làm hành động mặc định (ví dụ: nhấn đơn = tắt báo thức / nghe máy / cúp máy / gọi đi tuỳ lúc). Không phải tạo nhiều automation cho một nút.
-
-**Cần:** tích hợp Phicomm R1 (nút giữa). Nên đặt hành động tích hợp của cử chỉ đó là «Không làm gì (chỉ phát sự kiện)», nếu không hai bên cùng chạy.
-
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fr1_nut_giua_nhieu_cu_chi.yaml)
 
 ---
 
