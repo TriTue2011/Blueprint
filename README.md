@@ -28,16 +28,14 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Gửi Zalo Custom Bot (Voice + xóa file)](#-gửi-zalo-custom-bot-voice--xóa-file)
   - [🔗 Zalo Calling trong các blueprint cũ](#-zalo-calling-trong-các-blueprint-cũ)
   - [🎤 Voice gửi Zalo Calling (nhiều người và nhóm)](#-voice-gửi-zalo-calling-nhiều-người-và-nhóm)
-  - [🧭 Một nút nhiều việc (ưu tiên yêu cầu gần nhất)](#-một-nút-nhiều-việc-ưu-tiên-yêu-cầu-gần-nhất)
-  - [🎮 Loa R1 nút giữa mọi cử chỉ trong một automation](#-loa-r1-nút-giữa-mọi-cử-chỉ-trong-một-automation)
   - [📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt](#-zalo-call-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
-  - [🔘 Zalo Call một nút bấm nghe máy, cúp máy hoặc gọi đi](#-zalo-call-một-nút-bấm-nghe-máy-cúp-máy-hoặc-gọi-đi)
   - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
   - [💬 Zalo Call Messenger tuỳ biến](#-zalo-call-messenger-tuỳ-biến)
+  - [✈️ Telegram Call: quy tắc cho cuộc gọi đến](#️-telegram-call-quy-tắc-cho-cuộc-gọi-đến)
+  - [🔘 Nút bấm mọi loại: MỘT automation, thêm bao nhiêu việc cũng được](#-nút-bấm-mọi-loại-một-automation-thêm-bao-nhiêu-việc-cũng-được)
   - [💬 Zalo Call nhắn tin hai chiều với trợ lý](#-zalo-call-nhắn-tin-hai-chiều-với-trợ-lý)
   - [⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch](#-zalo-call-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
   - [📱 Zalo Call gọi đi tuỳ biến](#-zalo-call-gọi-đi-tuỳ-biến)
-  - [🔔 Zalo Call nút cho cuộc gọi đến](#-zalo-call-nút-cho-cuộc-gọi-đến)
   - [🎥 Zalo Call người gọi xin chuyển sang video](#-zalo-call-người-gọi-xin-chuyển-sang-video)
   - [🔁 Automation của luuquangvu (webhook, hẹn giờ, liên kết)](#-automation-của-luuquangvu-webhook-hẹn-giờ-liên-kết)
   - [🧠 Script của luuquangvu cho Assist (tìm kiếm, lịch, bộ nhớ, hẹn giờ)](#-script-của-luuquangvu-cho-assist-tìm-kiếm-lịch-bộ-nhớ-hẹn-giờ)
@@ -657,7 +655,7 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 
 Giống blueprint Zalo Call cùng tên, dùng tích hợp **Telegram Call** (tài khoản Telegram thật, không phải bot).
 
-- **Quy tắc cho cuộc gọi đến**: **mỗi cuộc gọi Telegram đến kích hoạt automation** (có trace theo từng cuộc), báo ra loa, rồi sau số giây đã đặt thì **tự nghe máy** bằng loa/mic đã chọn nếu người gọi chưa cúp. Chỉ người bạn liệt kê (ID Telegram) được tự nghe; bật «mọi người» là lựa chọn riêng. Tắt hoặc xoá automation là hết quy tắc.
+- **Quy tắc cho cuộc gọi đến**: **mỗi cuộc gọi Telegram đến kích hoạt automation** (có trace theo từng cuộc) và gọi `telegram_call.apply_call_rule` cho đúng cuộc đó; phạm vi: người cụ thể (chọn từ thực thể `notify` của tích hợp hoặc nhập ID), thẻ, danh bạ, người lạ; quy tắc cụ thể hơn thắng; có lời nhắn đọc vào cuộc gọi khi nghe máy. Báo ra loa, rồi sau số giây đã đặt thì **tự nghe máy** bằng loa/mic đã chọn nếu người gọi chưa cúp. Chỉ người bạn liệt kê (ID Telegram) được tự nghe; bật «mọi người» là lựa chọn riêng. Tắt hoặc xoá automation là hết quy tắc.
   [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_call_incoming_rule.yaml)
 
 **Gửi thông báo qua Telegram Call trong các blueprint có Telegram Bot:** `alarm_person_camera` (1–4), `calendar_weather_notification`, `ai_creat_image_weather_3` có thêm ô **«Telegram Calling»** ngay trong mục Telegram: bật và điền ID người/nhóm nhận là ảnh, video, tin nhắn đi qua tài khoản Telegram thật, bật được cùng lúc với bot. Mặc định TẮT nên automation đang chạy không đổi.
@@ -1454,43 +1452,41 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 18 | Cập nhật Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
 | 19 | Cập nhật Pyscript | Automation | 2024.10.0 | Auto-sync pyscript từ GitHub |
 | 20 | Zalo Call gọi cảnh báo | Automation | 2026.3.0 | Gọi cảnh báo khi cảm biến kích hoạt |
-| 21 | Zalo Call một nút bấm | Automation | 2026.3.0 | Nghe máy / cúp / gọi đi bằng một nút |
-| 22 | Zalo Call quy tắc cuộc gọi đến | Automation | 2026.3.0 | Báo ra loa, tự nghe, AI, thiết bị nhà |
-| 23 | Zalo Call Messenger | Automation | 2026.3.0 | Nhắn tin hoặc gọi tuỳ biến theo thiết bị |
-| 24 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
-| 25 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
-| 26 | Voice gửi Zalo Calling | Script | 2026.3.0 | Gửi tin/vị trí/ảnh tới nhiều người và nhóm |
-| 27 | Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại | Automation | — | common_utilities.py |
-| 28 | Liên kết trạng thái bật/tắt của nhiều thiết bị | Automation | 2024.12.0 | — |
-| 29 | Bot Telegram hai chiều với Home Assistant | Automation | 2025.8.0 | telegram_bot_handle_tool.py, common_utilities.py |
-| 30 | Bot Zalo hai chiều với Home Assistant | Automation | 2025.8.0 | zalo_bot_handle_tool.py, common_utilities.py |
-| 31 | Phát hiện thiết bị bị bật tay | Automation | 2024.12.0 | — |
-| 32 | Thiết bị bật thì tự tắt sau một khoảng thời gian | Automation | 2024.12.0 | — |
-| 33 | Bộ nhớ cục bộ cho Assist | Automation | 2024.12.0 | memory.py, common_utilities.py |
-| 34 | Tìm video YouTube cho Assist | Script | 2024.12.0 | youtube_data_tool.py |
-| 35 | Lấy thông tin một video YouTube | Script | 2024.12.0 | — |
-| 36 | Phát video YouTube lên thiết bị | Script | 2024.12.0 | — |
-| 37 | Tìm kiếm Google cho Assist | Script | 2024.12.0 | — |
-| 38 | Dự báo thời tiết cho Assist | Script | 2024.12.0 | — |
-| 39 | Tra cứu sự kiện lịch cho Assist | Script | 2024.12.0 | — |
-| 40 | Tạo sự kiện lịch bằng giọng nói | Script | 2024.12.0 | — |
-| 41 | Tạo sự kiện lịch âm hằng năm | Script | 2024.12.0 | date_conversion_tool.py |
-| 42 | Tra ngày và đổi dương lịch ↔ âm lịch cho Assist | Script | 2024.12.0 | date_conversion_tool.py |
-| 43 | Điều khiển nhạc bằng giọng nói | Script | 2024.12.0 | — |
-| 44 | Điều khiển điều hoà | Script | 2024.12.0 | — |
-| 45 | Điều khiển tốc độ và xoay quạt | Script | 2024.12.0 | — |
-| 46 | Tìm vị trí thiết bị trong nhà | Script | 2024.12.0 | — |
-| 47 | Làm điện thoại kêu để tìm máy | Script | 2024.12.0 | — |
-| 48 | Hẹn giờ nhiều thiết bị bằng giọng nói | Script | 2024.12.0 | devices_scheduler.py |
-| 49 | Hẹn giờ nhiều thiết bị | Script | 2024.12.0 | common_utilities.py |
-| 50 | Điều khiển hẹn giờ bằng giọng nói | Script | 2024.12.0 | — |
-| 51 | Bộ nhớ ghi nhớ cho Assist | Script | 2024.12.0 | memory.py |
-| 52 | Zalo Call gọi đi tuỳ biến | Automation | 2026.3.0 | Zalo Call gọi đi tuỳ biến |
-| 53 | Zalo Call nút cho cuộc gọi đến | Automation | 2026.3.0 | Zalo Call nút cho cuộc gọi đến |
-| 54 | Zalo Call người gọi xin chuyển sang video | Automation | 2026.3.0 | Zalo Call người gọi xin chuyển sang video |
-| 55 | Một nút nhiều việc | Automation | 2026.3.0 | Việc có yêu cầu gần nhất |
-| 56 | Zalo Call nhắn tin hai chiều với trợ lý | Automation | 2026.3.0 | Trợ lý trả lời tin Zalo |
-| 57 | Loa R1 nút giữa mọi cử chỉ trong một automation | Automation | 2026.3.0 | Nhiều việc cho mỗi cử chỉ |
+| 21 | Zalo Call quy tắc cuộc gọi đến | Automation | 2026.3.0 | Báo ra loa, tự nghe, AI, thiết bị nhà |
+| 22 | Zalo Call Messenger | Automation | 2026.3.0 | Nhắn tin hoặc gọi tuỳ biến theo thiết bị |
+| 23 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
+| 24 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
+| 25 | Voice gửi Zalo Calling | Script | 2026.3.0 | Gửi tin/vị trí/ảnh tới nhiều người và nhóm |
+| 26 | Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại | Automation | — | common_utilities.py |
+| 27 | Liên kết trạng thái bật/tắt của nhiều thiết bị | Automation | 2024.12.0 | — |
+| 28 | Bot Telegram hai chiều với Home Assistant | Automation | 2025.8.0 | telegram_bot_handle_tool.py, common_utilities.py |
+| 29 | Bot Zalo hai chiều với Home Assistant | Automation | 2025.8.0 | zalo_bot_handle_tool.py, common_utilities.py |
+| 30 | Phát hiện thiết bị bị bật tay | Automation | 2024.12.0 | — |
+| 31 | Thiết bị bật thì tự tắt sau một khoảng thời gian | Automation | 2024.12.0 | — |
+| 32 | Bộ nhớ cục bộ cho Assist | Automation | 2024.12.0 | memory.py, common_utilities.py |
+| 33 | Tìm video YouTube cho Assist | Script | 2024.12.0 | youtube_data_tool.py |
+| 34 | Lấy thông tin một video YouTube | Script | 2024.12.0 | — |
+| 35 | Phát video YouTube lên thiết bị | Script | 2024.12.0 | — |
+| 36 | Tìm kiếm Google cho Assist | Script | 2024.12.0 | — |
+| 37 | Dự báo thời tiết cho Assist | Script | 2024.12.0 | — |
+| 38 | Tra cứu sự kiện lịch cho Assist | Script | 2024.12.0 | — |
+| 39 | Tạo sự kiện lịch bằng giọng nói | Script | 2024.12.0 | — |
+| 40 | Tạo sự kiện lịch âm hằng năm | Script | 2024.12.0 | date_conversion_tool.py |
+| 41 | Tra ngày và đổi dương lịch ↔ âm lịch cho Assist | Script | 2024.12.0 | date_conversion_tool.py |
+| 42 | Điều khiển nhạc bằng giọng nói | Script | 2024.12.0 | — |
+| 43 | Điều khiển điều hoà | Script | 2024.12.0 | — |
+| 44 | Điều khiển tốc độ và xoay quạt | Script | 2024.12.0 | — |
+| 45 | Tìm vị trí thiết bị trong nhà | Script | 2024.12.0 | — |
+| 46 | Làm điện thoại kêu để tìm máy | Script | 2024.12.0 | — |
+| 47 | Hẹn giờ nhiều thiết bị bằng giọng nói | Script | 2024.12.0 | devices_scheduler.py |
+| 48 | Hẹn giờ nhiều thiết bị | Script | 2024.12.0 | common_utilities.py |
+| 49 | Điều khiển hẹn giờ bằng giọng nói | Script | 2024.12.0 | — |
+| 50 | Bộ nhớ ghi nhớ cho Assist | Script | 2024.12.0 | memory.py |
+| 51 | Zalo Call gọi đi tuỳ biến | Automation | 2026.3.0 | Zalo Call gọi đi tuỳ biến |
+| 52 | Zalo Call người gọi xin chuyển sang video | Automation | 2026.3.0 | Zalo Call người gọi xin chuyển sang video |
+| 53 | Zalo Call nhắn tin hai chiều với trợ lý | Automation | 2026.3.0 | Trợ lý trả lời tin Zalo |
+| 54 | Nút bấm mọi loại, thêm bao nhiêu việc cũng được | Automation | 2026.3.0 | Một automation cho mọi nút; việc có cảm biến đổi gần nhất thắng |
+| 55 | Telegram Call quy tắc cuộc gọi đến | Automation | 2026.3.0 | apply_call_rule: người/thẻ/danh bạ/người lạ, báo loa, tự nghe, lời nhắn |
 
 ---
 

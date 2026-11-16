@@ -28,16 +28,13 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [🧩 Send to Zalo Custom Bot (Voice + Delete File)](#-send-to-zalo-custom-bot-voice--delete-file)
   - [🔗 Zalo Calling in the older blueprints](#-zalo-calling-in-the-older-blueprints)
   - [🎤 Voice send to Zalo Calling (many people and groups)](#-voice-send-to-zalo-calling-many-people-and-groups)
-  - [🧭 One button, many jobs (most recent request wins)](#-one-button-many-jobs-most-recent-request-wins)
-  - [🎮 R1 speaker middle button, every gesture in one automation](#-r1-speaker-middle-button-every-gesture-in-one-automation)
   - [📞 Zalo Call alert call when a sensor triggers](#-zalo-call-alert-call-when-a-sensor-triggers)
-  - [🔘 Zalo Call one button to answer, hang up or call](#-zalo-call-one-button-to-answer-hang-up-or-call)
   - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
   - [💬 Zalo Call custom Messenger](#-zalo-call-custom-messenger)
+  - [🔘 Any button: ONE automation, add as many jobs as you like](#-any-button-one-automation-add-as-many-jobs-as-you-like)
   - [💬 Zalo Call two-way chat with the assistant](#-zalo-call-two-way-chat-with-the-assistant)
   - [⏰ Zalo Call scheduled reminder call or message](#-zalo-call-scheduled-reminder-call-or-message)
   - [📱 Zalo Call custom outgoing call](#-zalo-call-custom-outgoing-call)
-  - [🔔 Zalo Call button for incoming calls](#-zalo-call-button-for-incoming-calls)
   - [🎥 Zalo Call caller asks to switch to video](#-zalo-call-caller-asks-to-switch-to-video)
   - [🔁 luuquangvu automations (webhooks, timers, linking)](#-luuquangvu-automations-webhooks-timers-linking)
   - [🧠 luuquangvu scripts for Assist (search, calendar, memory, timers)](#-luuquangvu-scripts-for-assist-search-calendar-memory-timers)
@@ -1037,43 +1034,41 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 18 | Auto-Update Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
 | 19 | Auto-Update Pyscript | Automation | 2024.10.0 | Auto-sync pyscript from GitHub |
 | 20 | Zalo Call Alert | Automation | 2026.3.0 | Alert call when a sensor triggers |
-| 21 | Zalo Call One Button | Automation | 2026.3.0 | Answer / hang up / call with one button |
-| 22 | Zalo Call Incoming Rules | Automation | 2026.3.0 | Announce, auto-answer, AI, home devices |
-| 23 | Zalo Call Messenger | Automation | 2026.3.0 | Customizable message or call by device |
-| 24 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
-| 25 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
-| 26 | Voice send to Zalo Calling | Script | 2026.3.0 | Send text/location/image to many people and groups |
-| 27 | Restore device timers after Home Assistant restarts | Automation | — | common_utilities.py |
-| 28 | Link the on/off state of several devices | Automation | 2024.12.0 | — |
-| 29 | Two-way Telegram bot for Home Assistant | Automation | 2025.8.0 | telegram_bot_handle_tool.py, common_utilities.py |
-| 30 | Two-way Zalo bot for Home Assistant | Automation | 2025.8.0 | zalo_bot_handle_tool.py, common_utilities.py |
-| 31 | Detect a device turned on manually | Automation | 2024.12.0 | — |
-| 32 | Turn a device off after a delay once it is on | Automation | 2024.12.0 | — |
-| 33 | Local memory for Assist | Automation | 2024.12.0 | memory.py, common_utilities.py |
-| 34 | Search YouTube videos for Assist | Script | 2024.12.0 | youtube_data_tool.py |
-| 35 | Get information about a YouTube video | Script | 2024.12.0 | — |
-| 36 | Play a YouTube video on a device | Script | 2024.12.0 | — |
-| 37 | Google search for Assist | Script | 2024.12.0 | — |
-| 38 | Weather forecast for Assist | Script | 2024.12.0 | — |
-| 39 | Look up calendar events for Assist | Script | 2024.12.0 | — |
-| 40 | Create calendar events by voice | Script | 2024.12.0 | — |
-| 41 | Create yearly lunar-calendar events | Script | 2024.12.0 | date_conversion_tool.py |
-| 42 | Date lookup and solar ↔ lunar conversion for Assist | Script | 2024.12.0 | date_conversion_tool.py |
-| 43 | Control music by voice | Script | 2024.12.0 | — |
-| 44 | Control the air conditioner | Script | 2024.12.0 | — |
-| 45 | Control fan speed and oscillation | Script | 2024.12.0 | — |
-| 46 | Find where a device is in the home | Script | 2024.12.0 | — |
-| 47 | Ring a phone to find it | Script | 2024.12.0 | — |
-| 48 | Multi-device timers by voice | Script | 2024.12.0 | devices_scheduler.py |
-| 49 | Multi-device timers | Script | 2024.12.0 | common_utilities.py |
-| 50 | Voice device timers | Script | 2024.12.0 | — |
-| 51 | Memory tool for Assist | Script | 2024.12.0 | memory.py |
-| 52 | Zalo Call custom outgoing call | Automation | 2026.3.0 | Zalo Call custom outgoing call |
-| 53 | Zalo Call button for incoming calls | Automation | 2026.3.0 | Zalo Call button for incoming calls |
-| 54 | Zalo Call caller asks to switch to video | Automation | 2026.3.0 | Zalo Call caller asks to switch to video |
-| 55 | One button, many jobs | Automation | 2026.3.0 | Most recent request wins |
-| 56 | Zalo Call two-way chat with the assistant | Automation | 2026.3.0 | The assistant answers Zalo messages |
-| 57 | R1 speaker middle button, every gesture in one automation | Automation | 2026.3.0 | Many jobs per gesture |
+| 21 | Zalo Call Incoming Rules | Automation | 2026.3.0 | Announce, auto-answer, AI, home devices |
+| 22 | Zalo Call Messenger | Automation | 2026.3.0 | Customizable message or call by device |
+| 23 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
+| 24 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
+| 25 | Voice send to Zalo Calling | Script | 2026.3.0 | Send text/location/image to many people and groups |
+| 26 | Restore device timers after Home Assistant restarts | Automation | — | common_utilities.py |
+| 27 | Link the on/off state of several devices | Automation | 2024.12.0 | — |
+| 28 | Two-way Telegram bot for Home Assistant | Automation | 2025.8.0 | telegram_bot_handle_tool.py, common_utilities.py |
+| 29 | Two-way Zalo bot for Home Assistant | Automation | 2025.8.0 | zalo_bot_handle_tool.py, common_utilities.py |
+| 30 | Detect a device turned on manually | Automation | 2024.12.0 | — |
+| 31 | Turn a device off after a delay once it is on | Automation | 2024.12.0 | — |
+| 32 | Local memory for Assist | Automation | 2024.12.0 | memory.py, common_utilities.py |
+| 33 | Search YouTube videos for Assist | Script | 2024.12.0 | youtube_data_tool.py |
+| 34 | Get information about a YouTube video | Script | 2024.12.0 | — |
+| 35 | Play a YouTube video on a device | Script | 2024.12.0 | — |
+| 36 | Google search for Assist | Script | 2024.12.0 | — |
+| 37 | Weather forecast for Assist | Script | 2024.12.0 | — |
+| 38 | Look up calendar events for Assist | Script | 2024.12.0 | — |
+| 39 | Create calendar events by voice | Script | 2024.12.0 | — |
+| 40 | Create yearly lunar-calendar events | Script | 2024.12.0 | date_conversion_tool.py |
+| 41 | Date lookup and solar ↔ lunar conversion for Assist | Script | 2024.12.0 | date_conversion_tool.py |
+| 42 | Control music by voice | Script | 2024.12.0 | — |
+| 43 | Control the air conditioner | Script | 2024.12.0 | — |
+| 44 | Control fan speed and oscillation | Script | 2024.12.0 | — |
+| 45 | Find where a device is in the home | Script | 2024.12.0 | — |
+| 46 | Ring a phone to find it | Script | 2024.12.0 | — |
+| 47 | Multi-device timers by voice | Script | 2024.12.0 | devices_scheduler.py |
+| 48 | Multi-device timers | Script | 2024.12.0 | common_utilities.py |
+| 49 | Voice device timers | Script | 2024.12.0 | — |
+| 50 | Memory tool for Assist | Script | 2024.12.0 | memory.py |
+| 51 | Zalo Call custom outgoing call | Automation | 2026.3.0 | Zalo Call custom outgoing call |
+| 52 | Zalo Call caller asks to switch to video | Automation | 2026.3.0 | Zalo Call caller asks to switch to video |
+| 53 | Zalo Call two-way chat with the assistant | Automation | 2026.3.0 | The assistant answers Zalo messages |
+| 54 | Any button, add as many jobs as you like | Automation | 2026.3.0 | One automation for every button; the job whose sensor changed most recently wins |
+| 55 | Telegram Call incoming-call rules | Automation | 2026.3.0 | apply_call_rule: person/tag/contacts/strangers, announce, auto-answer, voice message |
 
 ---
 
