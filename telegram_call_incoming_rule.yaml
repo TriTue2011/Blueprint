@@ -137,6 +137,20 @@ blueprint:
           default:
             - mic
             - speaker
+        xu_ly_xin_video:
+          name: Người gọi bật camera giữa cuộc thoại (xin chuyển sang video)
+          description: "Hỏi (mặc định, riêng tư): chỉ báo sự kiện `telegram_call_call_state` trạng thái `video_request`, không tự đồng ý · Đồng ý, gửi hình đen: bật video nhưng không đưa hình trong nhà · Đồng ý và gửi camera: bật video kèm camera đã chọn ở ô «Camera» bên dưới (hoặc camera mặc định của tích hợp)."
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Hỏi (chỉ báo sự kiện, không tự đồng ý)
+                  value: ask
+                - label: Đồng ý, gửi hình đen
+                  value: accept
+                - label: Đồng ý và gửi camera
+                  value: accept_camera
+          default: ask
         loa:
           name: Loa phát tiếng người gọi
           description: Loa R1 hoặc camera Imou/Dahua có cửa bộ đàm. Bỏ trống = loa mặc định của tích hợp.
@@ -270,6 +284,7 @@ variables:
   mic: !input mic
   camera: !input camera
   am_luong: !input am_luong
+  xu_ly_xin_video: !input xu_ly_xin_video
   cau_chao: !input cau_chao
   cup_sau_chao: !input cup_sau_chao
   bat_bao_loa: !input bat_bao_loa
@@ -312,7 +327,7 @@ actions:
     data: >-
       {% set d = {'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
                   'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5), 'call_types': loai_cuoc_goi,
-                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen,
+                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'video_request': xu_ly_xin_video,
                   'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != ''} %}
       {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
       {% if tro_ly_giong_noi | trim != '' %}{% set d = dict(d, pipeline=tro_ly_giong_noi | trim) %}{% endif %}
