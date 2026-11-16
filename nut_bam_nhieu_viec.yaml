@@ -6,7 +6,7 @@ blueprint:
     min_version: 2026.3.0
   domain: automation
   description: |
-    **Phiên bản: v.2026.11.17** — thay cho các blueprint nút riêng của loa R1 (nhận cuộc gọi, gọi đi, nút giữa nhiều cử chỉ): MỘT automation cho mọi nút.
+    **Phiên bản: v.2026.11.16** — thay cho các blueprint nút riêng của loa R1 (nhận cuộc gọi, gọi đi, nút giữa nhiều cử chỉ): MỘT automation cho mọi nút.
 
     **Nút:** ô «Nút bấm» nhận MỌI loại trigger (cử chỉ loa R1, nút Zigbee/Z-Wave/Matter, sự kiện `event`, `button`, công tắc, thiết bị bất kỳ…). Đặt **ID** cho từng trigger
     (ví dụ `don`, `doi`, `giu`) để biết đó là cử chỉ nào.

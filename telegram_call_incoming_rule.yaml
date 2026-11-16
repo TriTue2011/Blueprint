@@ -6,14 +6,14 @@ blueprint:
     min_version: 2026.3.0
   domain: automation
   description: |
-    **Phiên bản: v.2026.11.17** — cùng mô hình với blueprint «Zalo Call - Quy tắc cho cuộc gọi đến».
+    **Phiên bản: v.2026.11.16** — cùng mô hình với blueprint «Zalo Call - Quy tắc cho cuộc gọi đến».
 
     **Mỗi cuộc gọi Telegram đến kích hoạt automation này** (có lượt chạy/trace theo từng cuộc) và automation gọi `telegram_call.apply_call_rule` cho ĐÚNG cuộc gọi đó.
     Không lưu gì: tắt hay xoá automation là hết quy tắc. Nhiều automation khác nhau cho cùng một người vẫn chạy đủ: quy tắc cụ thể hơn thắng
     (người > thẻ > danh bạ > người lạ); cùng bậc thì mỗi quy tắc báo ra loa của riêng nó, còn nghe máy / thiết bị / lời nhắn theo quy tắc đầu tiên bật «Tự nghe máy».
 
     **Riêng tư:** không có quy tắc = chỉ đổ chuông. Thiết bị nhà do hai ô «nối ngay» / «nối khi người nhà nói trực tiếp» quyết: không tích = KHÔNG nối (nghe máy mà mic im lặng, video thì gửi hình đen).
-    Cần tích hợp **Telegram Call** từ bản 2026.11.17. Telegram Call chưa có trợ lý AI trò chuyện trong cuộc gọi (khác Zalo): thay bằng **lời nhắn** đọc vào cuộc gọi.
+    Cần tích hợp **Telegram Call** từ bản 2026.11.16.2. Telegram Call chưa có trợ lý AI trò chuyện trong cuộc gọi (khác Zalo): thay bằng **lời nhắn** đọc vào cuộc gọi.
   input:
     ap_dung:
       name: ① Áp dụng cho ai
