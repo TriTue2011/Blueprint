@@ -1,0 +1,319 @@
+blueprint:
+  name: "Live Cam (TV LG): chiếu lên TV khi có sự kiện - MỘT automation, thêm bao nhiêu sự kiện cũng được"
+  description: >-
+    **Cùng cách làm với «Dosen Pro: chiếu lên màn camera».** Một automation cho mọi sự kiện chiếu lên **TV LG webOS** qua app **Live Cam** (`com.viet.livecam`, bản 1.1.0 trở lên).
+
+
+    **Cách khai:** ô «Khi nào» nhận MỌI loại trigger (cảm biến đổi trạng thái, sự kiện, giờ…); đặt **ID** cho từng trigger (ví dụ `nguoi_o_cua`).
+    Mỗi **việc** nêu *ID trigger nào kích hoạt nó* (trống = mọi trigger), tuỳ chọn *chỉ khi một cảm biến khác đang ở trạng thái nào*, rồi *chiếu gì* (camera trực tiếp, thẻ thông tin, hình, video hay dòng chữ), mức ưu tiên, thời gian giữ và tên lớp.
+
+
+    **Luật chiếu** (do app trên TV xử lý, giống màn Dosen): mức ưu tiên cao hơn luôn ở trên; cùng mức thì sự kiện tới sau đè lên; **camera và thẻ cùng mức trên cùng đứng chung màn** (TV 49 inch: tới 6 camera trong lưới, thẻ xếp dọc bên phải; nhiều hơn thì đổi trang mỗi 5 giây); số liệu trên thẻ cập nhật trực tiếp; hết hạn hoặc bấm Back thì về lớp dưới; hết sạch thì app tự đóng và TV trở lại nội dung đang xem. Cùng «tên lớp» thì thay nhau, khác tên thì xếp chồng. Mọi việc đều có trần 1 giờ.
+
+
+    **Cần:** TV đã thêm vào HA bằng tích hợp **LG webOS TV** (dịch vụ `webostv.command`); app đã cài và đã nhập địa chỉ HA + token một lần trong màn cài đặt của app (nên dùng một người dùng HA riêng chỉ có quyền xem camera). TV đang tắt thì bật «Bật TV nếu đang tắt» (cần TV bật được từ xa trong tích hợp).
+  domain: automation
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/lg_livecam_man_hinh_nhieu_viec.yaml
+  homeassistant:
+    min_version: 2024.11.0
+  input:
+    tv_nhom:
+      name: ⓪ TV
+      icon: mdi:television
+      input:
+        tv:
+          name: TV LG
+          selector:
+            entity:
+              integration: webostv
+              domain: media_player
+        toi_da_camera:
+          name: Số camera tối đa cùng lúc
+          description: "Lưới camera: 1 đến 9. TV LG webOS 3 (2016) yếu: đo thật cho thấy mỗi hình cập nhật vài lần/giây đã ngốn gần hết CPU, nên mặc định 1 (một camera giải mã bằng phần cứng; mỗi camera thêm tốn ~+280% CPU). Nhiều hơn thì đổi trang mỗi 5 giây."
+          default: 1
+          selector:
+            number: {min: 1, max: 9, mode: box}
+        go2rtc_url:
+          name: Địa chỉ go2rtc (HLS trực tiếp cho camera đầu tiên)
+          description: "Ví dụ `http://192.168.1.10:1984`. TV webOS 3 KHÔNG phát được HLS fMP4 của Home Assistant, nhưng phát tốt HLS MPEG-TS của go2rtc bằng bộ giải mã phần cứng (đo trên tivi thật: ~136% CPU so với ~370% của MJPEG). Có địa chỉ này thì camera đầu tiên phát thẳng từ go2rtc. Để trống thì dùng MJPEG qua Home Assistant (nặng)."
+          default: ""
+          selector:
+            text: {}
+        go2rtc_ban_do:
+          name: Ánh xạ camera → tên luồng go2rtc (mỗi dòng `camera.x = ten-luong`)
+          description: "Camera không có dòng ở đây mà có tên dạng `camera.go2rtc_<ten_luong>` thì dùng `<ten-luong>` (đổi `_` thành `-`). Ví dụ `camera.go2rtc_cua_sub` → luồng `cua-sub`."
+          default: ""
+          selector:
+            text: {multiline: true}
+        app_id:
+          name: Kiểu hiển thị
+          description: "**Toàn màn** = app Live Cam (chiếm cả màn, che nội dung đang xem). **Cửa sổ góc** = app `com.viet.livecam.popup` hiện nhỏ ở một góc, đè lên nội dung đang xem (thay màn camera Dosen khi có cảm biến). Cửa sổ góc dùng kiểu cửa sổ `overlay` của webOS: mẹo không có trong tài liệu LG, TV có thể từ chối và hiện toàn màn hình; cần cài thêm gói `com.viet.livecam.popup`."
+          default: com.viet.livecam
+          selector:
+            select:
+              options:
+                - {value: com.viet.livecam, label: "Toàn màn (Live Cam)"}
+                - {value: com.viet.livecam.popup, label: "Cửa sổ góc (Live Cam góc)"}
+        goc:
+          name: Góc hiển thị (chỉ cửa sổ góc)
+          default: br
+          selector:
+            select:
+              options:
+                - {value: tl, label: "Trên trái"}
+                - {value: tr, label: "Trên phải"}
+                - {value: bl, label: "Dưới trái"}
+                - {value: br, label: "Dưới phải"}
+        kich_thuoc:
+          name: Cỡ cửa sổ góc, % màn hình (chỉ cửa sổ góc)
+          default: 30
+          selector:
+            number: {min: 15, max: 60, mode: box}
+        toi_da_the:
+          name: Số thẻ tối đa cùng lúc
+          default: 4
+          selector:
+            number: {min: 1, max: 8, mode: box}
+        bat_tv:
+          name: Bật TV nếu đang tắt
+          description: "Bật TV rồi chờ tối đa 30 giây cho TV khởi động xong trước khi chiếu."
+          default: false
+          selector:
+            boolean: {}
+    khi_nao:
+      name: ① Khi nào
+      icon: mdi:flash-outline
+      input:
+        trigger:
+          name: Các trigger (đặt ID cho từng cái)
+          description: "Thêm trigger của từng sự kiện (cảm biến người, cửa mở, chuông, sự kiện…). Đặt **ID** để việc bên dưới biết trigger nào kích hoạt nó."
+          selector:
+            trigger: {}
+        dieu_kien:
+          name: Điều kiện chung (tuỳ chọn)
+          description: "Áp cho mọi việc (ví dụ chỉ khi có nhà)."
+          default: []
+          selector:
+            condition: {}
+    viec_nhom:
+      name: ② Các việc (thêm khi cần)
+      icon: mdi:format-list-checks
+      input:
+        viec:
+          name: Việc
+          description: "Bấm «Thêm». Mỗi việc: **Tên**; **Khi trigger ID** (trống = mọi trigger); **Chỉ khi cảm biến / ở trạng thái** (tuỳ chọn); **Chiếu gì** và các ô tương ứng."
+          default: []
+          selector:
+            object:
+              multiple: true
+              label_field: ten
+              description_field: kieu
+              fields:
+                ten:
+                  label: Tên việc
+                  selector:
+                    text: {}
+                khi:
+                  label: Khi trigger có ID (trống = mọi trigger)
+                  selector:
+                    text:
+                      multiple: true
+                chi_khi_thuc_the:
+                  label: Chỉ khi thực thể (tuỳ chọn)
+                  selector:
+                    entity: {}
+                chi_khi_trang_thai:
+                  label: ở trạng thái (trống = bất kỳ trừ unavailable/unknown)
+                  selector:
+                    text:
+                      multiple: true
+                kieu:
+                  label: Chiếu gì
+                  required: true
+                  selector:
+                    select:
+                      options:
+                        - {value: camera, label: "Camera trực tiếp"}
+                        - {value: the, label: "Thẻ thông tin (số lớn + các dòng, cập nhật trực tiếp)"}
+                        - {value: anh, label: "Hình ảnh (địa chỉ http/https)"}
+                        - {value: video, label: "Video (địa chỉ http/https, .m3u8 hoặc .mp4)"}
+                        - {value: chu, label: "Dòng chữ"}
+                camera:
+                  label: Camera (khi chọn «Camera trực tiếp»; nhiều camera thì chia đôi / xoay vòng)
+                  selector:
+                    entity:
+                      domain: camera
+                      multiple: true
+                cam_bien_chinh:
+                  label: Thẻ — cảm biến chính (số lớn; trống = chỉ các dòng)
+                  selector:
+                    entity: {}
+                chu_thich:
+                  label: Thẻ — chú thích dưới số lớn (trống = tên cảm biến)
+                  selector:
+                    text: {}
+                mau:
+                  label: Thẻ — màu số lớn
+                  selector:
+                    select:
+                      options:
+                        - {value: red, label: "Đỏ"}
+                        - {value: green, label: "Xanh lá"}
+                        - {value: blue, label: "Xanh dương"}
+                        - {value: orange, label: "Cam"}
+                        - {value: black, label: "Trắng xám"}
+                cac_dong:
+                  label: Thẻ — các dòng thông tin (mỗi thực thể một dòng, tên và giá trị tiếng Việt)
+                  selector:
+                    entity:
+                      multiple: true
+                nguon:
+                  label: Địa chỉ hình / video (http:// hoặc https://; TV không phát được rtsp://)
+                  selector:
+                    text: {}
+                lap:
+                  label: Lặp video
+                  selector:
+                    boolean: {}
+                tieu_de:
+                  label: Tiêu đề (trống = tên camera)
+                  selector:
+                    text: {}
+                noi_dung:
+                  label: Nội dung (cho dòng chữ)
+                  selector:
+                    text:
+                      multiline: true
+                thoi_gian:
+                  label: Giữ trên màn bao lâu (giây; 0 = tới khi bấm Back, có sự kiện đè hoặc tối đa 1 giờ)
+                  selector:
+                    number:
+                      min: 0
+                      max: 3600
+                      mode: box
+                uu_tien:
+                  label: Mức ưu tiên (1 thấp · 2 thường · 3 cao · 4 khẩn cấp)
+                  selector:
+                    number:
+                      min: 1
+                      max: 4
+                      mode: box
+                ten_lop:
+                  label: Tên lớp (cùng tên thì thay nhau)
+                  selector:
+                    text: {}
+        cach_chon:
+          name: Khi nhiều việc cùng khớp
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Chạy tất cả (app tự xếp theo mức ưu tiên)
+                  value: tat_ca
+                - label: Chỉ việc đứng đầu danh sách
+                  value: dau_tien
+                - label: Chỉ việc có cảm biến điều kiện đổi trạng thái gần nhất
+                  value: moi_nhat
+          default: tat_ca
+mode: parallel
+max_exceeded: silent
+trigger: !input trigger
+condition: !input dieu_kien
+variables:
+  tv: !input tv
+  bat_tv: !input bat_tv
+  toi_da_camera: !input toi_da_camera
+  app_id: !input app_id
+  goc: !input goc
+  kich_thuoc: !input kich_thuoc
+  go2rtc_base: !input go2rtc_url
+  go2rtc_map_text: !input go2rtc_ban_do
+  go2rtc_map: >-
+    {% set ns = namespace(d={}) %}
+    {% for ln in (go2rtc_map_text | default('', true)).splitlines() %}
+      {% set p = ln.split('=') %}
+      {% if p | count == 2 and p[0] | trim and p[1] | trim %}{% set ns.d = ns.d | combine({p[0] | trim: p[1] | trim}) %}{% endif %}
+    {% endfor %}
+    {{ ns.d }}
+  toi_da_the: !input toi_da_the
+  viec: !input viec
+  cach_chon: !input cach_chon
+  tid: "{{ trigger.id | string }}"
+  # CHỈ SỐ các việc sẽ chạy: khớp ID trigger và (nếu có) thực thể điều kiện đúng trạng thái.
+  chon: >-
+    {% set ns = namespace(l=[]) %}
+    {% for j in viec | default([], true) %}
+      {% set kn = j.khi | default([], true) %}
+      {% set kn = [kn] if kn is string else kn %}
+      {% if kn | count == 0 or tid in (kn | map('string') | list) %}
+        {% set cb = (j.chi_khi_thuc_the | default('', true)) | string | trim %}
+        {% set ok = true %}
+        {% set t = 0 %}
+        {% if cb != '' %}
+          {% set st = expand(cb) | selectattr('entity_id', 'eq', cb) | first | default(none) %}
+          {% set tt = j.chi_khi_trang_thai | default([], true) %}
+          {% set tt = ([tt] if tt is string else tt) | map('string') | list %}
+          {% set ok = st is not none and ((tt | count == 0 and st.state not in ['unavailable', 'unknown']) or st.state in tt) %}
+          {% if ok %}{% set t = st.last_changed.timestamp() %}{% endif %}
+        {% endif %}
+        {% if ok %}{% set ns.l = ns.l + [{'i': loop.index0, 't': t}] %}{% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if ns.l | count == 0 %}[]
+    {% elif cach_chon == 'dau_tien' %}{{ [ns.l[0].i] | tojson }}
+    {% elif cach_chon == 'moi_nhat' %}
+      {% set b = namespace(x=ns.l[0]) %}
+      {% for u in ns.l %}{% if u.t > b.x.t %}{% set b.x = u %}{% endif %}{% endfor %}
+      {{ [b.x.i] | tojson }}
+    {% else %}{{ ns.l | map(attribute='i') | list | tojson }}
+    {% endif %}
+  # Các «lớp» gửi cho app: MỘT lần mở app mang mọi việc (hai lần mở liền nhau có thể mất lần sau khi app đang khởi động).
+  items: >-
+    {% set ns = namespace(l=[]) %}
+    {% for idx in chon %}
+      {% set s = viec[idx] %}
+      {% set kieu = s.kieu | default('camera', true) %}
+      {% set lop = (s.ten_lop | default('', true) | string | trim) or ('viec_' ~ idx) %}
+      {% set uu = s.uu_tien | default(2, true) | int(2) %}
+      {% set tg = s.thoi_gian | default(0, true) | float(0) %}
+      {% if kieu == 'camera' %}
+        {% set cams = s.camera if s.camera is list else ([s.camera] if s.camera else []) %}
+        {% for c in cams %}
+          {% set ten = (s.tieu_de | default('', true)) or state_attr(c, 'friendly_name') or c %}
+          {% set src = go2rtc_map.get(c) or (c[14:] | replace('_', '-') if c.startswith('camera.go2rtc_') else '') %}
+          {% set hls = (go2rtc_base | trim | regex_replace('/+$', '') ~ '/api/stream.m3u8?src=' ~ src) if (go2rtc_base | trim and src) else '' %}
+          {% set ns.l = ns.l + [{'cmd': 'show', 'kind': 'camera', 'camera': c, 'owner': lop if cams | count == 1 else lop ~ '_' ~ loop.index, 'priority': uu, 'ttl': tg, 'title': ten, 'split': true} | combine({'hls': hls} if hls else {})] %}
+        {% endfor %}
+      {% elif kieu == 'the' %}
+        {% set ds = s.cac_dong | default([], true) %}
+        {% set ds = ds if ds is list else [ds] %}
+        {% set ns.l = ns.l + [{'cmd': 'show', 'kind': 'card', 'owner': lop, 'priority': uu, 'ttl': tg, 'title': s.tieu_de | default('Thông tin', true), 'main_entity': s.cam_bien_chinh | default('', true), 'caption': s.chu_thich | default('', true), 'color': s.mau | default('red', true), 'entities': ds}] %}
+      {% elif kieu == 'chu' %}
+        {% set ns.l = ns.l + [{'cmd': 'show', 'kind': 'text', 'owner': lop, 'priority': uu, 'ttl': tg, 'title': s.tieu_de | default('Thông báo', true), 'text': s.noi_dung | default('', true)}] %}
+      {% else %}
+        {% set ns.l = ns.l + [{'cmd': 'show', 'kind': 'video' if kieu == 'video' else 'image', 'url': s.nguon | default('', true), 'owner': lop, 'priority': uu, 'ttl': tg, 'loop': s.lap | default(false, true) | bool(false), 'title': s.tieu_de | default('', true)}] %}
+      {% endif %}
+    {% endfor %}
+    {% set extra = {'max_cams': toi_da_camera | int(1), 'max_cards': toi_da_the | int(4)} %}
+    {% if app_id == 'com.viet.livecam.popup' %}{% set extra = extra | combine({'corner': goc, 'size': kich_thuoc | int(30)}) %}{% endif %}
+    {{ ns.l | map('combine', extra) | list }}
+action:
+  - if: "{{ items | count > 0 }}"
+    then:
+      - if: "{{ bat_tv and is_state(tv, 'off') }}"
+        then:
+          - action: media_player.turn_on
+            target:
+              entity_id: !input tv
+            continue_on_error: true
+          - wait_template: "{{ is_state(tv, 'on') }}"
+            timeout: 30
+            continue_on_timeout: true
+          - delay: 3
+      - action: webostv.command
+        target:
+          entity_id: !input tv
+        data:
+          command: com.webos.applicationManager/launch
+          payload: "{{ {'id': app_id, 'params': {'items': items}} }}"

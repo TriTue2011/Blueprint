@@ -1,0 +1,210 @@
+blueprint:
+  name: "TV LG: bật TV / thoát app là về Màn hình chính"
+  description: >-
+    Đưa **Màn hình chính** (`com.viet.home`, màn chọn app kiểu Android TV / Apple TV) lên trong hai trường hợp:
+
+
+    1. **TV vừa bật** (từ tắt sang bật): đợi vài giây cho TV khởi động xong rồi mở.
+
+    2. **Thoát một app** trong danh sách «App quản lý» (YouTube, Live Cam…): khi TV rơi về nguồn nền (HDMI / truyền hình) thì mở lại Màn hình chính, trễ ~2 giây.
+    Chuyển thẳng từ app này sang app khác, hoặc bấm nút **Input** để đổi nguồn thì KHÔNG bị chen vào.
+
+
+    **Nút Home trên remote KHÔNG thay được** (đã đo trên 49UH617T webOS 3): thanh chọn app của LG là lớp phủ đè lên app đang chạy, `app_id` không đổi nên Home Assistant không biết bạn vừa bấm Home. Muốn vào Màn hình chính từ thanh đó, chọn thẻ «Màn hình chính» (nằm đầu hàng).
+
+
+    **Cần:** TV đã thêm vào HA bằng tích hợp **LG webOS TV** (thực thể có thuộc tính `app_id`); app `com.viet.home` đã cài (Developer Mode). TV tắt hẳn rồi rút điện thì HA chỉ thấy `unavailable` → `on`; blueprint tính cả trường hợp này. Chưa cài app thì lệnh mở thất bại và không có gì xảy ra.
+  domain: automation
+  author: TriTue2011
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/lg_man_hinh_chinh_khi_bat_tivi.yaml
+  homeassistant:
+    min_version: 2024.11.0
+  input:
+    tv:
+      name: TV LG
+      selector:
+        entity:
+          integration: webostv
+          domain: media_player
+    app_id:
+      name: ID app Màn hình chính
+      default: com.viet.home
+      selector:
+        text: {}
+    cho_giay:
+      name: Đợi bao nhiêu giây sau khi TV bật
+      description: "TV vừa bật còn đang nạp nguồn cuối. Mở app quá sớm thì bị LG Home đè lại. Mặc định 12 giây."
+      default: 12
+      selector:
+        number: {min: 3, max: 60, mode: box, unit_of_measurement: s}
+    thoi_tiet:
+      name: Thời tiết (hiện trên Màn hình chính)
+      description: "Thực thể `weather.*` (ví dụ AccuWeather). Để trống thì không hiện khung thời tiết."
+      default: ""
+      selector:
+        entity:
+          domain: weather
+    am_lich:
+      name: Âm lịch (can chi, tiết khí, ngày lễ)
+      description: "Cảm biến có thuộc tính `tiet_khi`, `solar_holiday`, `lunar_holiday` (ví dụ `sensor.am_lich_hang_ngay` của tích hợp Lịch Việt). Ngày âm lịch luôn do TV tự tính; cảm biến chỉ bổ sung tiết khí và ngày lễ. Có thể để trống."
+      default: ""
+      selector:
+        entity:
+          domain: sensor
+    ha_url:
+      name: Địa chỉ Home Assistant (cho nút «Tự về đây»)
+      description: "Ví dụ `http://192.168.1.10:8123`. TV gửi lệnh bật/tắt bằng webhook, không cần token. Để trống thì nút báo chưa cấu hình."
+      default: ""
+      selector:
+        text: {}
+    webhook_id:
+      name: ID webhook của công tắc «Tự về đây»
+      description: "ID webhook của automation công tắc (xem README). Chuỗi dài, ngẫu nhiên; chỉ nhận từ mạng nội bộ."
+      default: ""
+      selector:
+        text: {}
+    khi_bat_tv:
+      name: ① Mở khi TV vừa bật
+      default: true
+      selector:
+        boolean: {}
+    khi_thoat_app:
+      name: ② Mở khi thoát một app
+      default: true
+      selector:
+        boolean: {}
+    apps_quan_ly:
+      name: App quản lý (thoát khỏi các app này thì về Màn hình chính)
+      description: "Tick app cần quản lý (danh sách lấy từ chính tivi của bạn). Cần app khác thì gõ ID vào ô. Không thêm `com.viet.home` (thoát Màn hình chính là để xem nguồn đang chạy)."
+      default:
+        - youtube.leanback.v4
+        - com.ssiptv.app
+        - com.viet.livecam
+        - com.webos.app.browser
+        - com.webos.app.photovideo
+        - com.webos.app.music
+        - com.webos.app.discovery
+        - com.webos.app.miracast
+        - com.webos.app.tvuserguide
+      selector:
+        select:
+          multiple: true
+          custom_value: true
+          options:
+            - {value: youtube.leanback.v4, label: "YouTube AdFree (youtube.leanback.v4)"}
+            - {value: com.ssiptv.app, label: "SS IPTV (com.ssiptv.app)"}
+            - {value: com.viet.livecam, label: "Live Cam (com.viet.livecam)"}
+            - {value: com.viet.livecam.popup, label: "Live Cam (góc) (com.viet.livecam.popup)"}
+            - {value: com.webos.app.browser, label: "Trình duyệt web (com.webos.app.browser)"}
+            - {value: com.webos.app.photovideo, label: "Ảnh & Video (com.webos.app.photovideo)"}
+            - {value: com.webos.app.music, label: "Âm nhạc (com.webos.app.music)"}
+            - {value: com.webos.app.discovery, label: "LG Content Store (com.webos.app.discovery)"}
+            - {value: com.webos.app.miracast, label: "Screen Share (com.webos.app.miracast)"}
+            - {value: com.webos.app.tvuserguide, label: "Hướng dẫn sử dụng (com.webos.app.tvuserguide)"}
+            - {value: com.webos.app.multiview, label: "Xem đa kênh (com.webos.app.multiview)"}
+            - {value: com.webos.app.recordings, label: "Chương trình đã ghi (com.webos.app.recordings)"}
+            - {value: com.webos.app.scheduler, label: "Ứng dụng lập lịch ghi (com.webos.app.scheduler)"}
+            - {value: com.webos.app.tvguide, label: "Thông tin chương trình TV (com.webos.app.tvguide)"}
+            - {value: com.webos.app.voice, label: "Tìm kiếm (com.webos.app.voice)"}
+            - {value: com.webos.app.connectionwizard, label: "Trình kết nối thiết bị (com.webos.app.connectionwizard)"}
+            - {value: com.webos.app.notificationcenter, label: "Thông báo (com.webos.app.notificationcenter)"}
+            - {value: com.palmdts.devmode, label: "Developer Mode (com.palmdts.devmode)"}
+    nguon_nen:
+      name: ID các nguồn nền (nơi TV rơi về sau khi thoát app)
+      default:
+        - com.webos.app.hdmi1
+        - com.webos.app.hdmi2
+        - com.webos.app.hdmi3
+        - com.webos.app.externalinput.av1
+        - com.webos.app.livetv
+      selector:
+        select:
+          multiple: true
+          custom_value: true
+          options:
+            - {value: com.webos.app.livetv, label: "Chương trình phát (com.webos.app.livetv)"}
+            - {value: com.webos.app.hdmi1, label: "HDMI1 (com.webos.app.hdmi1)"}
+            - {value: com.webos.app.hdmi2, label: "HDMI2 (com.webos.app.hdmi2)"}
+            - {value: com.webos.app.hdmi3, label: "HDMI3 (com.webos.app.hdmi3)"}
+            - {value: com.webos.app.externalinput.av1, label: "AV (com.webos.app.externalinput.av1)"}
+            - {value: com.webos.app.externalinput.av2, label: "AV2 (com.webos.app.externalinput.av2)"}
+            - {value: com.webos.app.externalinput.component, label: "Component (com.webos.app.externalinput.component)"}
+            - {value: com.webos.app.externalinput.scart, label: "AV1 (com.webos.app.externalinput.scart)"}
+mode: parallel
+max: 5
+max_exceeded: silent
+variables:
+  tv_id: !input tv
+  weather_id: !input thoi_tiet
+  am_lich_id: !input am_lich
+  ha_url_in: !input ha_url
+  hook_id: !input webhook_id
+  # Du lieu dua cho Man hinh chinh luc mo (TV khong giu token, khong giu ket noi). Thieu thuc the thi bo qua phan do.
+  info_data: >-
+    {% set d = {'day': now().day ~ '/' ~ now().month} %}
+    {% if am_lich_id and states(am_lich_id) not in ['unknown', 'unavailable', 'none'] %}
+      {% set tk = state_attr(am_lich_id, 'tiet_khi') %}
+      {% if tk %}{% set d = d | combine({'tiet_khi': tk}) %}{% endif %}
+      {% set le = [state_attr(am_lich_id, 'lunar_holiday'), state_attr(am_lich_id, 'solar_holiday')] | reject('none') | reject('in', ['', 'Không Có']) | list %}
+      {% if le %}{% set d = d | combine({'holiday': le | join(', ')}) %}{% endif %}
+    {% endif %}
+    {% if weather_id and states(weather_id) not in ['unknown', 'unavailable', 'none'] %}
+      {% set wa = states[weather_id].attributes %}
+      {% set d = d | combine({'w': {'t': wa.temperature, 'feel': wa.apparent_temperature if wa.apparent_temperature is defined else none,
+                                    'phrase': wa.phrase if wa.phrase is defined and wa.phrase else state_translated(weather_id),
+                                    'hum': wa.humidity if wa.humidity is defined else none,
+                                    'aq': wa.air_quality_category if wa.air_quality_category is defined else none}}) %}
+    {% endif %}
+    {% if ha_url_in and hook_id %}{% set d = d | combine({'hook': ha_url_in.rstrip('/') ~ '/api/webhook/' ~ hook_id}) %}{% endif %}
+    {{ d }}
+  khi_bat: !input khi_bat_tv
+  khi_thoat: !input khi_thoat_app
+  nen: !input nguon_nen
+triggers:
+  - trigger: state
+    id: bat
+    entity_id: !input tv
+    from: ["off", "unavailable"]
+    to: "on"
+  - trigger: state
+    id: thoat
+    entity_id: !input tv
+    attribute: app_id
+    from: !input apps_quan_ly
+actions:
+  # Moi nhanh tu quyet dinh co mo hay khong bang if/then (condition dat trong nhanh choose KHONG dung ca automation trong HA)
+  - choose:
+      - conditions: "{{ trigger.id == 'bat' and khi_bat }}"
+        sequence:
+          - delay:
+              seconds: !input cho_giay
+          - if:
+              - condition: template
+                value_template: "{{ is_state(tv_id, 'on') }}"
+            then:
+              - action: webostv.command
+                data:
+                  entity_id: !input tv
+                  command: com.webos.applicationManager/launch
+                  payload:
+                    id: !input app_id
+                    params:
+                      info: "{{ info_data }}"
+      - conditions: "{{ trigger.id == 'thoat' and khi_thoat }}"
+        sequence:
+          - delay: {seconds: 2}
+          # chi khi TV da roi ve nguon nen (hoac trong); dang o app khac, Input hay chinh Man hinh chinh thi thoi
+          - if:
+              - condition: template
+                value_template: >-
+                  {% set a = state_attr(tv_id, 'app_id') or '' %}
+                  {{ is_state(tv_id, 'on') and (a == '' or a in nen) }}
+            then:
+              - action: webostv.command
+                data:
+                  entity_id: !input tv
+                  command: com.webos.applicationManager/launch
+                  payload:
+                    id: !input app_id
+                    params:
+                      info: "{{ info_data }}"

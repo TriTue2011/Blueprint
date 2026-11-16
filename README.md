@@ -45,6 +45,9 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Kiểm tra thiết bị (Multi-Entity)](#-kiểm-tra-thiết-bị-multi-entity)
   - [⏳ Hẹn giờ có phục hồi sau khởi động lại](#-hẹn-giờ-có-phục-hồi-sau-khởi-động-lại)
   - [Loa Bluetooth trong HA (không cần add-on)](#-loa-bluetooth-trong-ha-không-cần-add-on)
+- **Tivi LG webOS 3**
+  - [📺 TV LG: bật TV / thoát app là về Màn hình chính](#-tv-lg-bật-tv--thoát-app-là-về-màn-hình-chính)
+  - [🎥 Live Cam (TV LG): chiếu camera khi có sự kiện](#-live-cam-tv-lg-chiếu-camera-khi-có-sự-kiện)
 - **Quản lý & Cập nhật**
   - [Tự động cập nhật Blueprints](#-tự-động-cập-nhật-blueprints)
   - [Tự động cập nhật Pyscript](#-tự-động-cập-nhật-pyscript)
@@ -58,6 +61,28 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Kiểm tra blueprint trước khi đẩy lên](#-kiểm-tra-blueprint-trước-khi-đẩy-lên)
 
 ---
+
+## 📺 TV LG: bật TV / thoát app là về Màn hình chính
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **File** | `lg_man_hinh_chinh_khi_bat_tivi.yaml` |
+| **HA tối thiểu** | 2024.11.0 |
+| **Yêu cầu** | Tích hợp **LG webOS TV**; app `com.viet.home` (repo [LG-webos-3](https://github.com/TriTue2011/LG-webos-3), cài bằng Developer Mode) |
+
+Bật TV (hoặc thoát một app trong danh sách «App quản lý») thì mở **Màn hình chính** (lưới app kiểu Android TV) kèm **thời tiết** và **tiết khí / ngày lễ âm lịch** do HA đưa vào lúc mở app (TV không giữ token). Chọn app / nguồn bằng ô tick (danh sách lấy từ tivi). Nút «Tự về đây» trên TV bật/tắt automation qua **hai webhook** `<id>-on` / `<id>-off` (đừng dùng `trigger.query`: HA 2026.11 báo lỗi trong mẫu). **Nút Home trên remote không thay được** (thanh app của LG là lớp phủ, `app_id` không đổi).
+
+## 🎥 Live Cam (TV LG): chiếu camera khi có sự kiện
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Loại** | Automation |
+| **File** | `lg_livecam_man_hinh_nhieu_viec.yaml` |
+| **HA tối thiểu** | 2024.11.0 |
+| **Yêu cầu** | Tích hợp **LG webOS TV**; app Live Cam (`com.viet.livecam`, hoặc `com.viet.livecam.popup` cho cửa sổ góc) trong repo [LG-webos-3](https://github.com/TriTue2011/LG-webos-3); nên có **go2rtc** |
+
+Một automation cho mọi sự kiện (cảm biến, sự kiện, giờ…) chiếu lên TV: camera, thẻ thông tin, ảnh, video, chữ; luật lớp giống màn Dosen. Chọn **toàn màn** hoặc **cửa sổ góc** (thử nghiệm, kiểu cửa sổ `overlay`). TV webOS 3 chỉ có **một** bộ giải mã phần cứng: điền địa chỉ **go2rtc** để camera đầu tiên phát HLS MPEG-TS trực tiếp (~136% CPU, so với ~370% của MJPEG). HLS fMP4 của Home Assistant **không phát được** trên tivi này. Mặc định 1 camera cùng lúc.
 
 ## ⚙️ Yêu cầu chung
 
