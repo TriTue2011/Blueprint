@@ -212,6 +212,7 @@ blueprint:
       input:
         cho_ai_noi:
           name: Cho AI nói chuyện khi nghe máy
+          description: AI nghe máy và nói trước. Mic và loa nhà chỉ nối khi người gọi xin nói trực tiếp (kể cả khi đặt «Bật NGAY»), vì đường tiếng lúc đó là của AI. Camera «Bật NGAY» vẫn nối ngay.
           selector:
             boolean: {}
           default: false
