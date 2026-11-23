@@ -19,6 +19,16 @@ blueprint:
       name: ① Áp dụng cho ai
       icon: mdi:account-filter-outline
       input:
+        tai_khoan:
+          name: Tài khoản Telegram
+          description: |
+            Gateway có NHIỀU tài khoản Telegram thì mỗi tài khoản là một mục Telegram Call riêng. Chọn tài khoản mà automation này lo:
+            chỉ cuộc gọi ĐẾN tài khoản đó mới áp quy tắc (người nhận, tự nghe máy, loa/mic…). Mỗi tài khoản một automation, quy tắc riêng.
+            Để trống = nhận cuộc gọi của MỌI tài khoản (khi chỉ có một tài khoản).
+          selector:
+            config_entry:
+              integration: telegram_call
+          default: ""
         bat_quy_tac:
           name: Bật quy tắc
           description: Tắt thì automation này không làm gì cho cuộc gọi nào.
@@ -267,6 +277,7 @@ mode: parallel
 max: 5
 
 variables:
+  tai_khoan: !input tai_khoan
   bat_quy_tac: !input bat_quy_tac
   pham_vi: !input pham_vi
   nguoi_cu_the: !input nguoi_cu_the
@@ -316,7 +327,7 @@ actions:
     condition: template
     value_template: >-
       {% set d = trigger.event.data %}
-      {{ bat_quy_tac and (
+      {{ bat_quy_tac and (tai_khoan | default('', true) == '' or d.config_entry_id == tai_khoan) and (
            (pham_vi == 'thread' and (d.user_id | string) in ds_nguoi)
         or (pham_vi == 'contacts' and d.contact_status == 'friend')
         or (pham_vi == 'strangers' and d.contact_status == 'stranger')
@@ -325,7 +336,7 @@ actions:
     action: telegram_call.apply_call_rule
     response_variable: ket_qua
     data: >-
-      {% set d = {'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
+      {% set d = {'config_entry_id': trigger.event.data.config_entry_id, 'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
                   'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5), 'call_types': loai_cuoc_goi,
                   'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'video_request': xu_ly_xin_video,
                   'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != ''} %}
