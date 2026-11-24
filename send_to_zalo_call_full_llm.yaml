@@ -35,6 +35,14 @@ blueprint:
       icon: mdi:phone-message-outline
       description: Chọn người nhận từ danh sách. Người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
       input:
+        zalo_calling_tai_khoan:
+          name: 📱 Tài khoản Zalo gửi đi (tuỳ chọn)
+          description: >-
+            Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = tài khoản mặc định.
+          default: ""
+          selector:
+            config_entry:
+              integration: zalo_call
         recipients:
           name: Người nhận (chọn nhiều)
           description: Thực thể notify.zalo_call_... của Zalo Calling. Có thể để trống nếu dùng các ô mã Zalo bên dưới.
@@ -151,6 +159,7 @@ fields:
       text:
 sequence:
   - variables:
+      zalo_calling_tai_khoan: !input zalo_calling_tai_khoan
       recipients_chon: !input recipients
       ma_nguoi: !input ma_nguoi
       ma_nhom: !input ma_nhom
@@ -227,7 +236,7 @@ sequence:
                   action: zalo_call.send_message
                   data: >-
                     {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
-                        'message': tin_thong_tin if content_type == 'information' else tin_vi_tri} }}
+                        'message': tin_thong_tin if content_type == 'information' else tin_vi_tri} | combine({'entry_id': zalo_calling_tai_khoan} if zalo_calling_tai_khoan | string | trim != '' else {}) }}
             - conditions:
                 - condition: template
                   value_template: "{{ content_type == 'image' }}"
@@ -239,11 +248,11 @@ sequence:
                     - continue_on_error: true
                       action: zalo_call.send_message
                       data: >-
-                        {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type, 'message': noi_dung} }}
+                        {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type, 'message': noi_dung} | combine({'entry_id': zalo_calling_tai_khoan} if zalo_calling_tai_khoan | string | trim != '' else {}) }}
                 - continue_on_error: true
                   action: zalo_call.send_image
                   data: >-
-                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type, 'file': image_path_resolved} }}
+                    {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type, 'file': image_path_resolved} | combine({'entry_id': zalo_calling_tai_khoan} if zalo_calling_tai_khoan | string | trim != '' else {}) }}
 
   - if:
       - condition: template

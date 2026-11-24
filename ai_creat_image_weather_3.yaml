@@ -542,6 +542,15 @@ blueprint:
           default: false
           selector:
             boolean: {}
+        zalo_calling_tai_khoan:
+          name: 📱 Tài khoản Zalo gửi đi (tuỳ chọn)
+          description: >-
+            Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = tài khoản mặc định.
+          default: ""
+          selector:
+            config_entry:
+              integration: zalo_call
+
         zalo_calling_recipients:
           name: 👥 Người nhận Zalo Calling (chọn nhiều)
           description: Thực thể notify.zalo_call_... của Zalo Calling.
@@ -1574,6 +1583,7 @@ actions:
       _zcall_chon:     !input zalo_calling_recipients
       zalo_calling_ma_nguoi: !input zalo_calling_ma_nguoi
       zalo_calling_ma_nhom: !input zalo_calling_ma_nhom
+      zalo_calling_tai_khoan: !input zalo_calling_tai_khoan
       zalo_calling_ttl: !input zalo_calling_ttl
       zalo_calling_recall_after: !input zalo_calling_recall_after
       zalo_calling_format: !input zalo_calling_format
@@ -1590,6 +1600,7 @@ actions:
       zalo_calling_video_thumbnail: !input zalo_calling_video_thumbnail
       zc_opt_msg: >-
         {% set o = {} %}
+        {% if zalo_calling_tai_khoan | string | trim != '' %}{% set o = dict(o, entry_id=zalo_calling_tai_khoan | string | trim) %}{% endif %}
         {% if zalo_calling_ttl | int(0) > 0 %}{% set o = dict(o, ttl=zalo_calling_ttl | int) %}{% endif %}
         {% if zalo_calling_recall_after | int(0) > 0 %}{% set o = dict(o, recall_after=zalo_calling_recall_after | int) %}{% endif %}
         {% if zalo_calling_format | string not in ['default', ''] %}{% set o = dict(o, format=zalo_calling_format) %}{% endif %}
@@ -1605,11 +1616,13 @@ actions:
         {{ o }}
       zc_opt_media: >-
         {% set o = {} %}
+        {% if zalo_calling_tai_khoan | string | trim != '' %}{% set o = dict(o, entry_id=zalo_calling_tai_khoan | string | trim) %}{% endif %}
         {% if zalo_calling_ttl | int(0) > 0 %}{% set o = dict(o, ttl=zalo_calling_ttl | int) %}{% endif %}
         {% if zalo_calling_recall_after | int(0) > 0 %}{% set o = dict(o, recall_after=zalo_calling_recall_after | int) %}{% endif %}
         {{ o }}
       zc_opt_video: >-
         {% set o = {} %}
+        {% if zalo_calling_tai_khoan | string | trim != '' %}{% set o = dict(o, entry_id=zalo_calling_tai_khoan | string | trim) %}{% endif %}
         {% if zalo_calling_ttl | int(0) > 0 %}{% set o = dict(o, ttl=zalo_calling_ttl | int) %}{% endif %}
         {% if zalo_calling_recall_after | int(0) > 0 %}{% set o = dict(o, recall_after=zalo_calling_recall_after | int) %}{% endif %}
         {% if zalo_calling_video_thumbnail | string | trim != '' %}{% set o = dict(o, thumbnail=zalo_calling_video_thumbnail | string | trim) %}{% endif %}
