@@ -34,6 +34,7 @@ blueprint:
       name: Zalo Calling
       icon: mdi:phone-message-outline
       description: Chọn người nhận từ danh sách. Người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
+      collapsed: true
       input:
         zalo_calling_tai_khoan:
           name: 📱 Tài khoản Zalo gửi đi (tuỳ chọn)

@@ -18,6 +18,7 @@ blueprint:
     ap_dung:
       name: ① Áp dụng cho ai
       icon: mdi:account-filter-outline
+      collapsed: true
       input:
         tai_khoan:
           name: Tài khoản Telegram
@@ -98,6 +99,7 @@ blueprint:
     nghe_may:
       name: ② Tự nghe máy và thiết bị nhà
       icon: mdi:phone-check-outline
+      collapsed: true
       input:
         tu_nghe_may:
           name: Tự nghe máy

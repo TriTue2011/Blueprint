@@ -92,6 +92,7 @@ blueprint:
     camera_sensor_section:
       name: Camera & Sensor Settings
       icon: mdi:camera
+      collapsed: true
       input:
         camera_entities:
           name: Camera Entities

@@ -276,28 +276,62 @@ blueprint:
           selector:
             text:
 
-        include_telegram_call:
-          name: ✅ Telegram Calling (Optional)
-          description: |
-            👉 Bật nếu muốn gửi thông báo qua tích hợp **Telegram Call** (tài khoản Telegram thật, không cần bot ở trên). Bật được cùng lúc với Telegram Bot.
-          default: false
-          selector:
-            boolean: {}
-
-        telegram_call_target:
-          name: 🧑‍💻 Telegram Calling - người/nhóm nhận
-          description: |
-            👉 ID số của người hoặc nhóm nhận (nhóm/kênh có dấu trừ phía trước). Lấy bằng dịch vụ `telegram_call.find_chat` hoặc `get_contacts`.
-            ✅ Chỉ dùng khi bật «Telegram Calling» ở trên; bỏ trống thì không gửi.
-          default: ""
-          selector:
-            text: {}
-
         telegram_thread_id:
           name: Thread ID (Optional)
           default: ""
           selector:
             text:
+
+    # ============================================================
+    # TELEGRAM CALLING SETTINGS (tách riêng khỏi Telegram Bot — chọn người nhận từ danh sách, như Zalo Calling)
+    # ============================================================
+    telegram_calling_settings:
+      name: Telegram Calling (chọn người nhận từ danh sách)
+      icon: mdi:phone-message-outline
+      collapsed: true
+      input:
+        include_telegram_call:
+          name: ✅ Bật gửi qua Telegram Calling
+          description: >-
+            Gửi qua tích hợp Telegram Calling (tài khoản Telegram thật, không cần bot ở trên). Bật được cùng lúc với Telegram Bot.
+            Người nhận chọn từ danh sách (Telegram Call → Cấu hình → danh bạ), hoặc gõ tay mã số nếu người/nhóm chưa có trong danh sách.
+          default: false
+          selector:
+            boolean: {}
+        telegram_calling_tai_khoan:
+          name: 📱 Tài khoản Telegram gửi đi (tuỳ chọn)
+          description: >-
+            Chỉ cần khi máy chủ có nhiều tài khoản Telegram (mỗi tài khoản là một mục «Telegram Call»). Để trống = tài khoản mặc định.
+          default: ""
+          selector:
+            config_entry:
+              integration: telegram_call
+
+        telegram_calling_recipients:
+          name: 👥 Người nhận Telegram Calling (chọn nhiều)
+          description: Thực thể notify.telegram_call_... của Telegram Calling (chỉ gồm người đã nhắn chuyện với tài khoản, do gateway tự nhận biết).
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: telegram_call
+                  domain: notify
+
+        telegram_calling_ma_nguoi:
+          name: ➕ Thêm người theo Chat ID (không có trong danh sách trên)
+          description: Mỗi dòng một Chat ID (số dương). Người bất kỳ, không cần có sẵn trong danh bạ/danh sách trên.
+          default: []
+          selector:
+            text:
+              multiple: true
+        telegram_calling_ma_nhom:
+          name: ➕ Thêm nhóm/kênh theo Chat ID (có dấu trừ phía trước)
+          description: Mỗi dòng một Chat ID nhóm/kênh (số âm, Telegram luôn đặt nhóm là số âm).
+          default: []
+          selector:
+            text:
+              multiple: true
 
     zalo_bot_section:
       name: 💬 Zalo Bot Settings (Pyscript)
@@ -808,7 +842,16 @@ variables:
 
   include_telegram_bot: !input include_telegram_notify
   include_telegram_call: !input include_telegram_call
-  telegram_call_target: !input telegram_call_target
+  telegram_calling_tai_khoan: !input telegram_calling_tai_khoan
+  telegram_calling_recipients: !input telegram_calling_recipients
+  telegram_calling_ma_nguoi: !input telegram_calling_ma_nguoi
+  telegram_calling_ma_nhom: !input telegram_calling_ma_nhom
+  telegram_calling_ds: >-
+    {% set ns = namespace(l=[], ids=[]) %}
+    {% for e in telegram_calling_recipients %}{% set t = state_attr(e, 'chat_id') | string %}{% if t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'chat_id': t}] %}{% endif %}{% endfor %}
+    {% for m in telegram_calling_ma_nguoi %}{% set t = m | string | trim %}{% if t is match('^-?[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'chat_id': t}] %}{% endif %}{% endfor %}
+    {% for m in telegram_calling_ma_nhom %}{% set t = m | string | trim %}{% if t is match('^-?[0-9]+$') and t not in ns.ids %}{% set ns.ids = ns.ids + [t] %}{% set ns.l = ns.l + [{'chat_id': t}] %}{% endif %}{% endfor %}
+    {{ ns.l }}
   include_telegram_notify: "{{ include_telegram_bot or include_telegram_call }}"          # «có gửi Telegram nào không» (bot hoặc Telegram Call)
   telegram_config_entry: !input telegram_config_entry
   telegram_target: !input telegram_target
@@ -1264,29 +1307,28 @@ actions:
                                 {% endif %}
                                 {{ data }}
 
-                        - alias: "Telegram Calling — send_message (cùng dữ liệu với Telegram Bot)"
+                        - alias: "Telegram Calling — send_message (nhiều người nhận, danh sách + gõ tay)"
                           if:
                             - condition: template
-                              value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+                              value_template: "{{ include_telegram_call and telegram_calling_ds | count > 0 }}"
                           then:
-                            - variables:
-                                telegram_target: "{{ telegram_call_target | string | trim }}"
-                                telegram_thread_id: ""
-                                telegram_config_entry: ""
-                            - continue_on_error: true
-                              action: telegram_call.send_message
-                              data: >
-                                {% set data = {
-                                  'config_entry_id': telegram_config_entry,
-                                  'message': final_title ~ '\n\n' ~ final_message
-                                } %}
-                                {% if telegram_target != '' %}
-                                  {% set data = dict(data, target=telegram_target | int) %}
-                                {% endif %}
-                                {% if telegram_thread_id != '' %}
-                                  {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
-                                {% endif %}
-                                {{ data }}
+                            - repeat:
+                                for_each: "{{ telegram_calling_ds }}"
+                                sequence:
+                                  - continue_on_error: true
+                                    action: telegram_call.send_message
+                                    data: >
+                                      {% set data = {
+                                        'message': final_title ~ '\n\n' ~ final_message,
+                                        'chat_id': repeat.item.chat_id | int
+                                      } %}
+                                      {% if telegram_calling_tai_khoan | string | trim != '' %}
+                                        {% set data = dict(data, config_entry_id=telegram_calling_tai_khoan | string | trim) %}
+                                      {% endif %}
+                                      {% if telegram_thread_id | string | trim != '' %}
+                                        {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+                                      {% endif %}
+                                      {{ data }}
 
                 # --- GỬI ZALO BOT ---
                 - choose:
@@ -1702,29 +1744,28 @@ actions:
                           {% endif %}
                           {{ data }}
 
-                  - alias: "Telegram Calling — send_message (cùng dữ liệu với Telegram Bot)"
+                  - alias: "Telegram Calling — send_message (nhiều người nhận, danh sách + gõ tay)"
                     if:
                       - condition: template
-                        value_template: "{{ include_telegram_call and (telegram_call_target | string | trim) != '' }}"
+                        value_template: "{{ include_telegram_call and telegram_calling_ds | count > 0 }}"
                     then:
-                      - variables:
-                          telegram_target: "{{ telegram_call_target | string | trim }}"
-                          telegram_thread_id: ""
-                          telegram_config_entry: ""
-                      - continue_on_error: true
-                        action: telegram_call.send_message
-                        data: >
-                          {% set data = {
-                            'config_entry_id': telegram_config_entry,
-                            'message': weather_final_title ~ '\n\n' ~ weather_final_message
-                          } %}
-                          {% if telegram_target != '' %}
-                            {% set data = dict(data, target=telegram_target | int) %}
-                          {% endif %}
-                          {% if telegram_thread_id != '' %}
-                            {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
-                          {% endif %}
-                          {{ data }}
+                      - repeat:
+                          for_each: "{{ telegram_calling_ds }}"
+                          sequence:
+                            - continue_on_error: true
+                              action: telegram_call.send_message
+                              data: >
+                                {% set data = {
+                                  'message': weather_final_title ~ '\n\n' ~ weather_final_message,
+                                  'chat_id': repeat.item.chat_id | int
+                                } %}
+                                {% if telegram_calling_tai_khoan | string | trim != '' %}
+                                  {% set data = dict(data, config_entry_id=telegram_calling_tai_khoan | string | trim) %}
+                                {% endif %}
+                                {% if telegram_thread_id | string | trim != '' %}
+                                  {% set data = dict(data, message_thread_id=telegram_thread_id | int) %}
+                                {% endif %}
+                                {{ data }}
 
           # --- GỬI ZALO BOT THỜI TIẾT ---
           - choose:

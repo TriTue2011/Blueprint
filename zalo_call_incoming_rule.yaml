@@ -10,6 +10,7 @@ blueprint:
     tai_khoan_zalo:
       name: ⓪ Tài khoản Zalo
       icon: mdi:account-switch
+      collapsed: true
       input:
         tai_khoan:
           name: Tài khoản Zalo điều khiển (tuỳ chọn)
@@ -21,6 +22,7 @@ blueprint:
     ap_dung:
       name: ① Áp dụng cho ai
       icon: mdi:account-filter-outline
+      collapsed: true
       input:
         bat_quy_tac:
           name: Bật quy tắc
