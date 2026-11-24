@@ -5,8 +5,19 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: "**Phiên bản: v.2026.11.15** — mỗi cuộc gọi đến kích hoạt automation này và chính nó áp quy tắc cho cuộc gọi đó (nhiều quy tắc khác nhau không còn đè nhau, tắt automation là hết quy tắc)."
+  description: "**Phiên bản: v.2026.11.24** — mỗi cuộc gọi đến kích hoạt automation này và chính nó áp quy tắc cho cuộc gọi đó (nhiều quy tắc khác nhau không còn đè nhau, tắt automation là hết quy tắc)."
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     ap_dung:
       name: ① Áp dụng cho ai
       icon: mdi:account-filter-outline
@@ -348,6 +359,7 @@ mode: parallel
 max: 10
 
 variables:
+  tai_khoan: !input tai_khoan
   version: 20261115
   bat_quy_tac: !input bat_quy_tac
   bat_thong_bao: !input bat_thong_bao
@@ -434,6 +446,11 @@ triggers:
     event_type: automation_reloaded
     id: khoi_dong
 
+conditions:
+  - condition: template
+    alias: Đúng tài khoản Zalo (nếu có chọn)
+    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('zalo_call')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
+
 actions:
   - choose:
       - alias: Có cuộc gọi - áp quy tắc cho ĐÚNG cuộc gọi này
@@ -471,7 +488,7 @@ actions:
               {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
               {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
               {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
-              {{ d }}
+              {{ (d) | combine({'entry_id': tai_khoan}) }}
           - alias: Báo ở chuông thông báo (chỉ khi bật ô «Báo ở chuông thông báo»)
             if:
               - condition: template
@@ -513,7 +530,7 @@ actions:
                     {% set d = {'scope': pham_vi} %}
                     {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
                     {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
-                    {{ d }}
+                    {{ (d) | combine({'entry_id': tai_khoan}) }}
                 - alias: Phần trả lời tin nhắn bằng AI (tin nhắn chưa đi qua automation nên vẫn lưu trong kho)
                   if:
                     - condition: template
@@ -526,7 +543,7 @@ actions:
                         {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
                         {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
                         {% if tro_ly_giong_noi %}{% set d = dict(d, pipeline=tro_ly_giong_noi) %}{% endif %}
-                        {{ d }}
+                        {{ (d) | combine({'entry_id': tai_khoan}) }}
           - alias: Bật công tắc tổng cho phép đồng ý chuyển sang video
             if:
               - condition: template
@@ -534,4 +551,5 @@ actions:
             then:
               - action: zalo_call.set_default_devices
                 data:
+                  entry_id: !input tai_khoan
                   video_consent: true

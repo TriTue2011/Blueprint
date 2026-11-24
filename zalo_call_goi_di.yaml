@@ -5,8 +5,19 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: "**Phiên bản: v.2026.11.13**"
+  description: "**Phiên bản: v.2026.11.24**"
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     khi_nao:
       name: ① Khi nào gọi
       icon: mdi:gesture-tap-button
@@ -216,6 +227,7 @@ mode: single
 max_exceeded: silent
 
 variables:
+  tai_khoan: !input tai_khoan
   do_to_mic: !input do_to_mic
   do_to_loa: !input do_to_loa
   giong_tts: !input giong_tts
@@ -281,4 +293,4 @@ actions:
       {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
       {% if am_luong | int(0) > 0 %}{% set d = dict(d, volume=am_luong | int) %}{% endif %}
       {% set d = d | combine(zc_audio) | combine(zc_tts) %}
-      {{ d }}
+      {{ (d) | combine({'entry_id': tai_khoan}) }}

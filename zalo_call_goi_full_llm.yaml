@@ -18,11 +18,22 @@ blueprint:
     - Nhớ **expose script cho Assist** sau khi lưu; giữ tên script mặc định.
     - Sau khi tạo script, nhấn dấu 3 chấm, chọn «Edit in YAML», xoá dòng `description` để khôi phục mô tả mặc định cho trợ lý.
 
-    **Phiên bản: v.2026.11.15**
+    **Phiên bản: v.2026.11.24**
   domain: script
   homeassistant:
     min_version: 2026.3.0
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     nguoi:
       name: ① Người có thể gọi
       icon: mdi:account-voice
@@ -175,6 +186,7 @@ fields:
     selector:
       boolean:
 variables:
+  tai_khoan: !input tai_khoan
   version: 20261115
   recipients_chon: !input recipients
   ma_nguoi: !input ma_nguoi
@@ -315,7 +327,7 @@ sequence:
       {% if do_to_mic | int(0) > 0 %}{% set d = dict(d, mic_gain=do_to_mic | int) %}{% endif %}
       {% if do_to_loa | int(0) > 0 %}{% set d = dict(d, speaker_gain=do_to_loa | int) %}{% endif %}
       {% if parts | count > 0 %}{% set d = dict(d, connect_now=parts) %}{% endif %}
-      {{ d }}
+      {{ (d) | combine({'entry_id': tai_khoan}) }}
 
   - variables:
       response:

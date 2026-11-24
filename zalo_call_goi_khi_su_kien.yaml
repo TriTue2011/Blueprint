@@ -12,8 +12,19 @@ blueprint:
 
     Trong câu tự viết dùng được `{ten}` (tên thiết bị gây ra sự kiện), `{khu_vuc}` và `{gio}`.
 
-    **Phiên bản: v.2026.11.14**
+    **Phiên bản: v.2026.11.24**
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     khi_nao:
       name: ① Khi nào cảnh báo
       icon: mdi:alarm-light-outline
@@ -297,6 +308,7 @@ mode: single
 max_exceeded: silent
 
 variables:
+  tai_khoan: !input tai_khoan
   do_to_mic: !input do_to_mic
   do_to_loa: !input do_to_loa
   giong_tts: !input giong_tts
@@ -404,8 +416,8 @@ actions:
           sequence:
             - action: zalo_call.send_message
               data: >-
-                {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
-                    'message': noi_dung | trim, 'emoji': 'alert'} }}
+                {{ ({'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
+                    'message': noi_dung | trim, 'emoji': 'alert'}) | combine({'entry_id': tai_khoan}) }}
   - alias: Gọi điện cho từng người nhận (chỉ người, nhóm không gọi được)
     repeat:
       for_each: "{{ ds_nhan }}"
@@ -430,7 +442,7 @@ actions:
                         {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
                         {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
                         {% set d = d | combine(zc_audio) | combine(zc_tts) %}
-                        {{ d }}
+                        {{ (d) | combine({'entry_id': tai_khoan}) }}
               default:
                   - action: zalo_call.alert_call
                     response_variable: ket_qua
@@ -443,7 +455,7 @@ actions:
                       {% if sau_khi_doc != 'mac_dinh' %}{% set d = dict(d, after=sau_khi_doc) %}{% endif %}
                       {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
                       {% set d = d | combine(zc_audio) | combine(zc_tts) %}
-                      {{ d }}
+                      {{ (d) | combine({'entry_id': tai_khoan}) }}
             - if:
                 - condition: template
                   value_template: "{{ not goi_lan_luot }}"
@@ -471,5 +483,6 @@ actions:
                           value_template: "{{ is_state(cam_bien_cuoc_goi, 'ringing') }}"
                       then:
                         - action: zalo_call.end_call
-                          data: {}
+                          data:
+                            entry_id: !input tai_khoan
                         - delay: 2

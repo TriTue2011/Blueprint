@@ -5,8 +5,19 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: "**Phiên bản: v.2026.11.13**"
+  description: "**Phiên bản: v.2026.11.24**"
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     ap_dung:
       name: ① Áp dụng cho ai
       icon: mdi:account-filter-outline
@@ -107,6 +118,7 @@ mode: parallel
 max: 5
 
 variables:
+  tai_khoan: !input tai_khoan
   version: 20261113
   nguoi: !input nguoi
   ma_loc: !input ma_loc
@@ -133,6 +145,9 @@ triggers:
 
 conditions:
   - condition: template
+    alias: Đúng tài khoản Zalo (nếu có chọn)
+    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('zalo_call')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
+  - condition: template
     alias: Đúng người (nếu có chọn)
     value_template: "{{ nguoi_thread | count == 0 or (trigger.event.data.thread_id | string) in nguoi_thread }}"
 
@@ -155,7 +170,7 @@ actions:
             value_template: "{{ cach_xu_ly == 'dong_y' }}"
         sequence:
           - action: zalo_call.accept_video
-            data: "{{ {'call_id': trigger.event.data.call_id | string} }}"
+            data: "{{ ({'call_id': trigger.event.data.call_id | string}) | combine({'entry_id': tai_khoan}) }}"
       - alias: Tự đồng ý và gửi camera
         conditions:
           - condition: template
@@ -163,7 +178,7 @@ actions:
         sequence:
           - action: zalo_call.accept_video
             data: >-
-              {% set d = {'call_id': trigger.event.data.call_id | string} %}{% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}{{ d }}
+              {% set d = {'call_id': trigger.event.data.call_id | string} %}{% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}{{ (d) | combine({'entry_id': tai_khoan}) }}
       - alias: Hỏi trên điện thoại
         conditions:
           - condition: template
@@ -201,4 +216,4 @@ actions:
             then:
               - action: zalo_call.accept_video
                 data: >-
-                  {% set d = {'call_id': trigger.event.data.call_id | string} %}{% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}{{ d }}
+                  {% set d = {'call_id': trigger.event.data.call_id | string} %}{% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}{{ (d) | combine({'entry_id': tai_khoan}) }}

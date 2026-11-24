@@ -5,8 +5,19 @@ blueprint:
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: "**Phiên bản: v.2026.11.14.1**"
+  description: "**Phiên bản: v.2026.11.24.1**"
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     ai_noi_chuyen:
       name: ① Ai được nói chuyện với trợ lý (nhiều người, nhiều nhóm, cả người lạ)
       icon: mdi:account-voice
@@ -106,6 +117,7 @@ max: 20
 max_exceeded: silent
 
 variables:
+  tai_khoan: !input tai_khoan
   version: 20261112
   nguoi_nhan: !input nguoi_nhan
   ma_nguoi: !input ma_nguoi
@@ -148,6 +160,9 @@ triggers:
     id: voice
 
 conditions:
+  - condition: template
+    alias: Đúng tài khoản Zalo (nếu có chọn)
+    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('zalo_call')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
   - alias: Không xử lý tin do chính mình gửi
     condition: template
     value_template: "{{ not (ev.is_self | default(false)) }}"
@@ -197,6 +212,7 @@ actions:
         sequence:
           - action: zalo_call.send_message
             data:
+              entry_id: !input tai_khoan
               thread_id: "{{ thread_id }}"
               type: "{{ 'group' if is_group else 'user' }}"
               message: "{{ ('@' ~ sender_name ~ ' ') if can_mention else '' }}{{ speech }}"
@@ -208,6 +224,7 @@ actions:
         sequence:
           - action: zalo_call.send_message
             data:
+              entry_id: !input tai_khoan
               thread_id: "{{ thread_id }}"
               type: "{{ 'group' if is_group else 'user' }}"
               message: "Xin lỗi, trợ lý chưa trả lời được lúc này. Bạn thử lại sau nhé."

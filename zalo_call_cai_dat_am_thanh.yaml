@@ -12,8 +12,19 @@ blueprint:
 
     100 % = 0 dB (giữ nguyên) · 200 % = +6 dB · 50 % = −6 dB.
 
-    **Phiên bản: v.2026.11.14**
+    **Phiên bản: v.2026.11.24**
   input:
+    tai_khoan_zalo:
+      name: ⓪ Tài khoản Zalo
+      icon: mdi:account-switch
+      input:
+        tai_khoan:
+          name: Tài khoản Zalo điều khiển (tuỳ chọn)
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          selector:
+            config_entry:
+              integration: zalo_call
+          default: ""
     khi_nao:
       name: ① Khi nào áp dụng
       icon: mdi:clock-outline
@@ -172,6 +183,7 @@ mode: restart
 max_exceeded: silent
 
 variables:
+  tai_khoan: !input tai_khoan
   luc_khoi_dong: !input luc_khoi_dong
   do_to_mic: !input do_to_mic
   do_to_loa: !input do_to_loa
@@ -217,4 +229,4 @@ conditions:
 
 actions:
   - action: zalo_call.set_default_devices
-    data: "{{ du_lieu }}"
+    data: "{{ (du_lieu) | combine({'entry_id': tai_khoan}) }}"
