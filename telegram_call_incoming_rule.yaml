@@ -13,7 +13,7 @@ blueprint:
     (người > thẻ > danh bạ > người lạ); cùng bậc thì mỗi quy tắc báo ra loa của riêng nó, còn nghe máy / thiết bị / lời nhắn theo quy tắc đầu tiên bật «Tự nghe máy».
 
     **Riêng tư:** không có quy tắc = chỉ đổ chuông. Thiết bị nhà do hai ô «nối ngay» / «nối khi người nhà nói trực tiếp» quyết: không tích = KHÔNG nối (nghe máy mà mic im lặng, video thì gửi hình đen).
-    Cần tích hợp **Telegram Call** từ bản 2026.11.16.2. Telegram Call chưa có trợ lý AI trò chuyện trong cuộc gọi (khác Zalo): thay bằng **lời nhắn** đọc vào cuộc gọi.
+    Cần tích hợp **Telegram Call** từ bản 2026.11.16.2. Mục «③ AI nói chuyện» cho AI nghe-hiểu-trả lời hai chiều trong cuộc gọi, giống Zalo Call.
   input:
     ap_dung:
       name: ① Áp dụng cho ai
@@ -199,15 +199,9 @@ blueprint:
               unit_of_measurement: "%"
               mode: slider
           default: 0
-        tro_ly_giong_noi:
-          name: Assist pipeline (lấy giọng đọc + nghe hiểu khi bật AI)
-          description: Tên hoặc id pipeline; dùng cho lời nhắn, AI nói chuyện, câu báo ra loa ở ③. Trống = pipeline ưu tiên. Bắt buộc có giá trị nếu bật «Cho AI nói chuyện».
-          selector:
-            text: {}
-          default: ""
         cau_chao:
           name: Lời nhắn đọc vào cuộc gọi khi nghe máy (tuỳ chọn)
-          description: Giọng của pipeline đã chọn ở trên. Để trống = không đọc (bật «Cho AI nói chuyện» thì AI tự mở lời, không bắt buộc câu này).
+          description: Giọng của pipeline đã chọn ở ③. Để trống = không đọc (bật «Cho AI nói chuyện» thì AI tự mở lời, không bắt buộc câu này).
           selector:
             text:
               multiline: true
@@ -218,14 +212,25 @@ blueprint:
           selector:
             boolean: {}
           default: false
+    ai:
+      name: ③ AI nói chuyện
+      icon: mdi:robot-outline
+      collapsed: true
+      input:
         cho_ai_noi:
           name: Cho AI nói chuyện khi nghe máy
           description: >-
-            AI nghe mic người gọi, hiểu và trả lời qua Assist pipeline đã chọn ở ③, lặp tới khi AI tự báo xong, người gọi im
+            AI nghe mic người gọi, hiểu và trả lời qua Assist pipeline đã chọn bên dưới, lặp tới khi AI tự báo xong, người gọi im
             lặng, hoặc quá giờ (tối đa 10 phút). CHƯA có chuyển máy trực tiếp cho người nhà giữa chừng (bản đầu).
           selector:
             boolean: {}
           default: false
+        tro_ly_giong_noi:
+          name: Trợ lý giọng nói (Assist) (chỉ khi bật «Cho AI nói chuyện»)
+          description: Bắt buộc khi cho AI nói chuyện. Chọn từ danh sách trợ lý giọng nói của Home Assistant. Cũng dùng cho lời nhắn và câu báo ra loa ở ④ khi đặt ở đó.
+          selector:
+            assist_pipeline: {}
+          default: ""
         nguoi_tin_cay:
           name: Người tin cậy (chỉ khi bật «Cho AI nói chuyện»)
           description: Tin cậy thì AI nói chuyện bình thường. Không tin cậy thì AI được dặn không tiết lộ thông tin gia đình/thiết bị.
@@ -241,7 +246,7 @@ blueprint:
             boolean: {}
           default: false
     bao_loa:
-      name: ③ Báo ra loa khi có cuộc gọi đến
+      name: ④ Báo ra loa khi có cuộc gọi đến
       icon: mdi:bullhorn-outline
       collapsed: true
       input:
@@ -287,7 +292,7 @@ blueprint:
               mode: slider
           default: 0
     thong_bao:
-      name: ④ Thông báo
+      name: ⑤ Thông báo
       icon: mdi:bell-outline
       collapsed: true
       input:
