@@ -211,6 +211,14 @@ blueprint:
           selector:
             boolean: {}
           default: false
+        ai_tra_loi_tin:
+          name: AI trả lời tin nhắn chữ của người này (ngoài cuộc gọi)
+          description: >-
+            Người gửi tin nhắn CHỮ cho tài khoản (không phải lúc gọi) cũng được AI trả lời, dùng chung Assist pipeline ở trên.
+            Quy tắc này LƯU SẴN (khác apply_call_rule chỉ sống trong một cuộc gọi) — đặt lúc HA khởi động hoặc tải lại automation.
+          selector:
+            boolean: {}
+          default: false
     bao_loa:
       name: ③ Báo ra loa khi có cuộc gọi đến
       icon: mdi:bullhorn-outline
@@ -300,6 +308,7 @@ variables:
   xu_ly_xin_video: !input xu_ly_xin_video
   cau_chao: !input cau_chao
   cup_sau_chao: !input cup_sau_chao
+  ai_tra_loi_tin: !input ai_tra_loi_tin
   bat_bao_loa: !input bat_bao_loa
   loa_bao_goc: !input loa_bao
   loa_bao: >-
@@ -315,6 +324,7 @@ variables:
     {% for e in nguoi_cu_the %}{% set ns.l = ns.l + [state_attr(e, 'user_id') | string] %}{% endfor %}
     {% for ma in them_theo_id %}{% set m = ma | string | trim %}{% if m is match('^[0-9]+$') %}{% set ns.l = ns.l + [m] %}{% endif %}{% endfor %}
     {{ ns.l | unique | list }}
+  muc_tieu: "{{ ds_nguoi if pham_vi == 'thread' else [''] }}"
 
 triggers:
   # MỖI cuộc gọi đến kích hoạt automation này; chính nó áp quy tắc cho cuộc đó.
@@ -323,8 +333,44 @@ triggers:
     event_data:
       state: incoming
     id: cuoc_goi
+  # Lúc HA khởi động / tải lại automation: dọn quy tắc LƯU SẴN cũ và đặt lại phần trả lời TIN NHẮN (apply_call_rule không lưu gì,
+  # chỉ sống trong một cuộc gọi — tin nhắn không qua đó nên cần set_rule riêng, một lần, ở đây).
+  - trigger: homeassistant
+    event: start
+    id: khoi_dong
+  - trigger: event
+    event_type: automation_reloaded
+    id: khoi_dong
 
 actions:
+  - alias: Khởi động / tải lại - dọn quy tắc cũ và đặt phần trả lời tin nhắn
+    conditions:
+      - condition: template
+        value_template: "{{ trigger.id == 'khoi_dong' }}"
+    sequence:
+      - repeat:
+          for_each: "{{ muc_tieu }}"
+          sequence:
+            - alias: Xoá quy tắc cũ trong kho của mục tiêu (bản blueprint trước ghi vào kho và nó sống mãi dù tắt automation)
+              action: telegram_call.remove_rule
+              data: >-
+                {% set d = {'scope': pham_vi} %}
+                {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
+                {{ (d) | combine({'entry_id': tai_khoan}) }}
+            - alias: Phần trả lời tin nhắn bằng AI (tin nhắn chưa đi qua automation nên vẫn lưu trong kho)
+              if:
+                - condition: template
+                  value_template: "{{ bat_quy_tac and ai_tra_loi_tin }}"
+              then:
+                - action: telegram_call.set_rule
+                  data: >-
+                    {% set d = {'scope': pham_vi, 'ai_reply_text': true} %}
+                    {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
+                    {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
+                    {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
+                    {% if tro_ly_giong_noi | trim != '' %}{% set d = dict(d, pipeline=tro_ly_giong_noi | trim) %}{% endif %}
+                    {{ (d) | combine({'entry_id': tai_khoan}) }}
   - alias: Chỉ khi quy tắc đang bật và cuộc gọi thuộc đối tượng của quy tắc
     condition: template
     value_template: >-
