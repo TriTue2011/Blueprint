@@ -344,10 +344,10 @@ triggers:
 
 actions:
   - alias: Khởi động / tải lại - dọn quy tắc cũ và đặt phần trả lời tin nhắn
-    conditions:
+    if:
       - condition: template
         value_template: "{{ trigger.id == 'khoi_dong' }}"
-    sequence:
+    then:
       - repeat:
           for_each: "{{ muc_tieu }}"
           sequence:
