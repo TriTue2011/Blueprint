@@ -357,7 +357,7 @@ actions:
                 {% set d = {'scope': pham_vi} %}
                 {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
                 {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
-                {{ (d) | combine({'entry_id': tai_khoan}) }}
+                {{ (d) | combine({'config_entry_id': tai_khoan}) }}
             - alias: Phần trả lời tin nhắn bằng AI (tin nhắn chưa đi qua automation nên vẫn lưu trong kho)
               if:
                 - condition: template
@@ -370,7 +370,7 @@ actions:
                     {% if pham_vi == 'tag' %}{% set d = dict(d, tag=the_tag | trim) %}{% endif %}
                     {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
                     {% if tro_ly_giong_noi | trim != '' %}{% set d = dict(d, pipeline=tro_ly_giong_noi | trim) %}{% endif %}
-                    {{ (d) | combine({'entry_id': tai_khoan}) }}
+                    {{ (d) | combine({'config_entry_id': tai_khoan}) }}
   - alias: Chỉ khi quy tắc đang bật và cuộc gọi thuộc đối tượng của quy tắc
     condition: template
     value_template: >-
