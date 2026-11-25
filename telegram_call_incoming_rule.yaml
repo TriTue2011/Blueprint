@@ -211,26 +211,6 @@ blueprint:
           selector:
             boolean: {}
           default: false
-    ai:
-      name: ②b AI nói chuyện khi nghe máy
-      icon: mdi:robot-outline
-      collapsed: true
-      input:
-        cho_ai_noi:
-          name: Cho AI nói chuyện khi nghe máy
-          description: >-
-            AI nghe máy và nói chuyện (nghe → hiểu → trả lời), lặp tới khi AI tự báo xong hoặc im lặng quá lâu rồi cúp máy.
-            Bắt buộc có «Assist pipeline» ở mục ③ Báo ra loa bên dưới (dùng chung pipeline đó để chọn trợ lý + giọng đọc).
-            Chưa có chuyển máy trực tiếp cho người nhà nói (khác Zalo Calling) — bản đầu, sẽ bổ sung sau.
-          selector:
-            boolean: {}
-          default: false
-        nguoi_tin_cay:
-          name: Người tin cậy (chỉ khi bật «Cho AI nói chuyện»)
-          description: Tin cậy thì AI nói chuyện bình thường. Không tin cậy thì AI được dặn không tiết lộ thông tin gia đình.
-          selector:
-            boolean: {}
-          default: false
     bao_loa:
       name: ③ Báo ra loa khi có cuộc gọi đến
       icon: mdi:bullhorn-outline
@@ -320,8 +300,6 @@ variables:
   xu_ly_xin_video: !input xu_ly_xin_video
   cau_chao: !input cau_chao
   cup_sau_chao: !input cup_sau_chao
-  cho_ai_noi: !input cho_ai_noi
-  nguoi_tin_cay: !input nguoi_tin_cay
   bat_bao_loa: !input bat_bao_loa
   loa_bao_goc: !input loa_bao
   loa_bao: >-
@@ -363,8 +341,7 @@ actions:
       {% set d = {'config_entry_id': trigger.event.data.config_entry_id, 'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
                   'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5), 'call_types': loai_cuoc_goi,
                   'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'video_request': xu_ly_xin_video,
-                  'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != '',
-                  'ai': cho_ai_noi, 'trusted': nguoi_tin_cay} %}
+                  'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != ''} %}
       {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
       {% if tro_ly_giong_noi | trim != '' %}{% set d = dict(d, pipeline=tro_ly_giong_noi | trim) %}{% endif %}
       {% if cau_chao | trim != '' %}{% set d = dict(d, greeting=cau_chao | trim) %}{% endif %}
