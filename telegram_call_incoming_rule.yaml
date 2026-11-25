@@ -199,9 +199,15 @@ blueprint:
               unit_of_measurement: "%"
               mode: slider
           default: 0
+        tro_ly_giong_noi:
+          name: Assist pipeline (lấy giọng đọc + nghe hiểu khi bật AI)
+          description: Tên hoặc id pipeline; dùng cho lời nhắn, AI nói chuyện, câu báo ra loa ở ③. Trống = pipeline ưu tiên. Bắt buộc có giá trị nếu bật «Cho AI nói chuyện».
+          selector:
+            text: {}
+          default: ""
         cau_chao:
           name: Lời nhắn đọc vào cuộc gọi khi nghe máy (tuỳ chọn)
-          description: Giọng của pipeline đã chọn ở ③. Để trống = không đọc (bật «Cho AI nói chuyện» thì AI tự mở lời, không bắt buộc câu này).
+          description: Giọng của pipeline đã chọn ở trên. Để trống = không đọc (bật «Cho AI nói chuyện» thì AI tự mở lời, không bắt buộc câu này).
           selector:
             text:
               multiline: true
@@ -252,12 +258,6 @@ blueprint:
               filter:
                 - domain: media_player
           default: []
-        tro_ly_giong_noi:
-          name: Assist pipeline (lấy giọng đọc)
-          description: Tên hoặc id pipeline; giọng TTS của nó dùng cho câu báo và lời nhắn. Trống = pipeline ưu tiên.
-          selector:
-            text: {}
-          default: ""
         cau_bao:
           name: Câu báo
           description: "Dùng {ten} (tên người gọi) và {loai} (thoại/video). Trống = «Có cuộc gọi {loai} từ {ten}»."
