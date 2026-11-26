@@ -199,6 +199,21 @@ blueprint:
               unit_of_measurement: "%"
               mode: slider
           default: 0
+        chong_vong:
+          name: Chế độ mic/loa khi nói chuyện (song công chỉ áp dụng cho loa R1)
+          selector:
+            select:
+              mode: dropdown
+              options:
+                - label: Tự quyết (khuyên dùng)
+                  value: auto
+                - label: Luân phiên - tạm tắt mic khi loa phát (êm tai, khuyên dùng với R1)
+                  value: "on"
+                - label: Song công - nghe và nói cùng lúc (chỉ loa R1; dễ chói nếu mic gần loa)
+                  value: duplex
+                - label: Tắt
+                  value: "off"
+          default: auto
         cau_chao:
           name: Lời nhắn đọc vào cuộc gọi khi nghe máy (tuỳ chọn)
           description: Giọng của pipeline đã chọn ở ③. Để trống = không đọc (bật «Cho AI nói chuyện» thì AI tự mở lời, không bắt buộc câu này).
@@ -325,6 +340,7 @@ variables:
   mic: !input mic
   camera: !input camera
   am_luong: !input am_luong
+  chong_vong: !input chong_vong
   xu_ly_xin_video: !input xu_ly_xin_video
   cau_chao: !input cau_chao
   cup_sau_chao: !input cup_sau_chao
@@ -408,7 +424,7 @@ actions:
     data: >-
       {% set d = {'config_entry_id': trigger.event.data.config_entry_id, 'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
                   'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5), 'call_types': loai_cuoc_goi,
-                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'video_request': xu_ly_xin_video,
+                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'echo_guard': chong_vong, 'video_request': xu_ly_xin_video,
                   'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != '',
                   'ai': cho_ai_noi, 'trusted': nguoi_tin_cay} %}
       {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
