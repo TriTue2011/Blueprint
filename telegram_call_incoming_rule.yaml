@@ -424,7 +424,7 @@ actions:
     data: >-
       {% set d = {'config_entry_id': trigger.event.data.config_entry_id, 'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
                   'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5), 'call_types': loai_cuoc_goi,
-                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'video_request': xu_ly_xin_video,
+                  'announce': bat_bao_loa and loa_bao != '', 'connect_now': noi_ngay, 'connect': noi_khi_chuyen, 'echo_guard': chong_vong, 'video_request': xu_ly_xin_video,
                   'announce_repeat': lap_bao | int(0), 'announce_volume': am_luong_bao | int(0), 'hangup_after': cup_sau_chao and cau_chao | trim != '',
                   'ai': cho_ai_noi, 'trusted': nguoi_tin_cay} %}
       {% if ten_goi | trim != '' %}{% set d = dict(d, name=ten_goi | trim) %}{% endif %}
