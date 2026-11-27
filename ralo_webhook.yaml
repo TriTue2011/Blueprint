@@ -1,7 +1,7 @@
 blueprint:
   name: Ralo - Nhắn tin hai chiều với trợ lý Home Assistant (AI trả lời tin Zalo)
   author: TriTue2011
-  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_webhook.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/ralo_webhook.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
@@ -16,7 +16,7 @@ blueprint:
           description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
-              integration: zalo_call
+              integration: ralo
           default: ""
     ai_noi_chuyen:
       name: ① Ai được nói chuyện với trợ lý (nhiều người, nhiều nhóm, cả người lạ)
@@ -24,12 +24,12 @@ blueprint:
       input:
         nguoi_nhan:
           name: Người và nhóm trong danh bạ Ralo
-          description: Chọn được NHIỀU người và NHIỀU nhóm (thực thể `notify.zalo_call_...`; cấu hình ở *Cài đặt → Thiết bị & dịch vụ → Ralo → Cấu hình*).
+          description: Chọn được NHIỀU người và NHIỀU nhóm (thực thể `notify.ralo_...`; cấu hình ở *Cài đặt → Thiết bị & dịch vụ → Ralo → Cấu hình*).
           selector:
             entity:
               multiple: true
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: notify
           default: []
         nhan_tep:
@@ -136,7 +136,7 @@ variables:
   send_error: !input send_error
   nhan_tep: !input nhan_tep
   ev: "{{ trigger.event.data }}"
-  is_voice: "{{ trigger.event.event_type == 'zalo_call_voice_text' }}"
+  is_voice: "{{ trigger.event.event_type == 'ralo_voice_text' }}"
   thread_id: "{{ ev.thread_id | default('', true) | string }}"
   sender_id: "{{ ev.sender_id | default('', true) | string }}"
   sender_name: "{{ ev.sender_name | default('', true) | string | trim }}"
@@ -153,16 +153,16 @@ variables:
 
 triggers:
   - trigger: event
-    event_type: zalo_call_message
+    event_type: ralo_message
     id: message
   - trigger: event
-    event_type: zalo_call_voice_text
+    event_type: ralo_voice_text
     id: voice
 
 conditions:
   - condition: template
     alias: Đúng tài khoản Zalo (nếu có chọn)
-    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('zalo_call')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
+    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('ralo')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
   - alias: Không xử lý tin do chính mình gửi
     condition: template
     value_template: "{{ not (ev.is_self | default(false)) }}"
@@ -191,7 +191,7 @@ actions:
     data:
       agent_id: !input agent_id
       language: "{{ language | trim }}"
-      conversation_id: "zalo_call_bp_{{ thread_id }}"
+      conversation_id: "ralo_bp_{{ thread_id }}"
       text: >-
         {% if extra_prompt | trim | length > 0 %}{{ extra_prompt | trim }}
 
@@ -210,7 +210,7 @@ actions:
           - condition: template
             value_template: "{{ speech | length > 0 }}"
         sequence:
-          - action: zalo_call.send_message
+          - action: ralo.send_message
             data:
               entry_id: !input tai_khoan
               thread_id: "{{ thread_id }}"
@@ -222,7 +222,7 @@ actions:
           - condition: template
             value_template: "{{ send_error }}"
         sequence:
-          - action: zalo_call.send_message
+          - action: ralo.send_message
             data:
               entry_id: !input tai_khoan
               thread_id: "{{ thread_id }}"

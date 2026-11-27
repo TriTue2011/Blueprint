@@ -1,7 +1,7 @@
 blueprint:
   name: Ralo - Quy tắc cho cuộc gọi đến (tự nghe máy, AI, báo ra loa)
   author: TriTue2011
-  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_incoming_rule.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/ralo_incoming_rule.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
@@ -17,7 +17,7 @@ blueprint:
           description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
-              integration: zalo_call
+              integration: ralo
           default: ""
     ap_dung:
       name: ① Áp dụng cho ai
@@ -44,7 +44,7 @@ blueprint:
               options:
                 - label: Một người hoặc một nhóm cụ thể (chọn ở ô bên dưới)
                   value: thread
-                - label: Mọi người mang một thẻ (điền ô «Thẻ» bên dưới; gắn thẻ bằng dịch vụ zalo_call.set_contact_tags)
+                - label: Mọi người mang một thẻ (điền ô «Thẻ» bên dưới; gắn thẻ bằng dịch vụ ralo.set_contact_tags)
                   value: tag
                 - label: Mọi người trong danh bạ (bạn bè)
                   value: contacts
@@ -60,12 +60,12 @@ blueprint:
             entity:
               multiple: true
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: notify
           default: []
         them_theo_ma:
           name: Thêm người hoặc nhóm theo mã Zalo (threadID) (chỉ khi «Áp dụng cho» = Một người hoặc một nhóm cụ thể)
-          description: Mỗi dòng một mã (chỉ gồm chữ số). Không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts* (hiện id và tên của bạn bè và nhóm). Dùng cùng ô chọn bên trên cũng được.
+          description: Mỗi dòng một mã (chỉ gồm chữ số). Không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → ralo.list_contacts* (hiện id và tên của bạn bè và nhóm). Dùng cùng ô chọn bên trên cũng được.
           selector:
             text:
               multiple: true
@@ -429,14 +429,14 @@ variables:
 
 triggers:
   # ① MỖI CUỘC GỌI kích hoạt automation này (có lượt chạy/trace theo từng cuộc) và chính nó áp quy tắc cho cuộc đó. Không lưu quy tắc: tắt hay xoá
-  # automation là hết quy tắc; nhiều automation khác nhau cùng một người vẫn chạy đủ (quy tắc cụ thể hơn thắng, xem zalo_call.apply_call_rule).
+  # automation là hết quy tắc; nhiều automation khác nhau cùng một người vẫn chạy đủ (quy tắc cụ thể hơn thắng, xem ralo.apply_call_rule).
   - trigger: event
-    event_type: zalo_call_call_state
+    event_type: ralo_call_state
     event_data:
       state: incoming
     id: cuoc_goi
   - trigger: event
-    event_type: zalo_call_call_state
+    event_type: ralo_call_state
     event_data:
       state: ringing
     id: cuoc_goi
@@ -451,7 +451,7 @@ triggers:
 conditions:
   - condition: template
     alias: Đúng tài khoản Zalo (nếu có chọn)
-    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('zalo_call')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
+    value_template: "{{ tai_khoan == '' or not (trigger.event is defined and (trigger.event.event_type | default('')).startswith('ralo')) or (trigger.event.data.entry_id | default('')) == tai_khoan }}"
 
 actions:
   - choose:
@@ -471,7 +471,7 @@ actions:
                 or (pham_vi == 'groups' and d.call_type == 'group')
                 or (pham_vi == 'tag' and (the_tag | trim) != '' and (the_tag | trim) in (d.tags | default([], true))) ) }}
           - alias: Áp quy tắc cho cuộc gọi
-            action: zalo_call.apply_call_rule
+            action: ralo.apply_call_rule
             data: >-
               {% set d = {'call_id': trigger.event.data.call_id | string, 'scope': pham_vi, 'source': this.entity_id,
                           'answer': tu_nghe_may, 'answer_delay': nghe_sau | int(5),
@@ -498,7 +498,7 @@ actions:
             then:
               - action: persistent_notification.create
                 data:
-                  notification_id: "zalo_call_quy_tac_{{ this.entity_id }}_{{ trigger.event.data.call_id }}"
+                  notification_id: "ralo_quy_tac_{{ this.entity_id }}_{{ trigger.event.data.call_id }}"
                   title: "Ralo: ĐÃ ÁP quy tắc cho cuộc gọi"
                   message: |-
                     Cuộc gọi {{ trigger.event.data.call_id }} từ {{ trigger.event.data.peer or trigger.event.data.thread_id }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
@@ -521,13 +521,13 @@ actions:
               - action: system_log.write
                 data:
                   level: warning
-                  logger: zalo_call.blueprint
+                  logger: ralo.blueprint
                   message: "Quy tắc cuộc gọi đến: mã Zalo không hợp lệ (chỉ gồm chữ số): {{ ds_thread.sai | join(', ') }}"
           - repeat:
               for_each: "{{ muc_tieu }}"
               sequence:
                 - alias: Xoá quy tắc cũ trong kho của mục tiêu (bản blueprint trước ghi quy tắc cuộc gọi vào kho và nó sống mãi dù tắt automation)
-                  action: zalo_call.remove_rule
+                  action: ralo.remove_rule
                   data: >-
                     {% set d = {'scope': pham_vi} %}
                     {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
@@ -538,7 +538,7 @@ actions:
                     - condition: template
                       value_template: "{{ bat_quy_tac and ai_tra_loi_tin and cho_ai_noi }}"
                   then:
-                    - action: zalo_call.set_rule
+                    - action: ralo.set_rule
                       data: >-
                         {% set d = {'scope': pham_vi, 'reply_ai': true, 'trusted': nguoi_tin_cay} %}
                         {% if pham_vi == 'thread' %}{% set d = dict(d, thread_id=repeat.item | string) %}{% endif %}
@@ -551,7 +551,7 @@ actions:
               - condition: template
                 value_template: "{{ bat_quy_tac and bat_cong_tac_chuyen_video and xu_ly_xin_video != 'ask' }}"
             then:
-              - action: zalo_call.set_default_devices
+              - action: ralo.set_default_devices
                 data:
                   entry_id: !input tai_khoan
                   video_consent: true

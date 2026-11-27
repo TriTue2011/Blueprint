@@ -497,21 +497,21 @@ blueprint:
           default: ""
           selector:
             config_entry:
-              integration: zalo_call
+              integration: ralo
 
         zalo_calling_recipients:
           name: 👥 Người nhận Zalo Calling (chọn nhiều)
-          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          description: Thực thể notify.ralo_... của Zalo Calling.
           default: []
           selector:
             entity:
               multiple: true
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: notify
         zalo_calling_ma_nguoi:
           name: ➕ Thêm người theo mã Zalo (threadID)
-          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → ralo.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
           default: []
           selector:
             text:
@@ -1217,7 +1217,7 @@ actions:
                   value_template: "{{ (zalo_calling_initial_caption) | trim | length > 0 }}"
               then:
                 - continue_on_error: true
-                  action: zalo_call.send_message
+                  action: ralo.send_message
                   data: >-
                     {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                         'message': (zalo_calling_initial_caption) | trim} | combine(zc_opt_msg) }}
@@ -1225,7 +1225,7 @@ actions:
                 for_each: "{{ ['/media/snapshots/' ~ file_path_dynamic ~ '_snapshot1.jpg'] }}"
                 sequence:
                   - continue_on_error: true
-                    action: zalo_call.send_image
+                    action: ralo.send_image
                     data: >-
                       {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                           'file': repeat.item} | combine(zc_opt_media) }}
@@ -1483,7 +1483,7 @@ actions:
                                 for_each: "{{ [ai_messages] }}"
                                 sequence:
                                     - continue_on_error: true
-                                      action: zalo_call.send_message
+                                      action: ralo.send_message
                                       data: >-
                                         {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                                             'message': (repeat.item) | trim} | combine(zc_opt_msg) }}
@@ -1655,7 +1655,7 @@ actions:
                             for_each: "{{ [error_message] }}"
                             sequence:
                                 - continue_on_error: true
-                                  action: zalo_call.send_message
+                                  action: ralo.send_message
                                   data: >-
                                     {{ {'thread_id': zc_to.thread_id, 'type': zc_to.type,
                                         'message': (repeat.item) | trim} | combine(zc_opt_msg) }}

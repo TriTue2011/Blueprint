@@ -660,7 +660,7 @@ Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất �
 
 **Cần:** Ralo từ bản 2026.11.11.2; người nhận chọn ở *Ralo → Cấu hình*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_alert_sensor.yaml)
 
 ---
 
@@ -672,7 +672,7 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 
 **Cần:** Ralo từ bản 2026.11.11.2.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_incoming_rule.yaml)
 
 ---
 
@@ -695,7 +695,7 @@ Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộ
 
 **Cần:** Ralo từ bản 2026.11.11.2; người nhận chọn ở *Ralo → Cấu hình*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_messenger.yaml)
 
 ---
 
@@ -705,7 +705,7 @@ Ai nhắn Zalo cho tài khoản của bạn (người hoặc nhóm bạn chọn)
 
 **Cần:** Ralo đã kết nối với app và một trợ lý hội thoại đã chọn mô hình AI. Đừng bật cùng lúc với quy tắc `reply_ai` của Ralo cho cùng một người/nhóm (mỗi tin sẽ bị trả lời hai lần).
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_webhook.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_webhook.yaml)
 
 ---
 
@@ -715,7 +715,7 @@ Ai nhắn Zalo cho tài khoản của bạn (người hoặc nhóm bạn chọn)
 
 **Cần:** Ralo từ bản 2026.11.11.2; người nhận chọn ở *Ralo → Cấu hình*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_nhac_hen.yaml)
 
 ---
 
@@ -725,7 +725,7 @@ Gọi một người khi **bất kỳ sự kiện nào** (nút bấm, giờ, c�
 
 **Cần:** Ralo từ bản 2026.11.11.4.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_goi_di.yaml)
 
 ---
 
@@ -737,7 +737,7 @@ Người gọi xin chuyển từ thoại sang video: **hỏi trên điện tho�
 
 **Cần:** Ralo từ bản 2026.11.11.4.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_video_request.yaml)
 
 ---
 
@@ -747,7 +747,7 @@ Người gọi xin chuyển từ thoại sang video: **hỏi trên điện tho�
 
 **Cần:** Ralo từ bản 2026.11.14.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_cai_dat_am_thanh.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_cai_dat_am_thanh.yaml)
 
 ---
 
@@ -765,7 +765,7 @@ Các mẫu có gọi điện (gọi đi, cảnh báo, nút bấm, nghe máy, nh�
 
 **Cần:** Ralo từ bản 2026.11.14.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_khi_su_kien.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_goi_khi_su_kien.yaml)
 
 ---
 
@@ -791,7 +791,7 @@ Script cho **Voice Assistant**: nói *«gọi Đại ca bằng camera phòng kh�
 
 **Cần:** Ralo từ bản 2026.11.14.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_full_llm.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_goi_full_llm.yaml)
 
 ---
 
@@ -809,11 +809,11 @@ Ví dụ nút R1: nhấn đơn + cuộc gọi Zalo/Telegram đang đổ chuông 
 
 ## 🎤 Voice gửi Zalo Calling (nhiều người và nhóm)
 
-Script cho **Voice Assistant** (Assist): gửi tin nhắn, vị trí hoặc ảnh cho **nhiều người và nhóm cùng lúc** qua **Zalo Calling**. Người nhận **chọn từ danh sách** (thực thể `notify.zalo_call_...`), không gõ mã Zalo. Cùng khuôn với «Gửi Zalo Custom Bot», nhưng không cần số điện thoại tài khoản và mã nhóm.
+Script cho **Voice Assistant** (Assist): gửi tin nhắn, vị trí hoặc ảnh cho **nhiều người và nhóm cùng lúc** qua **Zalo Calling**. Người nhận **chọn từ danh sách** (thực thể `notify.ralo_...`), không gõ mã Zalo. Cùng khuôn với «Gửi Zalo Custom Bot», nhưng không cần số điện thoại tài khoản và mã nhóm.
 
 **Cần:** Zalo Calling từ bản 2026.11.11.3; người nhận chọn ở *Ralo → Cấu hình*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_ralo_full_llm.yaml)
 
 ---
 

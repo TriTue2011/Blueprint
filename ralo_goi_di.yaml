@@ -1,7 +1,7 @@
 blueprint:
   name: Ralo - Gọi đi tuỳ biến (nút bấm, giờ, cảm biến... có AI, loa, mic, camera, âm lượng)
   author: TriTue2011
-  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_goi_di.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/ralo_goi_di.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
@@ -16,7 +16,7 @@ blueprint:
           description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
-              integration: zalo_call
+              integration: ralo
           default: ""
     khi_nao:
       name: ① Khi nào gọi
@@ -33,7 +33,7 @@ blueprint:
           selector:
             entity:
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: sensor
           default: ""
     goi_ai:
@@ -46,12 +46,12 @@ blueprint:
           selector:
             entity:
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: notify
           default: ""
         ma_goi:
           name: Hoặc gọi người theo mã Zalo (threadID)
-          description: Chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp; có điền thì dùng mã này thay cho ô chọn bên trên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*.
+          description: Chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp; có điền thì dùng mã này thay cho ô chọn bên trên. Xem mã ở *Công cụ nhà phát triển → Hành động → ralo.list_contacts*.
           selector:
             text: {}
           default: ""
@@ -281,7 +281,7 @@ conditions:
     value_template: "{{ goi_id | string != '' and goi_la_nguoi }}"
 
 actions:
-  - action: zalo_call.make_call
+  - action: ralo.make_call
     data: >-
       {% set d = {'thread_id': goi_id | string, 'type': loai_cuoc_goi} %}
       {% if cau_noi | trim != '' %}{% set d = dict(d, message=cau_noi | trim, repeat=so_lan_doc | int(1), hangup_after=cup_sau_khi_doc) %}{% endif %}

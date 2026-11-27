@@ -583,22 +583,22 @@ blueprint:
           default: ""
           selector:
             config_entry:
-              integration: zalo_call
+              integration: ralo
 
         zalo_calling_recipients:
           name: 👥 Người nhận Zalo Calling (chọn nhiều)
-          description: Thực thể notify.zalo_call_... của Zalo Calling.
+          description: Thực thể notify.ralo_... của Zalo Calling.
           default: []
           selector:
             entity:
               multiple: true
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: notify
 
         zalo_calling_ma_nguoi:
           name: ➕ Thêm người theo mã Zalo (threadID)
-          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Xem mã ở *Công cụ nhà phát triển → Hành động → ralo.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
           default: []
           selector:
             text:
@@ -1748,7 +1748,7 @@ actions:
           for_each: "{{ _zcall_to }}"
           sequence:
             - continue_on_error: true
-              action: zalo_call.send_image
+              action: ralo.send_image
               data: >-
                 {{ {'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                     'file': final_image_path} | combine(zc_opt_media) }}

@@ -611,7 +611,7 @@ When a sensor triggers (person, smoke, water leak, open door, power loss...) **c
 
 **Needs:** Ralo 2026.11.11.2 or newer; recipients picked in *Ralo → Configure*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_alert_sensor.yaml)
 
 ---
 
@@ -623,7 +623,7 @@ Decide what happens when **someone calls in**: **announce on a speaker**, **auto
 
 **Needs:** Ralo 2026.11.11.2 or newer.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_incoming_rule.yaml)
 
 ---
 
@@ -633,7 +633,7 @@ Send a Zalo message (or call) when a device changes, **widely customizable but o
 
 **Needs:** Ralo 2026.11.11.2 or newer; recipients picked in *Ralo → Configure*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_messenger.yaml)
 
 ---
 
@@ -643,7 +643,7 @@ Whoever messages your Zalo account (the people or groups you pick) gets a reply 
 
 **Needs:** Ralo connected to the app and a conversation assistant with an AI model selected. Do not enable it together with Ralo's `reply_ai` rule for the same person/group (each message would be answered twice).
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_webhook.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_webhook.yaml)
 
 ---
 
@@ -653,7 +653,7 @@ At the chosen time, **call someone on Zalo and read a reminder** (or message the
 
 **Needs:** Ralo 2026.11.11.2 or newer; recipients picked in *Ralo → Configure*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_nhac_hen.yaml)
 
 ---
 
@@ -663,7 +663,7 @@ Call one person on **any event** (button, time, sensor): voice or video, what to
 
 **Needs:** Ralo 2026.11.11.4 or newer.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_goi_di.yaml)
 
 ---
 
@@ -675,17 +675,17 @@ The caller asks to switch from voice to video: **ask on your phone** (Accept / D
 
 **Needs:** Ralo 2026.11.11.4 or newer.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fralo_video_request.yaml)
 
 ---
 
 ## 🎤 Voice send to Zalo Calling (many people and groups)
 
-A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
+A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.ralo_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
 
 **Needs:** Zalo Calling 2026.11.11.3 or newer; recipients picked in *Ralo → Configure*.
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_ralo_full_llm.yaml)
 
 ---
 

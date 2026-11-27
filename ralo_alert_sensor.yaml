@@ -1,18 +1,11 @@
 blueprint:
-  name: Ralo - Tự động gọi khi có sự kiện hoặc thiết bị thay đổi
+  name: Ralo - Gọi cảnh báo khi cảm biến kích hoạt
   author: TriTue2011
-  source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_goi_khi_su_kien.yaml
+  source_url: https://github.com/TriTue2011/Blueprint/blob/main/ralo_alert_sensor.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
-  description: |
-    **Gọi điện (hoặc đọc cảnh báo rồi cúp) khi có BẤT KỲ sự kiện nào**: thiết bị đổi trạng thái hoặc thuộc tính, cảm biến vượt ngưỡng, đến giờ, sự kiện của Home Assistant, webhook, thẻ NFC...
-    Bạn tự chọn **điều kiện kích hoạt** ở ô «Khi nào gọi» (đủ mọi loại trigger của HA, chọn từ danh sách) và **điều kiện kèm theo** ở ô «Chỉ gọi khi» (đủ mọi loại điều kiện).
-    Người nhận chọn từ danh sách; có thể gọi lần lượt tới khi có người nghe máy, nối thiết bị trong nhà, đặt độ to mic/loa, giọng đọc, chống báo lặp, khung giờ, chỉ gọi khi vắng nhà.
-
-    Trong câu tự viết dùng được `{ten}` (tên thiết bị gây ra sự kiện), `{khu_vuc}` và `{gio}`.
-
-    **Phiên bản: v.2026.11.24**
+  description: "**Phiên bản: v.2026.11.24**"
   input:
     tai_khoan_zalo:
       name: ⓪ Tài khoản Zalo
@@ -23,40 +16,42 @@ blueprint:
           description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
-              integration: zalo_call
+              integration: ralo
           default: ""
     khi_nao:
       name: ① Khi nào cảnh báo
       icon: mdi:alarm-light-outline
       description: Chọn cảm biến và loại cảnh báo.
       input:
-        kich_hoat:
-          name: Khi nào gọi (trigger)
-          description: >-
-            Thêm một hoặc nhiều điều kiện kích hoạt: thiết bị đổi trạng thái (có thể chọn «từ → sang» và «giữ ít nhất N giây»), thuộc tính đổi, số vượt ngưỡng,
-            đến giờ, sự kiện của Home Assistant, webhook, vùng, thẻ... Có thể thêm nhiều trigger; trigger nào xảy ra cũng gọi.
+        cam_bien:
+          name: Cảm biến
+          description: Chọn một hoặc nhiều cảm biến (binary_sensor), ví dụ chuyển động, khói, rò nước, cửa, khí gas, mất điện, người từ camera...
           selector:
-            trigger: {}
-        dieu_kien_them:
-          name: Chỉ gọi khi (điều kiện kèm theo, tuỳ chọn)
-          description: >-
-            Mọi điều kiện ở đây đều phải đúng thì mới gọi (trạng thái thiết bị, khung giờ, ngày trong tuần, mặt trời, số, người trong nhà...). Để trống = luôn gọi khi trigger xảy ra.
-          default: []
-          selector:
-            condition: {}
-        kieu_goi:
-          name: Kiểu cuộc gọi
-          description: >-
-            Đọc cảnh báo: gọi, đọc câu rồi cúp. Gọi thường: gọi để người nhà nói chuyện (nối thiết bị trong nhà ở mục «Thiết bị trong nhà»).
-          default: doc_canh_bao
+            entity:
+              multiple: true
+              filter:
+                - domain: binary_sensor
+        trang_thai_kich_hoat:
+          name: Cảnh báo khi cảm biến chuyển sang
           selector:
             select:
               mode: dropdown
               options:
-                - label: Đọc cảnh báo rồi cúp
-                  value: doc_canh_bao
-                - label: Gọi thường (người nhà nói chuyện)
-                  value: goi_thuong
+                - label: BẬT (có người, có khói, cửa mở, có nước...)
+                  value: "on"
+                - label: TẮT (mất điện, mất kết nối, cảm biến ngừng báo...)
+                  value: "off"
+          default: "on"
+        giu_it_nhat:
+          name: Giữ trạng thái ít nhất (giây) mới báo
+          description: Tránh báo nhầm do nhiễu. 0 = báo ngay.
+          selector:
+            number:
+              min: 0
+              max: 600
+              step: 1
+              unit_of_measurement: giây
+          default: 0
         loai_canh_bao:
           name: Loại cảnh báo (câu nói có sẵn)
           description: Chọn câu có sẵn. Máy tự thêm khu vực và giờ vào câu. Chọn «Tự viết» để dùng câu của bạn ở ô bên dưới.
@@ -102,12 +97,12 @@ blueprint:
             entity:
               multiple: true
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: notify
           default: []
         ma_nguoi:
           name: Thêm người theo mã Zalo (threadID)
-          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → zalo_call.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
+          description: Mỗi dòng một mã, chỉ gồm chữ số. Người bất kỳ, không cần cấu hình tích hợp. Mã là duy nhất nên không nhầm khi trùng tên. Xem mã ở *Công cụ nhà phát triển → Hành động → ralo.list_contacts*. Dùng cùng ô chọn bên trên cũng được.
           selector:
             text:
               multiple: true
@@ -140,7 +135,7 @@ blueprint:
           selector:
             entity:
               filter:
-                - integration: zalo_call
+                - integration: ralo
                   domain: sensor
           default: ""
         gui_tin:
@@ -340,7 +335,6 @@ variables:
   loai_canh_bao: !input loai_canh_bao
   cau_tu_viet: !input cau_tu_viet
   loai_cuoc_goi: !input loai_cuoc_goi
-  kieu_goi: !input kieu_goi
   sau_khi_doc: !input sau_khi_doc
   noi_gom: !input noi_gom
   loa_goc: !input loa
@@ -366,28 +360,24 @@ variables:
     cua_mo: Cảnh báo cửa vừa mở
     mat_dien: Cảnh báo mất điện
     nguoi_nga: Cảnh báo có người ngã
-  su_kien_tu: >-
-    {{ trigger.entity_id | default('', true) if trigger is defined else '' }}
-  ten_cam_bien: >-
-    {% if trigger is defined and trigger.to_state is defined and trigger.to_state is not none %}{{ trigger.to_state.name }}
-    {% elif trigger is defined and trigger.event is defined and trigger.event is not none %}{{ trigger.event.event_type }}
-    {% elif trigger is defined and trigger.description is defined %}{{ trigger.description }}
-    {% else %}sự kiện{% endif %}
-  khu_vuc: "{{ (area_name(su_kien_tu) or '') if su_kien_tu else '' }}"
+  ten_cam_bien: "{{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}"
+  khu_vuc: "{{ area_name(trigger.entity_id) or '' }}"
   gio_bao: "{{ now().strftime('%H:%M') }}"
   noi_dung: >-
     {% if loai_canh_bao == 'tu_viet' and cau_tu_viet | trim != '' %}
       {{ cau_tu_viet | replace('{ten}', ten_cam_bien) | replace('{khu_vuc}', khu_vuc) | replace('{gio}', gio_bao) }}
     {% else %}
-      {{ mau_cau.get(loai_canh_bao, 'Cảnh báo') }}{% if khu_vuc %} ở {{ khu_vuc }}{% endif %} ({{ ten_cam_bien }}), lúc {{ gio_bao }}.
+      {{ mau_cau.get(loai_canh_bao, 'Cảnh báo') }}{% if khu_vuc %} ở {{ khu_vuc }}{% endif %} (cảm biến {{ ten_cam_bien }}), lúc {{ gio_bao }}.
     {% endif %}
 
-triggers: !input kich_hoat
+triggers:
+  - trigger: state
+    entity_id: !input cam_bien
+    to: !input trang_thai_kich_hoat
+    for:
+      seconds: !input giu_it_nhat
 
 conditions:
-  - alias: Điều kiện kèm theo do bạn chọn
-    condition: and
-    conditions: !input dieu_kien_them
   - condition: template
     alias: Chống báo lặp
     value_template: >-
@@ -414,7 +404,7 @@ actions:
       - repeat:
           for_each: "{{ ds_nhan }}"
           sequence:
-            - action: zalo_call.send_message
+            - action: ralo.send_message
               data: >-
                 {{ ({'thread_id': repeat.item.thread_id, 'type': repeat.item.type,
                     'message': noi_dung | trim, 'emoji': 'alert'}) | combine({'entry_id': tai_khoan}) }}
@@ -426,36 +416,18 @@ actions:
             - condition: template
               value_template: "{{ repeat.item.type == 'user' }}"
           then:
-            - choose:
-                - alias: Gọi thường (người nhà nói chuyện)
-                  conditions:
-                    - condition: template
-                      value_template: "{{ kieu_goi == 'goi_thuong' }}"
-                  sequence:
-                    - action: zalo_call.make_call
-                      response_variable: ket_qua
-                      data: >-
-                        {% set d = {'thread_id': repeat.item.thread_id} %}
-                        {% if loai_cuoc_goi != 'auto' %}{% set d = dict(d, type=loai_cuoc_goi) %}{% endif %}
-                        {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-                        {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
-                        {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
-                        {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
-                        {% set d = d | combine(zc_audio) | combine(zc_tts) %}
-                        {{ (d) | combine({'entry_id': tai_khoan}) }}
-              default:
-                  - action: zalo_call.alert_call
-                    response_variable: ket_qua
-                    data: >-
-                      {% set d = {'thread_id': repeat.item.thread_id, 'message': noi_dung} %}
-                      {% if loai_cuoc_goi != 'auto' %}{% set d = dict(d, type=loai_cuoc_goi) %}{% endif %}
-                      {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
-                      {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
-                      {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
-                      {% if sau_khi_doc != 'mac_dinh' %}{% set d = dict(d, after=sau_khi_doc) %}{% endif %}
-                      {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
-                      {% set d = d | combine(zc_audio) | combine(zc_tts) %}
-                      {{ (d) | combine({'entry_id': tai_khoan}) }}
+            - action: ralo.alert_call
+              response_variable: ket_qua
+              data: >-
+                {% set d = {'thread_id': repeat.item.thread_id, 'message': noi_dung} %}
+                {% if loai_cuoc_goi != 'auto' %}{% set d = dict(d, type=loai_cuoc_goi) %}{% endif %}
+                {% if loa %}{% set d = dict(d, speaker=loa) %}{% endif %}
+                {% if mic %}{% set d = dict(d, mic=mic) %}{% endif %}
+                {% if camera %}{% set d = dict(d, camera=camera) %}{% endif %}
+                {% if sau_khi_doc != 'mac_dinh' %}{% set d = dict(d, after=sau_khi_doc) %}{% endif %}
+                {% if noi_gom | count > 0 %}{% set d = dict(d, connect=noi_gom) %}{% endif %}
+                {% set d = d | combine(zc_audio) | combine(zc_tts) %}
+                {{ (d) | combine({'entry_id': tai_khoan}) }}
             - if:
                 - condition: template
                   value_template: "{{ not goi_lan_luot }}"
@@ -482,7 +454,7 @@ actions:
                         - condition: template
                           value_template: "{{ is_state(cam_bien_cuoc_goi, 'ringing') }}"
                       then:
-                        - action: zalo_call.end_call
+                        - action: ralo.end_call
                           data:
                             entry_id: !input tai_khoan
                         - delay: 2
