@@ -12,7 +12,7 @@ blueprint:
 
     ### Bắt buộc
 
-    - Tích hợp **Ralo** (HACS, kho `TriTue2011/Zalo-calling`) bản `2026.11.11.3` trở lên.
+    - Tích hợp **Ralo** (HACS, kho `TriTue2011/Raling`) bản `2026.11.11.3` trở lên.
     - Chọn người/nhóm nhận ở *Ralo → Cấu hình → Người và nhóm nhận*, mỗi người thành một thực thể `notify.ralo_...`.
 
     ### Tùy chọn
