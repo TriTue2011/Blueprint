@@ -776,7 +776,7 @@ blueprint:
             text: {}
 
     # ============================================================
-    # TELEGRAM CALLING SETTINGS (tách riêng khỏi Telegram Bot — chọn người nhận từ danh sách, như Zalo Calling)
+    # TELEGRAM CALLING SETTINGS (tách riêng khỏi Telegram Bot — chọn người nhận từ danh sách, như Ralo)
     # ============================================================
     telegram_calling_settings:
       name: 8b · Telegram Calling (chọn người nhận từ danh sách)
@@ -939,14 +939,14 @@ blueprint:
               multiline: true
 
     zalo_calling_settings:
-      name: 10b · Zalo Calling (chọn người nhận từ danh sách)
+      name: 10b · Ralo (chọn người nhận từ danh sách)
       icon: mdi:phone-message-outline
       collapsed: true
       input:
         include_zalo_calling:
-          name: ✅ Bật gửi qua Zalo Calling
+          name: ✅ Bật gửi qua Ralo
           description: >-
-            Gửi qua tích hợp Zalo Calling (kho TriTue2011/Zalo-calling, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
+            Gửi qua tích hợp Ralo (kho TriTue2011/Ralo_integration, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
             (Ralo → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
           default: false
           selector:
@@ -961,8 +961,8 @@ blueprint:
               integration: ralo
 
         zalo_calling_recipients:
-          name: 👥 Người nhận Zalo Calling (chọn nhiều)
-          description: Thực thể notify.ralo_... của Zalo Calling.
+          name: 👥 Người nhận Ralo (chọn nhiều)
+          description: Thực thể notify.ralo_... của Ralo.
           default: []
           selector:
             entity:
@@ -986,7 +986,7 @@ blueprint:
             text:
               multiple: true
 
-        # ---- Tham số của dịch vụ gửi tin Zalo Calling (sinh bởi bp_zalo_params.py; «Theo mặc định» = không gửi trường đó) ----
+        # ---- Tham số của dịch vụ gửi tin Ralo (sinh bởi bp_zalo_params.py; «Theo mặc định» = không gửi trường đó) ----
         zalo_calling_ttl:
           name: ⏳ Tự xóa tin sau (ms)
           description: >-
@@ -2916,7 +2916,7 @@ actions:
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
 
-  - alias: Gửi qua Zalo Calling
+  - alias: Gửi qua Ralo
     if:
       - condition: template
         value_template: "{{ include_zalo_calling and som_gui_anh and zalo_calling_ds | count > 0 }}"
@@ -2992,7 +2992,7 @@ actions:
               message: !input zalo_custom_initial_caption
               ttl: !input zalo_custom_ttl
 
-  - alias: Gửi qua Zalo Calling
+  - alias: Gửi qua Ralo
     if:
       - condition: template
         value_template: "{{ include_zalo_calling and som_gui_video and zalo_calling_ds | count > 0 }}"
@@ -3456,7 +3456,7 @@ actions:
                   message: "{{ tin_loi_ai }}"
                   ttl: !input zalo_custom_ttl
 
-      - alias: Gửi qua Zalo Calling
+      - alias: Gửi qua Ralo
         if:
           - condition: template
             value_template: "{{ include_zalo_calling and zalo_calling_ds | count > 0 }}"
@@ -4116,7 +4116,7 @@ actions:
                   ttl: !input zalo_custom_ttl
                 response_variable: zalo_anh_response
 
-  - alias: Gửi qua Zalo Calling
+  - alias: Gửi qua Ralo
     if:
       - condition: template
         value_template: "{{ include_zalo_calling and muon_gui_anh and zalo_calling_ds | count > 0 }}"
@@ -4187,7 +4187,7 @@ actions:
                    else zalo_custom_initial_caption }}
               ttl: !input zalo_custom_ttl
 
-  - alias: Gửi qua Zalo Calling
+  - alias: Gửi qua Ralo
     if:
       - condition: template
         value_template: "{{ include_zalo_calling and muon_gui_video and zalo_calling_ds | count > 0 }}"
@@ -4259,7 +4259,7 @@ actions:
                     message: "{{ repeat.item }}"
                     ttl: !input zalo_custom_ttl
 
-  - alias: Gửi qua Zalo Calling
+  - alias: Gửi qua Ralo
     if:
       - condition: template
         value_template: "{{ include_zalo_calling and pb_zl.rieng | length > 0 and zalo_calling_ds | count > 0 }}"

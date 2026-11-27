@@ -14,7 +14,7 @@ blueprint:
     - Muốn chỉ **xem danh sách thiết bị** mà không gọi: nói *«liệt kê thiết bị gọi Zalo»*.
 
     ## Cài đặt
-    - Tích hợp **Zalo Calling** bản `2026.11.14` trở lên.
+    - Tích hợp **Ralo** bản `2026.11.14` trở lên.
     - Nhớ **expose script cho Assist** sau khi lưu; giữ tên script mặc định.
     - Sau khi tạo script, nhấn dấu 3 chấm, chọn «Edit in YAML», xoá dòng `description` để khôi phục mô tả mặc định cho trợ lý.
 

@@ -513,7 +513,7 @@ blueprint:
               mode: box
 
     # ============================================================
-    # TELEGRAM CALLING SETTINGS (tách riêng khỏi Telegram Bot — chọn người nhận từ danh sách, như Zalo Calling)
+    # TELEGRAM CALLING SETTINGS (tách riêng khỏi Telegram Bot — chọn người nhận từ danh sách, như Ralo)
     # ============================================================
     telegram_calling_settings:
       name: Telegram Calling (chọn người nhận từ danh sách)
@@ -564,14 +564,14 @@ blueprint:
               multiple: true
 
     zalo_calling_settings:
-      name: 💬 Zalo Calling (chọn người nhận từ danh sách)
+      name: 💬 Ralo (chọn người nhận từ danh sách)
       icon: mdi:phone-message-outline
       collapsed: true
       input:
         include_zalo_calling:
-          name: ✅ Bật gửi qua Zalo Calling
+          name: ✅ Bật gửi qua Ralo
           description: >-
-            Gửi qua tích hợp Zalo Calling (kho TriTue2011/Zalo-calling, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
+            Gửi qua tích hợp Ralo (kho TriTue2011/Ralo_integration, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
             (Ralo → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
           default: false
           selector:
@@ -586,8 +586,8 @@ blueprint:
               integration: ralo
 
         zalo_calling_recipients:
-          name: 👥 Người nhận Zalo Calling (chọn nhiều)
-          description: Thực thể notify.ralo_... của Zalo Calling.
+          name: 👥 Người nhận Ralo (chọn nhiều)
+          description: Thực thể notify.ralo_... của Ralo.
           default: []
           selector:
             entity:
@@ -611,7 +611,7 @@ blueprint:
             text:
               multiple: true
 
-        # ---- Tham số của dịch vụ gửi tin Zalo Calling (sinh bởi bp_zalo_params.py; «Theo mặc định» = không gửi trường đó) ----
+        # ---- Tham số của dịch vụ gửi tin Ralo (sinh bởi bp_zalo_params.py; «Theo mặc định» = không gửi trường đó) ----
         zalo_calling_ttl:
           name: ⏳ Tự xóa tin sau (ms)
           description: >-
@@ -1739,7 +1739,7 @@ actions:
               image_path: "{{ final_image_path }}"
               ttl: "{{ _zc_ttl }}"
 
-  - alias: Gửi ảnh qua Zalo Calling
+  - alias: Gửi ảnh qua Ralo
     if:
       - condition: template
         value_template: "{{ _zcall and _zcall_to | count > 0 }}"
