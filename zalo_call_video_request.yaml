@@ -1,5 +1,5 @@
 blueprint:
-  name: Zalo Call - Người gọi xin chuyển từ thoại sang video
+  name: Ralo - Người gọi xin chuyển từ thoại sang video
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_video_request.yaml
   homeassistant:
@@ -13,7 +13,7 @@ blueprint:
       input:
         tai_khoan:
           name: Tài khoản Zalo điều khiển (tuỳ chọn)
-          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
               integration: zalo_call
@@ -24,7 +24,7 @@ blueprint:
       input:
         nguoi:
           name: Chỉ những người này (tuỳ chọn)
-          description: Chọn từ danh sách Zalo Call. Để trống = bất kỳ ai xin.
+          description: Chọn từ danh sách Ralo. Để trống = bất kỳ ai xin.
           selector:
             entity:
               multiple: true

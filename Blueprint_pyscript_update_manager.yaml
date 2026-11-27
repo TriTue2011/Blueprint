@@ -153,14 +153,14 @@ blueprint:
           name: ✅ Bật gửi qua Zalo Calling
           description: >-
             Gửi qua tích hợp Zalo Calling (kho TriTue2011/Zalo-calling, bản 2026.11.11.3 trở lên). Người nhận chọn từ danh sách
-            (Zalo Call → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
+            (Ralo → Cấu hình → Người và nhóm nhận), người và nhóm lẫn lộn đều được, mỗi người đúng loại của mình.
           default: false
           selector:
             boolean: {}
         zalo_calling_tai_khoan:
           name: 📱 Tài khoản Zalo gửi đi (tuỳ chọn)
           description: >-
-            Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = tài khoản mặc định.
+            Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = tài khoản mặc định.
           default: ""
           selector:
             config_entry:

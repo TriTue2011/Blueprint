@@ -1,13 +1,13 @@
 blueprint:
-  name: Zalo Call - Cài đặt âm thanh và chống vọng mặc định
+  name: Ralo - Cài đặt âm thanh và chống vọng mặc định
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_cai_dat_am_thanh.yaml
   homeassistant:
     min_version: 2026.3.0
   domain: automation
   description: |
-    Đặt các cài đặt ÂM THANH mặc định của Zalo Call bằng automation: độ to phần mềm của mic và loa (độc lập với cài đặt của loa R1) và các tham số chống vọng.
-    Các giá trị này nằm trong app Zalo Call (cùng nơi trang **Cài đặt → Cuộc gọi** của WebUI), nên đổi ở đây hay ở WebUI đều khớp nhau. Quy tắc cuộc gọi, make_call/answer_call
+    Đặt các cài đặt ÂM THANH mặc định của Ralo bằng automation: độ to phần mềm của mic và loa (độc lập với cài đặt của loa R1) và các tham số chống vọng.
+    Các giá trị này nằm trong app Ralo (cùng nơi trang **Cài đặt → Cuộc gọi** của WebUI), nên đổi ở đây hay ở WebUI đều khớp nhau. Quy tắc cuộc gọi, make_call/answer_call
     và nút −/+ trong cuộc gọi vẫn ghi đè khi cần. Ô để «Không đổi» thì không gửi gì.
 
     100 % = 0 dB (giữ nguyên) · 200 % = +6 dB · 50 % = −6 dB.
@@ -20,7 +20,7 @@ blueprint:
       input:
         tai_khoan:
           name: Tài khoản Zalo điều khiển (tuỳ chọn)
-          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
               integration: zalo_call
@@ -141,7 +141,7 @@ blueprint:
         kieu_dang_nhap:
           name: Áp dụng cho kiểu đăng nhập
           description: >-
-            Web và PC là hai phiên Zalo riêng nên Zalo Call lưu bộ cài đặt thiết bị RIÊNG cho từng kiểu. «Kiểu đang dùng» sửa bộ của kiểu app đang đăng nhập;
+            Web và PC là hai phiên Zalo riêng nên Ralo lưu bộ cài đặt thiết bị RIÊNG cho từng kiểu. «Kiểu đang dùng» sửa bộ của kiểu app đang đăng nhập;
             chọn Web hoặc PC để sửa sẵn bộ của kiểu đó (kể cả khi chưa đăng nhập bằng kiểu ấy).
           default: dang_dung
           selector:

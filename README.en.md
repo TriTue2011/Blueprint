@@ -28,14 +28,14 @@ A collection of **Home Assistant Blueprints** powered by AI (LLM) to automate yo
   - [🧩 Send to Zalo Custom Bot (Voice + Delete File)](#-send-to-zalo-custom-bot-voice--delete-file)
   - [🔗 Zalo Calling in the older blueprints](#-zalo-calling-in-the-older-blueprints)
   - [🎤 Voice send to Zalo Calling (many people and groups)](#-voice-send-to-zalo-calling-many-people-and-groups)
-  - [📞 Zalo Call alert call when a sensor triggers](#-zalo-call-alert-call-when-a-sensor-triggers)
-  - [📲 Zalo Call incoming-call rules](#-zalo-call-incoming-call-rules)
-  - [💬 Zalo Call custom Messenger](#-zalo-call-custom-messenger)
+  - [📞 Ralo alert call when a sensor triggers](#-ralo-alert-call-when-a-sensor-triggers)
+  - [📲 Ralo incoming-call rules](#-ralo-incoming-call-rules)
+  - [💬 Ralo custom Messenger](#-ralo-custom-messenger)
   - [🔘 Any button: ONE automation, add as many jobs as you like](#-any-button-one-automation-add-as-many-jobs-as-you-like)
-  - [💬 Zalo Call two-way chat with the assistant](#-zalo-call-two-way-chat-with-the-assistant)
-  - [⏰ Zalo Call scheduled reminder call or message](#-zalo-call-scheduled-reminder-call-or-message)
-  - [📱 Zalo Call custom outgoing call](#-zalo-call-custom-outgoing-call)
-  - [🎥 Zalo Call caller asks to switch to video](#-zalo-call-caller-asks-to-switch-to-video)
+  - [💬 Ralo two-way chat with the assistant](#-ralo-two-way-chat-with-the-assistant)
+  - [⏰ Ralo scheduled reminder call or message](#-ralo-scheduled-reminder-call-or-message)
+  - [📱 Ralo custom outgoing call](#-ralo-custom-outgoing-call)
+  - [🎥 Ralo caller asks to switch to video](#-ralo-caller-asks-to-switch-to-video)
   - [🔁 luuquangvu automations (webhooks, timers, linking)](#-luuquangvu-automations-webhooks-timers-linking)
   - [🧠 luuquangvu scripts for Assist (search, calendar, memory, timers)](#-luuquangvu-scripts-for-assist-search-calendar-memory-timers)
 - **Utilities**
@@ -605,75 +605,75 @@ Send messages, images, and videos through a personal Zalo account. Supports webh
 
 ---
 
-## 📞 Zalo Call alert call when a sensor triggers
+## 📞 Ralo alert call when a sensor triggers
 
 When a sensor triggers (person, smoke, water leak, open door, power loss...) **call the person you pick on Zalo**: the alert is read out, then the home speaker, mic and camera are connected. Calls people **one after another** until someone answers. **Everything is picked from lists**, no typing ids.
 
-**Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
+**Needs:** Ralo 2026.11.11.2 or newer; recipients picked in *Ralo → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
 
 ---
 
-## 📲 Zalo Call incoming-call rules
+## 📲 Ralo incoming-call rules
 
 Decide what happens when **someone calls in**: **announce on a speaker**, **auto-answer**, let the **AI talk**, and **which home devices to connect** when a person takes over (tick Mic / Speaker / Camera; ticking Camera makes it a video call). Apply to one person, all contacts, strangers or all groups.
 
-**Video switch request:** pick «Auto-accept» per person; it only takes effect when the **«Cho phép đồng ý chuyển sang video»** switch (video-switch consent) on the Zalo Call device is **ON** (off by default; there is a box that turns it on when Home Assistant starts). Applies to incoming and outgoing calls.
+**Video switch request:** pick «Auto-accept» per person; it only takes effect when the **«Cho phép đồng ý chuyển sang video»** switch (video-switch consent) on the Ralo device is **ON** (off by default; there is a box that turns it on when Home Assistant starts). Applies to incoming and outgoing calls.
 
-**Needs:** Zalo Call 2026.11.11.2 or newer.
+**Needs:** Ralo 2026.11.11.2 or newer.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
 
 ---
 
-## 💬 Zalo Call custom Messenger
+## 💬 Ralo custom Messenger
 
 Send a Zalo message (or call) when a device changes, **widely customizable but only by picking from lists**: watched devices, mode (any change, on, off, above/below a threshold, daily report), ready-made sentences, text style (emoji, bold, color, size), recipients.
 
-**Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
+**Needs:** Ralo 2026.11.11.2 or newer; recipients picked in *Ralo → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
 
 ---
 
-## 💬 Zalo Call two-way chat with the assistant
+## 💬 Ralo two-way chat with the assistant
 
 Whoever messages your Zalo account (the people or groups you pick) gets a reply from the **Home Assistant conversation assistant**, which keeps the thread per person/group. Pick people/groups from the address book or paste a **Zalo ID** for strangers; in groups it only answers when the message contains the **trigger word**. **No Pyscript, no bot token, no separate webhook**: the integration receives the messages from the app.
 
-**Needs:** Zalo Call connected to the app and a conversation assistant with an AI model selected. Do not enable it together with Zalo Call's `reply_ai` rule for the same person/group (each message would be answered twice).
+**Needs:** Ralo connected to the app and a conversation assistant with an AI model selected. Do not enable it together with Ralo's `reply_ai` rule for the same person/group (each message would be answered twice).
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_webhook.yaml)
 
 ---
 
-## ⏰ Zalo Call scheduled reminder call or message
+## ⏰ Ralo scheduled reminder call or message
 
 At the chosen time, **call someone on Zalo and read a reminder** (or message them): medicine, bedtime, wake-up, meals, water, exercise, meetings, watering plants. Great for older relatives who rarely read messages.
 
-**Needs:** Zalo Call 2026.11.11.2 or newer; recipients picked in *Zalo Call → Configure*.
+**Needs:** Ralo 2026.11.11.2 or newer; recipients picked in *Ralo → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
 
 ---
 
-## 📱 Zalo Call custom outgoing call
+## 📱 Ralo custom outgoing call
 
 Call one person on **any event** (button, time, sensor): voice or video, what to say, AI or not, mic/speaker/camera and volume. Only calls when idle.
 
-**Needs:** Zalo Call 2026.11.11.4 or newer.
+**Needs:** Ralo 2026.11.11.4 or newer.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
 
 ---
 
-## 🎥 Zalo Call caller asks to switch to video
+## 🎥 Ralo caller asks to switch to video
 
 The caller asks to switch from voice to video: **ask on your phone** (Accept / Decline), accept automatically, or accept and send a camera; can announce on a speaker. Never accepts by default.
 
-**Auto-accept** is a separate path that only happens when the **«Cho phép đồng ý chuyển sang video»** switch (video-switch consent) on the Zalo Call device is **ON** (off by default) **and** that person has an «Auto-accept» rule (the «incoming-call rules» blueprint). The caller asks with the camera button at the top right of the call screen.
+**Auto-accept** is a separate path that only happens when the **«Cho phép đồng ý chuyển sang video»** switch (video-switch consent) on the Ralo device is **ON** (off by default) **and** that person has an «Auto-accept» rule (the «incoming-call rules» blueprint). The caller asks with the camera button at the top right of the call screen.
 
-**Needs:** Zalo Call 2026.11.11.4 or newer.
+**Needs:** Ralo 2026.11.11.4 or newer.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
 
@@ -683,7 +683,7 @@ The caller asks to switch from voice to video: **ask on your phone** (Accept / D
 
 A script for the **Voice Assistant** (Assist): send a message, a location or an image to **several people and groups at once** through **Zalo Calling**. Recipients are **picked from a list** (`notify.zalo_call_...` entities), no typing Zalo ids. Same shape as «Send to Zalo Custom Bot», without the account phone number and group id.
 
-**Needs:** Zalo Calling 2026.11.11.3 or newer; recipients picked in *Zalo Call → Configure*.
+**Needs:** Zalo Calling 2026.11.11.3 or newer; recipients picked in *Ralo → Configure*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
 
@@ -1033,10 +1033,10 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 17 | Check Device Source | Automation | 2024.10.0 | Tell manual from app from automation |
 | 18 | Auto-Update Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
 | 19 | Auto-Update Pyscript | Automation | 2024.10.0 | Auto-sync pyscript from GitHub |
-| 20 | Zalo Call Alert | Automation | 2026.3.0 | Alert call when a sensor triggers |
-| 21 | Zalo Call Incoming Rules | Automation | 2026.3.0 | Announce, auto-answer, AI, home devices |
-| 22 | Zalo Call Messenger | Automation | 2026.3.0 | Customizable message or call by device |
-| 23 | Zalo Call Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
+| 20 | Ralo Alert | Automation | 2026.3.0 | Alert call when a sensor triggers |
+| 21 | Ralo Incoming Rules | Automation | 2026.3.0 | Announce, auto-answer, AI, home devices |
+| 22 | Ralo Messenger | Automation | 2026.3.0 | Customizable message or call by device |
+| 23 | Ralo Reminder | Automation | 2026.3.0 | Scheduled reminder call or message |
 | 24 | Cooldown Recovery | Automation | 2024.10.0 | Timer that recovers after a restart |
 | 25 | Voice send to Zalo Calling | Script | 2026.3.0 | Send text/location/image to many people and groups |
 | 26 | Restore device timers after Home Assistant restarts | Automation | — | common_utilities.py |
@@ -1064,9 +1064,9 @@ Both run automatically via [`.github/workflows/soat-blueprint.yaml`](/.github/wo
 | 48 | Multi-device timers | Script | 2024.12.0 | common_utilities.py |
 | 49 | Voice device timers | Script | 2024.12.0 | — |
 | 50 | Memory tool for Assist | Script | 2024.12.0 | memory.py |
-| 51 | Zalo Call custom outgoing call | Automation | 2026.3.0 | Zalo Call custom outgoing call |
-| 52 | Zalo Call caller asks to switch to video | Automation | 2026.3.0 | Zalo Call caller asks to switch to video |
-| 53 | Zalo Call two-way chat with the assistant | Automation | 2026.3.0 | The assistant answers Zalo messages |
+| 51 | Ralo custom outgoing call | Automation | 2026.3.0 | Ralo custom outgoing call |
+| 52 | Ralo caller asks to switch to video | Automation | 2026.3.0 | Ralo caller asks to switch to video |
+| 53 | Ralo two-way chat with the assistant | Automation | 2026.3.0 | The assistant answers Zalo messages |
 | 54 | Any button, add as many jobs as you like | Automation | 2026.3.0 | One automation for every button; the job whose sensor changed most recently wins |
 | 55 | Telegram Call incoming-call rules | Automation | 2026.3.0 | apply_call_rule: person/tag/contacts/strangers, announce, auto-answer, voice message |
 

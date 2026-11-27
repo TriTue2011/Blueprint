@@ -1,5 +1,5 @@
 blueprint:
-  name: Zalo Call - Messenger tuỳ biến (nhắn tin hoặc gọi khi thiết bị thay đổi)
+  name: Ralo - Messenger tuỳ biến (nhắn tin hoặc gọi khi thiết bị thay đổi)
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_messenger.yaml
   homeassistant:
@@ -13,7 +13,7 @@ blueprint:
       input:
         tai_khoan:
           name: Tài khoản Zalo điều khiển (tuỳ chọn)
-          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
               integration: zalo_call
@@ -220,7 +220,7 @@ blueprint:
       input:
         nguoi_nhan:
           name: Người nhận
-          description: Chọn từ danh sách Zalo Call (người hoặc nhóm).
+          description: Chọn từ danh sách Ralo (người hoặc nhóm).
           selector:
             entity:
               multiple: true
@@ -259,7 +259,7 @@ blueprint:
           name: 🎙️ Độ to mic gửi sang bên kia (phần mềm, %)
           description: >-
             Độ to PHẦN MỀM của tiếng mic gửi đi, độc lập với cài đặt của loa R1. 100 % = 0 dB (giữ nguyên), 200 % = +6 dB, 50 % = −6 dB.
-            0 = theo mặc định đặt trong Zalo Call (WebUI hoặc dịch vụ set_default_devices).
+            0 = theo mặc định đặt trong Ralo (WebUI hoặc dịch vụ set_default_devices).
           default: 0
           selector:
             number:
@@ -271,7 +271,7 @@ blueprint:
         do_to_loa:
           name: 🔊 Độ to tiếng bên kia ra loa (phần mềm, %)
           description: >-
-            Độ to PHẦN MỀM của tiếng bên kia phát ra loa. 100 % = 0 dB, 0 = theo mặc định của Zalo Call.
+            Độ to PHẦN MỀM của tiếng bên kia phát ra loa. 100 % = 0 dB, 0 = theo mặc định của Ralo.
           default: 0
           selector:
             number:
@@ -283,7 +283,7 @@ blueprint:
         giong_tts:
           name: 🗣️ Engine đọc (TTS)
           description: >-
-            Chọn thực thể tts để đọc lời lên cuộc gọi. Để trống = theo trợ lý giọng nói / TTS mặc định của Zalo Call.
+            Chọn thực thể tts để đọc lời lên cuộc gọi. Để trống = theo trợ lý giọng nói / TTS mặc định của Ralo.
           default: ""
           selector:
             entity:

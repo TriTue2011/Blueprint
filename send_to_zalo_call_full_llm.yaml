@@ -13,7 +13,7 @@ blueprint:
     ### Bắt buộc
 
     - Tích hợp **Zalo Calling** (HACS, kho `TriTue2011/Zalo-calling`) bản `2026.11.11.3` trở lên.
-    - Chọn người/nhóm nhận ở *Zalo Call → Cấu hình → Người và nhóm nhận*, mỗi người thành một thực thể `notify.zalo_call_...`.
+    - Chọn người/nhóm nhận ở *Ralo → Cấu hình → Người và nhóm nhận*, mỗi người thành một thực thể `notify.zalo_call_...`.
 
     ### Tùy chọn
 
@@ -39,7 +39,7 @@ blueprint:
         zalo_calling_tai_khoan:
           name: 📱 Tài khoản Zalo gửi đi (tuỳ chọn)
           description: >-
-            Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = tài khoản mặc định.
+            Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = tài khoản mặc định.
           default: ""
           selector:
             config_entry:

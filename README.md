@@ -28,15 +28,15 @@ Bộ sưu tập **Home Assistant Blueprints** tích hợp AI (LLM) để tự đ
   - [Gửi Zalo Custom Bot (Voice + xóa file)](#-gửi-zalo-custom-bot-voice--xóa-file)
   - [🔗 Zalo Calling trong các blueprint cũ](#-zalo-calling-trong-các-blueprint-cũ)
   - [🎤 Voice gửi Zalo Calling (nhiều người và nhóm)](#-voice-gửi-zalo-calling-nhiều-người-và-nhóm)
-  - [📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt](#-zalo-call-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
-  - [📲 Zalo Call quy tắc cho cuộc gọi đến](#-zalo-call-quy-tắc-cho-cuộc-gọi-đến)
-  - [💬 Zalo Call Messenger tuỳ biến](#-zalo-call-messenger-tuỳ-biến)
+  - [📞 Ralo gọi cảnh báo khi cảm biến kích hoạt](#-ralo-gọi-cảnh-báo-khi-cảm-biến-kích-hoạt)
+  - [📲 Ralo quy tắc cho cuộc gọi đến](#-ralo-quy-tắc-cho-cuộc-gọi-đến)
+  - [💬 Ralo Messenger tuỳ biến](#-ralo-messenger-tuỳ-biến)
   - [✈️ Telegram Call: quy tắc cho cuộc gọi đến](#️-telegram-call-quy-tắc-cho-cuộc-gọi-đến)
   - [🔘 Nút bấm mọi loại: MỘT automation, thêm bao nhiêu việc cũng được](#-nút-bấm-mọi-loại-một-automation-thêm-bao-nhiêu-việc-cũng-được)
-  - [💬 Zalo Call nhắn tin hai chiều với trợ lý](#-zalo-call-nhắn-tin-hai-chiều-với-trợ-lý)
-  - [⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch](#-zalo-call-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
-  - [📱 Zalo Call gọi đi tuỳ biến](#-zalo-call-gọi-đi-tuỳ-biến)
-  - [🎥 Zalo Call người gọi xin chuyển sang video](#-zalo-call-người-gọi-xin-chuyển-sang-video)
+  - [💬 Ralo nhắn tin hai chiều với trợ lý](#-ralo-nhắn-tin-hai-chiều-với-trợ-lý)
+  - [⏰ Ralo gọi hoặc nhắn nhắc hẹn theo lịch](#-ralo-gọi-hoặc-nhắn-nhắc-hẹn-theo-lịch)
+  - [📱 Ralo gọi đi tuỳ biến](#-ralo-gọi-đi-tuỳ-biến)
+  - [🎥 Ralo người gọi xin chuyển sang video](#-ralo-người-gọi-xin-chuyển-sang-video)
   - [🔁 Automation của luuquangvu (webhook, hẹn giờ, liên kết)](#-automation-của-luuquangvu-webhook-hẹn-giờ-liên-kết)
   - [🧠 Script của luuquangvu cho Assist (tìm kiếm, lịch, bộ nhớ, hẹn giờ)](#-script-của-luuquangvu-cho-assist-tìm-kiếm-lịch-bộ-nhớ-hẹn-giờ)
 - **Tiện ích**
@@ -654,23 +654,23 @@ Gửi tin nhắn, ảnh, video qua Zalo Custom Bot. Hỗ trợ webhook, đồng 
 
 ---
 
-## 📞 Zalo Call gọi cảnh báo khi cảm biến kích hoạt
+## 📞 Ralo gọi cảnh báo khi cảm biến kích hoạt
 
 Cảm biến kích hoạt (có người, khói, rò nước, cửa mở, mất điện...) thì **gọi điện Zalo** cho người bạn chọn: máy đọc cảnh báo rồi nối thẳng loa, mic, camera trong nhà. Gọi **lần lượt** từng người cho tới khi có người nghe máy. **Mọi thứ chọn từ danh sách**, không phải gõ mã.
 
-**Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
+**Cần:** Ralo từ bản 2026.11.11.2; người nhận chọn ở *Ralo → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_alert_sensor.yaml)
 
 ---
 
-## 📲 Zalo Call quy tắc cho cuộc gọi đến
+## 📲 Ralo quy tắc cho cuộc gọi đến
 
 Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra loa** cho cả nhà biết, **tự nghe máy**, cho **AI nói chuyện**, và **bật thiết bị nhà nào** khi người nhà nói trực tiếp (tích Mic / Loa / Camera, tích Camera là cuộc gọi video). Áp cho một người, mọi người trong danh bạ, người lạ hoặc mọi nhóm.
 
-**Xin chuyển sang video:** chọn «Tự đồng ý» cho từng người; chỉ có tác dụng khi công tắc **«Cho phép đồng ý chuyển sang video»** trên thiết bị Zalo Call đang **BẬT** (mặc định tắt; có ô bật sẵn công tắc khi Home Assistant khởi động). Áp cho cả cuộc gọi đến lẫn cuộc gọi đi.
+**Xin chuyển sang video:** chọn «Tự đồng ý» cho từng người; chỉ có tác dụng khi công tắc **«Cho phép đồng ý chuyển sang video»** trên thiết bị Ralo đang **BẬT** (mặc định tắt; có ô bật sẵn công tắc khi Home Assistant khởi động). Áp cho cả cuộc gọi đến lẫn cuộc gọi đi.
 
-**Cần:** Zalo Call từ bản 2026.11.11.2.
+**Cần:** Ralo từ bản 2026.11.11.2.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_incoming_rule.yaml)
 
@@ -678,7 +678,7 @@ Quy định hệ thống làm gì khi **có người gọi đến**: **báo ra l
 
 ## ✈️ Telegram Call: quy tắc cho cuộc gọi đến
 
-Giống blueprint Zalo Call cùng tên, dùng tích hợp **Telegram Call** (tài khoản Telegram thật, không phải bot).
+Giống blueprint Ralo cùng tên, dùng tích hợp **Telegram Call** (tài khoản Telegram thật, không phải bot).
 
 - **Quy tắc cho cuộc gọi đến**: **mỗi cuộc gọi Telegram đến kích hoạt automation** (có trace theo từng cuộc) và gọi `telegram_call.apply_call_rule` cho đúng cuộc đó; phạm vi: người cụ thể (chọn từ thực thể `notify` của tích hợp hoặc nhập ID), thẻ, danh bạ, người lạ; quy tắc cụ thể hơn thắng; có lời nhắn đọc vào cuộc gọi khi nghe máy. Báo ra loa, rồi sau số giây đã đặt thì **tự nghe máy** bằng loa/mic đã chọn nếu người gọi chưa cúp. Chỉ người bạn liệt kê (ID Telegram) được tự nghe; bật «mọi người» là lựa chọn riêng. Tắt hoặc xoá automation là hết quy tắc.
   [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Ftelegram_call_incoming_rule.yaml)
@@ -689,63 +689,63 @@ Giống blueprint Zalo Call cùng tên, dùng tích hợp **Telegram Call** (tà
 
 ---
 
-## 💬 Zalo Call Messenger tuỳ biến
+## 💬 Ralo Messenger tuỳ biến
 
 Nhắn tin Zalo (hoặc gọi) khi thiết bị thay đổi, **tuỳ biến rộng nhưng chỉ chọn từ danh sách**: thiết bị theo dõi, chế độ (mọi thay đổi, bật, tắt, vượt ngưỡng, báo cáo hằng ngày), câu có sẵn, kiểu chữ (emoji, đậm, màu, cỡ chữ), người nhận.
 
-**Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
+**Cần:** Ralo từ bản 2026.11.11.2; người nhận chọn ở *Ralo → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_messenger.yaml)
 
 ---
 
-## 💬 Zalo Call nhắn tin hai chiều với trợ lý
+## 💬 Ralo nhắn tin hai chiều với trợ lý
 
 Ai nhắn Zalo cho tài khoản của bạn (người hoặc nhóm bạn chọn) thì **trợ lý hội thoại của Home Assistant** đọc và **trả lời lại trên Zalo**, nhớ mạch trò chuyện theo từng người/nhóm. Chọn người/nhóm từ danh bạ hoặc dán **mã Zalo** cho người lạ; trong nhóm chỉ trả lời khi tin có **từ khóa gọi**. **Không cần Pyscript, không cần token bot, không cần tạo webhook riêng**: tích hợp tự nhận tin từ app.
 
-**Cần:** Zalo Call đã kết nối với app và một trợ lý hội thoại đã chọn mô hình AI. Đừng bật cùng lúc với quy tắc `reply_ai` của Zalo Call cho cùng một người/nhóm (mỗi tin sẽ bị trả lời hai lần).
+**Cần:** Ralo đã kết nối với app và một trợ lý hội thoại đã chọn mô hình AI. Đừng bật cùng lúc với quy tắc `reply_ai` của Ralo cho cùng một người/nhóm (mỗi tin sẽ bị trả lời hai lần).
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_webhook.yaml)
 
 ---
 
-## ⏰ Zalo Call gọi hoặc nhắn nhắc hẹn theo lịch
+## ⏰ Ralo gọi hoặc nhắn nhắc hẹn theo lịch
 
 Đúng giờ đã chọn, **gọi điện Zalo đọc lời nhắc** (hoặc nhắn tin): uống thuốc, đi ngủ, thức dậy, ăn cơm, uống nước, tập thể dục, họp, tưới cây. Hợp cho người lớn tuổi ít nhìn tin nhắn.
 
-**Cần:** Zalo Call từ bản 2026.11.11.2; người nhận chọn ở *Zalo Call → Cấu hình*.
+**Cần:** Ralo từ bản 2026.11.11.2; người nhận chọn ở *Ralo → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_nhac_hen.yaml)
 
 ---
 
-## 📱 Zalo Call gọi đi tuỳ biến
+## 📱 Ralo gọi đi tuỳ biến
 
 Gọi một người khi **bất kỳ sự kiện nào** (nút bấm, giờ, cảm biến): chọn thoại hay video, câu đọc, có AI không, mic/loa/camera và âm lượng. Chỉ gọi khi đang rảnh.
 
-**Cần:** Zalo Call từ bản 2026.11.11.4.
+**Cần:** Ralo từ bản 2026.11.11.4.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_di.yaml)
 
 ---
 
-## 🎥 Zalo Call người gọi xin chuyển sang video
+## 🎥 Ralo người gọi xin chuyển sang video
 
 Người gọi xin chuyển từ thoại sang video: **hỏi trên điện thoại** (Đồng ý / Từ chối), tự đồng ý, hoặc tự đồng ý và gửi camera; có thể đọc thông báo ra loa. Mặc định không tự đồng ý.
 
-**Tự đồng ý** là đường khác, chỉ xảy ra khi công tắc **«Cho phép đồng ý chuyển sang video»** trên thiết bị Zalo Call đang **BẬT** (mặc định tắt) **và** người đó có quy tắc «Tự đồng ý» (blueprint «quy tắc cho cuộc gọi đến»). Người xin bằng nút camera ở góc trên bên phải màn hình gọi.
+**Tự đồng ý** là đường khác, chỉ xảy ra khi công tắc **«Cho phép đồng ý chuyển sang video»** trên thiết bị Ralo đang **BẬT** (mặc định tắt) **và** người đó có quy tắc «Tự đồng ý» (blueprint «quy tắc cho cuộc gọi đến»). Người xin bằng nút camera ở góc trên bên phải màn hình gọi.
 
-**Cần:** Zalo Call từ bản 2026.11.11.4.
+**Cần:** Ralo từ bản 2026.11.11.4.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_video_request.yaml)
 
 ---
 
-## 🔊 Zalo Call cài đặt âm thanh và chống vọng mặc định
+## 🔊 Ralo cài đặt âm thanh và chống vọng mặc định
 
-Đặt bằng automation **độ to phần mềm của mic và loa** (%, 100 % = 0 dB, 200 % = +6 dB, 50 % = −6 dB; độc lập với cài đặt của loa R1) và các tham số **chống vọng trễ** (cửa sổ trễ loa→mic, ngưỡng), chế độ chống vọng, âm lượng loa lúc nghe máy, tự phát mic. Áp dụng khi Home Assistant khởi động hoặc khi nhấn một nút. Giá trị nằm trong app Zalo Call nên **khớp với trang Cài đặt → Cuộc gọi của WebUI** và với năm thực thể `number` trên thiết bị Zalo Call. Ô để «Không đổi» thì không gửi gì.
+Đặt bằng automation **độ to phần mềm của mic và loa** (%, 100 % = 0 dB, 200 % = +6 dB, 50 % = −6 dB; độc lập với cài đặt của loa R1) và các tham số **chống vọng trễ** (cửa sổ trễ loa→mic, ngưỡng), chế độ chống vọng, âm lượng loa lúc nghe máy, tự phát mic. Áp dụng khi Home Assistant khởi động hoặc khi nhấn một nút. Giá trị nằm trong app Ralo nên **khớp với trang Cài đặt → Cuộc gọi của WebUI** và với năm thực thể `number` trên thiết bị Ralo. Ô để «Không đổi» thì không gửi gì.
 
-**Cần:** Zalo Call từ bản 2026.11.14.
+**Cần:** Ralo từ bản 2026.11.14.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_cai_dat_am_thanh.yaml)
 
@@ -759,11 +759,11 @@ Các mẫu có gọi điện (gọi đi, cảnh báo, nút bấm, nghe máy, nh�
 
 ---
 
-## 📞 Zalo Call tự động gọi khi có sự kiện hoặc thiết bị thay đổi
+## 📞 Ralo tự động gọi khi có sự kiện hoặc thiết bị thay đổi
 
 **Gọi điện (đọc cảnh báo rồi cúp, hoặc gọi thường để người nhà nói chuyện) khi BẤT KỲ sự kiện nào xảy ra**: thiết bị đổi trạng thái hoặc thuộc tính (chọn «từ → sang», «giữ ít nhất N giây»), số vượt ngưỡng, đến giờ, sự kiện Home Assistant, webhook, thẻ NFC... Điều kiện kích hoạt chọn ở ô **trigger** và điều kiện kèm theo ở ô **condition** của Home Assistant (đủ mọi loại, chọn từ danh sách). Người nhận chọn từ danh sách; gọi lần lượt tới khi có người nghe máy; nối thiết bị trong nhà; độ to mic/loa, giọng đọc; chống báo lặp; khung giờ; chỉ gọi khi vắng nhà. Trong câu tự viết dùng `{ten}`, `{khu_vuc}`, `{gio}`. Bản «cảm biến kích hoạt» vẫn dùng được cho trường hợp đơn giản (chỉ cảm biến bật/tắt).
 
-**Cần:** Zalo Call từ bản 2026.11.14.
+**Cần:** Ralo từ bản 2026.11.14.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_khi_su_kien.yaml)
 
@@ -789,7 +789,7 @@ Các mẫu có gọi điện (gọi đi, cảnh báo, nút bấm, nghe máy, nh�
 
 Script cho **Voice Assistant**: nói *«gọi Đại ca bằng camera phòng khách, loa bếp, âm lượng 40»* là trợ lý gọi đúng thiết bị đó. Người gọi chọn theo **tên**; camera, loa, mic lấy từ **danh sách bạn cho phép** (thứ tự = **ưu tiên dự phòng**: thiết bị đầu không dùng được thì lấy thiết bị kế; chỉ nói một phần tên cũng được). Trợ lý **trả lời kèm thiết bị đã dùng và thiết bị còn có thể chọn**, nên nói tiếp được «đổi sang loa phòng ngủ». Nói *«liệt kê thiết bị gọi Zalo»* để chỉ xem danh sách. Tên không có trong danh sách thì không gọi và đọc lại danh sách.
 
-**Cần:** Zalo Call từ bản 2026.11.14.
+**Cần:** Ralo từ bản 2026.11.14.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fzalo_call_goi_full_llm.yaml)
 
@@ -811,7 +811,7 @@ Ví dụ nút R1: nhấn đơn + cuộc gọi Zalo/Telegram đang đổ chuông 
 
 Script cho **Voice Assistant** (Assist): gửi tin nhắn, vị trí hoặc ảnh cho **nhiều người và nhóm cùng lúc** qua **Zalo Calling**. Người nhận **chọn từ danh sách** (thực thể `notify.zalo_call_...`), không gõ mã Zalo. Cùng khuôn với «Gửi Zalo Custom Bot», nhưng không cần số điện thoại tài khoản và mã nhóm.
 
-**Cần:** Zalo Calling từ bản 2026.11.11.3; người nhận chọn ở *Zalo Call → Cấu hình*.
+**Cần:** Zalo Calling từ bản 2026.11.11.3; người nhận chọn ở *Ralo → Cấu hình*.
 
 [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FTriTue2011%2FBlueprint%2Fmain%2Fsend_to_zalo_call_full_llm.yaml)
 
@@ -1476,10 +1476,10 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 17 | Kiểm tra thiết bị | Automation | 2024.10.0 | Phân biệt nguồn điều khiển |
 | 18 | Cập nhật Blueprints | Automation | 2024.10.0 | Auto-update blueprints |
 | 19 | Cập nhật Pyscript | Automation | 2024.10.0 | Auto-sync pyscript từ GitHub |
-| 20 | Zalo Call gọi cảnh báo | Automation | 2026.3.0 | Gọi cảnh báo khi cảm biến kích hoạt |
-| 21 | Zalo Call quy tắc cuộc gọi đến | Automation | 2026.3.0 | Báo ra loa, tự nghe, AI, thiết bị nhà |
-| 22 | Zalo Call Messenger | Automation | 2026.3.0 | Nhắn tin hoặc gọi tuỳ biến theo thiết bị |
-| 23 | Zalo Call nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
+| 20 | Ralo gọi cảnh báo | Automation | 2026.3.0 | Gọi cảnh báo khi cảm biến kích hoạt |
+| 21 | Ralo quy tắc cuộc gọi đến | Automation | 2026.3.0 | Báo ra loa, tự nghe, AI, thiết bị nhà |
+| 22 | Ralo Messenger | Automation | 2026.3.0 | Nhắn tin hoặc gọi tuỳ biến theo thiết bị |
+| 23 | Ralo nhắc hẹn | Automation | 2026.3.0 | Gọi hoặc nhắn nhắc theo lịch |
 | 24 | Hẹn giờ phục hồi | Automation | 2024.10.0 | Hẹn giờ tự phục hồi sau khởi động lại |
 | 25 | Voice gửi Zalo Calling | Script | 2026.3.0 | Gửi tin/vị trí/ảnh tới nhiều người và nhóm |
 | 26 | Khôi phục hẹn giờ thiết bị sau khi HA khởi động lại | Automation | — | common_utilities.py |
@@ -1507,9 +1507,9 @@ push vào `main` và mỗi pull request; riêng push vào `main` thì workflow c
 | 48 | Hẹn giờ nhiều thiết bị | Script | 2024.12.0 | common_utilities.py |
 | 49 | Điều khiển hẹn giờ bằng giọng nói | Script | 2024.12.0 | — |
 | 50 | Bộ nhớ ghi nhớ cho Assist | Script | 2024.12.0 | memory.py |
-| 51 | Zalo Call gọi đi tuỳ biến | Automation | 2026.3.0 | Zalo Call gọi đi tuỳ biến |
-| 52 | Zalo Call người gọi xin chuyển sang video | Automation | 2026.3.0 | Zalo Call người gọi xin chuyển sang video |
-| 53 | Zalo Call nhắn tin hai chiều với trợ lý | Automation | 2026.3.0 | Trợ lý trả lời tin Zalo |
+| 51 | Ralo gọi đi tuỳ biến | Automation | 2026.3.0 | Ralo gọi đi tuỳ biến |
+| 52 | Ralo người gọi xin chuyển sang video | Automation | 2026.3.0 | Ralo người gọi xin chuyển sang video |
+| 53 | Ralo nhắn tin hai chiều với trợ lý | Automation | 2026.3.0 | Trợ lý trả lời tin Zalo |
 | 54 | Nút bấm mọi loại, thêm bao nhiêu việc cũng được | Automation | 2026.3.0 | Một automation cho mọi nút; việc có cảm biến đổi gần nhất thắng |
 | 55 | Telegram Call quy tắc cuộc gọi đến | Automation | 2026.3.0 | apply_call_rule: người/thẻ/danh bạ/người lạ, báo loa, tự nghe, lời nhắn |
 

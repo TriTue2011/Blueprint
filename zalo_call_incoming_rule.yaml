@@ -1,5 +1,5 @@
 blueprint:
-  name: Zalo Call - Quy tắc cho cuộc gọi đến (tự nghe máy, AI, báo ra loa)
+  name: Ralo - Quy tắc cho cuộc gọi đến (tự nghe máy, AI, báo ra loa)
   author: TriTue2011
   source_url: https://github.com/TriTue2011/Blueprint/blob/main/zalo_call_incoming_rule.yaml
   homeassistant:
@@ -14,7 +14,7 @@ blueprint:
       input:
         tai_khoan:
           name: Tài khoản Zalo điều khiển (tuỳ chọn)
-          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
               integration: zalo_call
@@ -55,7 +55,7 @@ blueprint:
           default: thread
         nguoi_cu_the:
           name: Những người hoặc nhóm cụ thể (chọn nhiều) (chỉ khi «Áp dụng cho» = Một người hoặc một nhóm cụ thể)
-          description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Zalo Call, người và nhóm lẫn lộn đều được; mỗi người/nhóm được đặt một quy tắc giống nhau.
+          description: Chỉ dùng khi chọn «Một người hoặc một nhóm cụ thể». Chọn từ danh sách Ralo, người và nhóm lẫn lộn đều được; mỗi người/nhóm được đặt một quy tắc giống nhau.
           selector:
             entity:
               multiple: true
@@ -85,12 +85,12 @@ blueprint:
     thiet_bi:
       name: "② Thiết bị trong nhà (loa, mic, camera: ưu tiên và khi nào dùng)"
       icon: mdi:video-wireless-outline
-      description: "Mỗi thiết bị có hai ô: danh sách xếp theo ưu tiên (cái đầu hỏng thì dùng cái kế) và «khi nào dùng». Danh sách để trống thì dùng thiết bị mặc định của Zalo Call."
+      description: "Mỗi thiết bị có hai ô: danh sách xếp theo ưu tiên (cái đầu hỏng thì dùng cái kế) và «khi nào dùng». Danh sách để trống thì dùng thiết bị mặc định của Ralo."
       collapsed: false
       input:
         loa:
           name: "Loa trong nhà (xếp theo thứ tự ưu tiên)"
-          description: "Loa đầu tiên không dùng được thì tự chuyển sang loa kế tiếp. Để trống = loa mặc định của thiết bị Zalo Call. Loa Google Home/Cast chỉ đọc tiếng báo, không nhận tiếng cuộc gọi, nên để cuối danh sách."
+          description: "Loa đầu tiên không dùng được thì tự chuyển sang loa kế tiếp. Để trống = loa mặc định của thiết bị Ralo. Loa Google Home/Cast chỉ đọc tiếng báo, không nhận tiếng cuộc gọi, nên để cuối danh sách."
           selector:
             entity:
               multiple: true
@@ -334,7 +334,7 @@ blueprint:
           name: Cách xử lý
           description: >-
             Mặc định không tự đồng ý. Chọn «Tự đồng ý» thì người này được tự đồng ý **khi công tắc tổng «Cho phép đồng ý chuyển sang video»
-            trên thiết bị Zalo Call đang BẬT** (mặc định TẮT; xem ô bên dưới). Muốn hỏi trên điện thoại thì dùng blueprint «Người gọi xin chuyển
+            trên thiết bị Ralo đang BẬT** (mặc định TẮT; xem ô bên dưới). Muốn hỏi trên điện thoại thì dùng blueprint «Người gọi xin chuyển
             từ thoại sang video». Áp cho cả cuộc gọi đến lẫn cuộc gọi đi với người này.
           selector:
             select:
@@ -350,7 +350,7 @@ blueprint:
         bat_cong_tac_chuyen_video:
           name: "Bật công tắc tổng «Cho phép đồng ý chuyển sang video» (chỉ khi «Cách xử lý» là Tự đồng ý)"
           description: >-
-            Tự đồng ý chỉ xảy ra khi công tắc tổng này BẬT (mặc định TẮT, nằm trên thiết bị Zalo Call). Tích ô này thì mỗi lần Home Assistant khởi
+            Tự đồng ý chỉ xảy ra khi công tắc tổng này BẬT (mặc định TẮT, nằm trên thiết bị Ralo). Tích ô này thì mỗi lần Home Assistant khởi
             động (hoặc bạn bấm *Chạy*) quy tắc sẽ BẬT công tắc đó, chỉ khi bạn chọn «Tự đồng ý» ở trên. Không tích thì blueprint không đụng tới
             công tắc: bạn tự bật/tắt trên thiết bị.
           default: false
@@ -499,7 +499,7 @@ actions:
               - action: persistent_notification.create
                 data:
                   notification_id: "zalo_call_quy_tac_{{ this.entity_id }}_{{ trigger.event.data.call_id }}"
-                  title: "Zalo Call: ĐÃ ÁP quy tắc cho cuộc gọi"
+                  title: "Ralo: ĐÃ ÁP quy tắc cho cuộc gọi"
                   message: |-
                     Cuộc gọi {{ trigger.event.data.call_id }} từ {{ trigger.event.data.peer or trigger.event.data.thread_id }}{{ ' (' ~ ten_goi ~ ')' if ten_goi | trim != '' else '' }}
                     Tự nghe máy: {{ ('có, sau ' ~ nghe_sau ~ ' giây') if tu_nghe_may else 'không' }}

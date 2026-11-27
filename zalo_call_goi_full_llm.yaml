@@ -29,7 +29,7 @@ blueprint:
       input:
         tai_khoan:
           name: Tài khoản Zalo điều khiển (tuỳ chọn)
-          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Zalo Call»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
+          description: Chỉ cần khi máy chủ có nhiều tài khoản Zalo (mỗi tài khoản là một mục «Ralo»). Để trống = mục đầu tiên. Với automation chạy theo sự kiện, chỉ phản ứng với sự kiện của tài khoản đã chọn.
           selector:
             config_entry:
               integration: zalo_call
@@ -118,7 +118,7 @@ blueprint:
       input:
         do_to_mic:
           name: Độ to mic gửi đi (%)
-          description: 0 = theo mặc định của Zalo Call.
+          description: 0 = theo mặc định của Ralo.
           default: 0
           selector:
             number:
@@ -129,7 +129,7 @@ blueprint:
               mode: slider
         do_to_loa:
           name: Độ to tiếng bên kia ra loa (%)
-          description: 0 = theo mặc định của Zalo Call.
+          description: 0 = theo mặc định của Ralo.
           default: 0
           selector:
             number:
